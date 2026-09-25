@@ -1,4 +1,4 @@
-/** 🃏 Padrão dos cards A/B: alturas iguais na linha, nada saindo, e a FOTO pro dono escolher (FOTO_BANCA=<caminho>.png → <caminho>-a.png / -b.png). COMO RODAR: npm run test:navegador */
+/** 🃏 Padrão dos cards: todos da mesma altura, preço e botão na mesma linha, nada saindo (FOTO_BANCA=<caminho>.png tira a foto). COMO RODAR: npm run test:navegador */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -36,12 +36,12 @@ async function garantirNavegador() {
 }
 test.after(async () => { if (navegador) await navegador.close(); if (servidor) servidor.close(); });
 
-async function medir(largura, padrao) {
+async function medir(largura) {
   const nav = await garantirNavegador();
   const ctx = await nav.newContext({ viewport: { width: largura, height: 900 }, isMobile: largura < 640, hasTouch: largura < 640, deviceScaleFactor: 2 });
   const pagina = await ctx.newPage();
   const erros = []; pagina.on('pageerror', (e) => erros.push(String(e)));
-  await pagina.goto(`${BASE}?padrao=${padrao}`, { waitUntil: 'networkidle' });
+  await pagina.goto(BASE, { waitUntil: 'networkidle' });
   await pagina.waitForSelector('[data-teste="grade-leiloes"]', { timeout: 20000 });
   await pagina.waitForTimeout(500);
   const m = await pagina.evaluate(() => {
@@ -54,12 +54,14 @@ async function medir(largura, padrao) {
         const caixa = r(c);
         const preco = [...c.querySelectorAll('p')].find((p) => /^R\$\s/.test(p.textContent.trim()) && p.className.includes('text-green-600'));
         const botao = [...c.querySelectorAll('button')].find((b) => /Entrar e Dar Lance/.test(b.textContent));
+        const prazo = c.querySelector('[data-teste="data-de-termino"], [data-teste="prazo-compacto"]');
         const fora = [...c.querySelectorAll('button, p, div, span')].filter((el) => { const b = el.getBoundingClientRect(); return b.width > 0 && (b.right > caixa.right + 1 || b.left < caixa.left - 1 || b.bottom > caixa.bottom + 1); }).length;
         return {
           altura: Math.round(caixa.h), topo: Math.round(caixa.top),
           precoTexto: preco?.textContent.trim(), precoLinhas: preco ? Math.round(r(preco).h / parseFloat(getComputedStyle(preco).lineHeight)) : null,
           precoTopoRelativo: preco ? Math.round(r(preco).top - caixa.top) : null,
           botaoTopoRelativo: botao ? Math.round(r(botao).top - caixa.top) : null,
+          prazoTexto: prazo?.textContent.trim() || null, prazoEhData: prazo?.dataset.teste === 'data-de-termino',
           elementosFora: fora,
         };
       }),
@@ -68,11 +70,11 @@ async function medir(largura, padrao) {
   return { ctx, pagina, erros, m };
 }
 
-for (const padrao of ['a', 'b']) {
-  test(`📱 390px · padrão ${padrao.toUpperCase()}: 2 colunas, todos os cards da MESMA altura, preço e botão na mesma linha, nada saindo`, { skip: semNavegador }, async () => {
-    const { ctx, pagina, erros, m } = await medir(390, padrao);
+{
+  test('📱 390px: 2 colunas, todos os cards da MESMA altura, preço e botão na mesma linha, nada saindo', { skip: semNavegador }, async () => {
+    const { ctx, pagina, erros, m } = await medir(390);
     try {
-      if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA.replace(/\.png$/, `-${padrao}.png`), fullPage: true });
+      if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA, fullPage: true });
       assert.equal(m.rolaHorizontal, false, 'a página rola de lado');
       assert.equal(m.colunas, 2, `esperava 2 colunas, achei ${m.colunas}`);
       assert.equal(m.cards.length, 6);
@@ -86,12 +88,18 @@ for (const padrao of ['a', 'b']) {
         assert.equal(c.precoLinhas, 1, `o preço "${c.precoTexto}" quebrou`);
         assert.equal(c.elementosFora, 0, `${c.elementosFora} elemento(s) saindo do card de "${c.precoTexto}"`);
       }
+      // 📅 em semanas o prazo é a DATA (régua de 03/09 e 17/09); em dias e minutos, a contagem
+      const porPreco = Object.fromEntries(m.cards.map((c) => [c.precoTexto, c]));
+      assert.match(porPreco['R$ 15,98'].prazoTexto, /^até \d{2}\/\d{2}$/, 'Chinelo (12 dias) devia mostrar a data');
+      assert.equal(porPreco['R$ 15,98'].prazoEhData, true);
+      assert.equal(porPreco['R$ 477,60'].prazoTexto, '3 dias', 'Harley (4 dias) devia mostrar a contagem');
+      assert.match(porPreco['R$ 1.250,00'].prazoTexto, /^00:0[67]:\d{2}$/, 'JBL (8 min) devia mostrar HH:MM:SS');
       assert.deepEqual(erros, []);
     } finally { await ctx.close(); }
   });
 
-  test(`🖥️ 1280px · padrão ${padrao.toUpperCase()}: 3 colunas, mesma altura, nada saindo`, { skip: semNavegador }, async () => {
-    const { ctx, erros, m } = await medir(1280, padrao);
+  test('🖥️ 1280px: 3 colunas, mesma altura, nada saindo', { skip: semNavegador }, async () => {
+    const { ctx, erros, m } = await medir(1280);
     try {
       assert.equal(m.colunas, 3);
       const alturas = [...new Set(m.cards.map((c) => c.altura))];

@@ -1,14 +1,12 @@
 /**
- * Banca do PADRÃO DOS CARDS — A e B para o dono escolher (25/09/2026).
+ * Banca do PADRÃO DOS CARDS (25/09/2026).
  *
  * Dono: "os cards acabam ficando sempre diferentes uns dos outros (em tamanho e
- * diagramação)… o espaço do relógio ocupa muito espaço… quero opção de solução
- * PRA JÁ" → "manda a foto da banca com A e B lado a lado".
- *
- * `?padrao=a|b|atual` escolhe a variante. Seis cards de verdade, na MESMA grade
- * da Home (2 por linha no celular), com os casos que hoje desalinham: título
- * curto e longo, com e sem líder, com e sem "Compre já", prazo em semanas, em
- * dias e urgente (minutos, vermelho).
+ * diagramação)… o espaço do relógio ocupa muito espaço". Viu A e B lado a lado
+ * e escolheu A. Seis cards de verdade, na MESMA grade da Home (2 por linha no
+ * celular), com os casos que desalinhavam: título curto e longo, com e sem
+ * líder, com e sem "Compre já", prazo em semanas (vira data), em dias e
+ * urgente (minutos, vermelho).
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -34,24 +32,17 @@ const leiloes = [
 ];
 const stats = { b1: { users: 1, bids: 1 }, b2: { users: 3, bids: 4 }, b3: { users: 1, bids: 1 }, b4: { users: 0, bids: 0 }, b5: { users: 6, bids: 19 }, b6: { users: 0, bids: 0 } };
 
-const padrao = new URLSearchParams(location.search).get('padrao') || 'a';
-const NOMES = {
-  a: 'A · grade fixa — prazo curto ao lado do preço',
-  b: 'B · prazo e líder na foto — corpo enxuto',
-  atual: 'HOJE — como está em produção',
-};
 
 createRoot(document.getElementById('raiz')).render(
   <MemoryRouter>
     <div style={{ background: '#0b1220', minHeight: '100vh', padding: '10px 0 16px' }}>
       <div data-teste="rotulo-do-padrao" className="px-3 pb-2 flex items-center gap-2">
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white text-gray-900 font-black text-base">{padrao === 'atual' ? '·' : padrao.toUpperCase()}</span>
-        <span className="text-white/90 text-xs font-semibold">{NOMES[padrao] || padrao}</span>
+        <span className="text-white/90 text-xs font-semibold">Padrão dos cards — grade fixa, prazo curto ao lado do preço</span>
       </div>
       {/* a MESMA grade da Home (src/pages/Home.jsx) + auto-rows-fr: cada linha nivela a altura */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr px-3" data-teste="grade-leiloes">
         {leiloes.map((a) => (
-          <AuctionCard key={a.id} auction={a} bidStats={stats[a.id]} showFavoriteButton userId="banca-usuario" padrao={padrao} />
+          <AuctionCard key={a.id} auction={a} bidStats={stats[a.id]} showFavoriteButton userId="banca-usuario" />
         ))}
       </div>
     </div>

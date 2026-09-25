@@ -4,26 +4,35 @@
 // o 'compre já', os cards acabam ficando sempre diferentes uns dos outros (em
 // tamanho e diagramação). Precisamos de um padrão. O espaço do relógio com o
 // 'termina … 00/00 às 00:00' ocupa muito espaço e empurra o resto pra baixo."
-//
-// O card aceita `padrao`: 'atual' (o de hoje, intocado), 'a' (grade fixa:
-// título sempre em 2 linhas, preço e prazo curto na MESMA linha, linha do
-// líder e linha de lances/compre-já sempre reservadas) e 'b' (prazo e líder
-// viram pílulas sobre a foto; o corpo só tem título, preço, lances e botões).
-// Enquanto o dono não escolher, produção segue em 'atual'.
-export const PADROES_DO_CARD = Object.freeze(['atual', 'a', 'b']);
+// Viu a banca com A e B lado a lado e escolheu A (grade fixa):
+//   · título SEMPRE em 2 linhas · prazo curto na linha do "Lance atual"
+//   · linha do líder sempre reservada · linha de lances/compre-já com altura
+//     fixa · card estica até a linha da grade e os botões vão pro rodapé.
+import { FUSO_DA_CASA, instanteDeTermino } from './relogioLeilao.js';
 
-/** "1 semana" → "1 sem" · "2 semanas" → "2 sem" · "4 dias" e "00:09:12" ficam. */
-export function contagemCurta(texto) {
-  return String(texto ?? '').replace(/\s*semanas?$/, ' sem');
-}
-
-/** O nome do líder que cabe numa pílula: "Ângela Maria Rocha dos Santos" → "Ângela S." */
-export function nomeDoLider(nome) {
-  const partes = String(nome ?? '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
-  if (!partes.length) return '';
-  const particulas = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'di', 'du', 'del', 'della', 'van', 'von']);
-  const sobrenome = [...partes.slice(1)].reverse().find((p) => !particulas.has(p.toLowerCase()));
-  return sobrenome ? `${partes[0]} ${sobrenome[0].toUpperCase()}.` : partes[0];
+/**
+ * O prazo que cabe ao lado de "Lance atual" num card de 170px.
+ *
+ * "4 dias" e "00:09:12" ficam como estão. Em SEMANAS o card mostra a DATA
+ * ("até 07/10"), não "1 semana": é a régua de 03/09 (cliente viu "1 semana"
+ * duas semanas seguidas e achou o leilão travado) e de 17/09 (a data no card),
+ * mantida sem gastar a linha inteira que o bloco antigo gastava.
+ *
+ * @returns {{texto: string, ehData: boolean, urgente: boolean} | null}
+ */
+export function prazoDoCard(contagem, endTime) {
+  const texto = String(contagem?.text ?? '').trim();
+  if (!texto || texto === 'Encerrado') return null;
+  const urgente = contagem?.isUrgent === true;
+  if (!/semanas?$/.test(texto)) return { texto, ehData: false, urgente };
+  const ms = instanteDeTermino(endTime);
+  if (ms === null) return { texto: texto.replace(/\s*semanas?$/, ' sem'), ehData: false, urgente };
+  try {
+    const dia = new Date(ms).toLocaleDateString('pt-BR', { timeZone: FUSO_DA_CASA, day: '2-digit', month: '2-digit' });
+    return { texto: `até ${dia}`, ehData: true, urgente };
+  } catch {
+    return { texto: texto.replace(/\s*semanas?$/, ' sem'), ehData: false, urgente };
+  }
 }
 
 /**

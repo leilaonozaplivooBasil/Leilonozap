@@ -12,7 +12,7 @@ const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf
 
 test('a grade de leilões é 2 colunas no celular, 3 no desktop — como a loja', () => {
   const H = ler('../src/pages/Home.jsx');
-  assert.match(H, /className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6" data-teste="grade-leiloes"/);
+  assert.match(H, /className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr" data-teste="grade-leiloes"/, "a grade nivela a altura da linha (auto-rows-fr) — padrão dos cards de 25/09");
   assert.doesNotMatch(H, /grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3/, 'sobrou a grade antiga de 1 coluna');
   const C = ler('../src/pages/Catalog.jsx');
   assert.match(C, /grid grid-cols-2 /, 'a loja é a referência: 2 por linha no celular');
