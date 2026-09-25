@@ -34,12 +34,13 @@ function useUrgencia(endTime) {
   return faixa;
 }
 
-function CartaoDeLeilao({ leilao, rotuloDoBotao, naLoja = 0 }) {
+function CartaoDeLeilao({ leilao, rotuloDoBotao }) {
   const foto = leilao.image_urls?.[0] || null;
   const lance = precoDoLeilao(leilao);
-  // 💰 Só compara quando a loja é REALMENTE mais cara — senão a comparação
-  // depõe contra o leilão. E o preço é NOSSO, da nossa loja, não estimativa.
-  const compara = naLoja > 0 && naLoja > lance;
+  // 💰 25/09/2026 — o "na loja R$ X" riscado SAIU do card, por ordem do dono
+  // (o PS5 mostrava "na loja R$ 6.000,00" e a comparação parecia inflada).
+  // O preço de loja continua ORDENANDO o "Em destaque" (maisValiosos), só não
+  // é mais exibido. E o selo de "-99%" continua proibido — ver abaixo.
   const faixa = useUrgencia(leilao.end_time);
   const recado = recadoDaUrgencia(faixa);
   const sala = `/AuctionRoom?id=${encodeURIComponent(leilao.id)}`;
@@ -99,26 +100,23 @@ function CartaoDeLeilao({ leilao, rotuloDoBotao, naLoja = 0 }) {
       </Link>
 
       <div className="relative flex flex-1 flex-col p-3">
-        <h3 className="line-clamp-2 min-h-[36px] text-[13px] font-medium leading-[1.3] text-white transition-colors duration-200 group-hover:text-nz-verde-menta">{leilao.title}</h3>
+        <h3 className="line-clamp-2 min-h-[34px] text-[13px] font-medium leading-[17px] text-white transition-colors duration-200 group-hover:text-nz-verde-menta">{leilao.title}</h3>
 
         <div
-          className={`mt-2 inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-200 ${pilulaDaUrgencia(faixa)}`}
+          className={`mt-2 inline-flex w-fit max-w-full items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors duration-200 ${pilulaDaUrgencia(faixa)}`}
           data-teste="contagem-do-cartao"
           data-urgencia={faixa}
         >
           <Clock size={11} /> <CountdownTimer endTime={leilao.end_time} />
-          {recado && <span className="uppercase tracking-[0.08em] opacity-80">· {recado}</span>}
+          {/* 📱 no card de 176px (celular) "00:05:55 · FECHANDO" não cabe e o selo saía do card;
+              a cor do selo já diz a urgência — a palavra só entra de sm pra cima */}
+          {recado && <span className="hidden uppercase tracking-[0.08em] opacity-80 sm:inline">· {recado}</span>}
         </div>
 
         <div className="mt-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/40">Lance atual</div>
         <div className="font-slab text-[19px] font-extrabold leading-tight text-nz-verde-neon" data-teste="preco-do-cartao">
           {emReais(lance)}
         </div>
-        {compara && (
-          <div className="mt-0.5 text-[11px] text-white/45" data-teste="preco-na-loja">
-            na loja <span className="line-through">{emReais(naLoja)}</span>
-          </div>
-        )}
 
         {/* 🟢 O BOTÃO JÁ NASCE VERDE. Antes era um vulto cinza que só virava botão
             quando o mouse passava — o print do dono mostrava os seis cards
@@ -126,7 +124,7 @@ function CartaoDeLeilao({ leilao, rotuloDoBotao, naLoja = 0 }) {
             "passar o mouse": para metade das pessoas o botão nunca ficava pronto. */}
         <Link
           to={sala}
-          className="mt-3 flex min-h-[42px] items-center justify-center gap-1.5 rounded-full bg-nz-verde-claro px-3 text-[13px] font-bold text-white shadow-[0_6px_18px_-8px_rgba(46,157,99,0.9)] transition-all duration-200 group-hover:bg-nz-verde-neon group-hover:shadow-[0_10px_24px_-8px_rgba(63,208,126,0.95)] hover:bg-nz-verde-neon motion-reduce:transition-none"
+          className="mt-3 flex min-h-[42px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-nz-verde-claro px-3 text-[12px] font-bold sm:text-[13px] text-white shadow-[0_6px_18px_-8px_rgba(46,157,99,0.9)] transition-all duration-200 group-hover:bg-nz-verde-neon group-hover:shadow-[0_10px_24px_-8px_rgba(63,208,126,0.95)] hover:bg-nz-verde-neon motion-reduce:transition-none"
         >
           {rotuloDoBotao}
           <ArrowRight size={14} className="transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transform-none" />
@@ -140,7 +138,6 @@ export default function CarrosselDeLeiloes({
   titulo,
   subtitulo,
   leiloes = [],
-  precoNaLoja = {},
   rotuloDoBotao = 'Dar lance',
   verTudo = { rotulo: 'Ver todos os leilões', para: '/leiloes' },
   teste = 'carrossel-de-leiloes',
@@ -291,7 +288,7 @@ export default function CarrosselDeLeiloes({
         >
           {leiloes.map((a) => (
             <div key={a.id} className="snap-start">
-              <CartaoDeLeilao leilao={a} rotuloDoBotao={rotuloDoBotao} naLoja={Number(precoNaLoja[a.product_id]) || 0} />
+              <CartaoDeLeilao leilao={a} rotuloDoBotao={rotuloDoBotao} />
             </div>
           ))}
         </div>

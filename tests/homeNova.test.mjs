@@ -163,9 +163,14 @@ test('🔴 o valor NÃO sai de market_price: os dois campos estão vazios na bas
   assert.equal(valorDoItem(comMarketPrice, { p1: 250 }), 250, 'o valor sai do preço de loja do produto');
 });
 
-test('o carrossel mostra "na loja" só quando a loja é mais cara que o lance', () => {
+test('🚫 25/09: o "na loja R$ X" riscado SAIU do card e do hero (ordem do dono) — o preço de loja só ORDENA', () => {
   const tela = semComentarios(readFileSync(path.join(RAIZ, 'src/components/homenova/CarrosselDeLeiloes.jsx'), 'utf8'));
-  assert.match(tela, /naLoja > 0 && naLoja > lance/, 'a comparação precisa exigir que a loja seja mais cara');
+  assert.doesNotMatch(tela, /na loja/, 'o "na loja" voltou pro card');
+  assert.doesNotMatch(tela, /preco-na-loja/);
+  const hero = semComentarios(readFileSync(path.join(RAIZ, 'src/components/homenova/HeroDoDia.jsx'), 'utf8'));
+  assert.doesNotMatch(hero, /na loja|hero-na-loja/, 'o "na loja" voltou pro hero');
+  const pagina = semComentarios(readFileSync(path.join(RAIZ, 'src/pages/HomeNova.jsx'), 'utf8'));
+  assert.match(pagina, /maisValiosos\(semOHeroi, precoNaLoja/, 'o preço de loja continua ordenando o destaque');
 });
 
 test('🔴 o "Em destaque" não pode engolir a semana inteira', () => {
@@ -200,8 +205,6 @@ test('🔴 o card NÃO carimba porcentagem de desconto num leilão aberto', () =
   const tela = semComentarios(readFileSync(path.join(RAIZ, 'src/components/homenova/CarrosselDeLeiloes.jsx'), 'utf8'));
   assert.ok(!/1\s*-\s*lance\s*\/\s*naLoja/.test(tela), 'voltou a calcular porcentagem de desconto no card');
   assert.ok(!/-\{\s*\w+\s*\}%/.test(tela), 'voltou a renderizar selo de porcentagem');
-  // e a comparação honesta continua lá
-  assert.match(tela, /data-teste="preco-na-loja"/);
 });
 
 // ── A régua nova: quem tem foto vai na frente (19/09/2026) ──────────────────
@@ -253,13 +256,26 @@ test('a vitrine nunca encolhe: com foto ou sem, entrega até o teto pedido', () 
   assert.equal(vitrine[0].nome, 'Cat 8', 'a única com foto lidera');
 });
 
-// ── A vitrine cresce para doze, e a ordem ganha dono (20/09/2026) ───────────
+// ── A vitrine volta a SEIS (25/09/2026) — e a ordem continua com dono ───────
+// Em 20/09 cresceu para doze. Em 25/09 o dono viu a home: no desktop a segunda
+// fileira empurrava os leilões para baixo de 1.400px. Seis + "Ver todas".
 
-test('a vitrine entrega doze, não seis — com catorze com foto, só duas ficam de fora', () => {
+test('a vitrine entrega seis — com catorze com foto, oito ficam pro "Ver todas"', () => {
   const linhas = Array.from({ length: 14 }, (_, i) => ({
     id: `c${i}`, nome: `Cat ${i}`, leiloes_ativos: 14 - i, produtos_na_loja: 1, image_url: '/f.webp',
   }));
-  assert.equal(categoriasDaVitrine(linhas).length, 12);
+  assert.equal(categoriasDaVitrine(linhas).length, 6);
+});
+
+test('📱 no celular os destaques vêm logo depois do hero; no desktop a ordem é a de sempre', () => {
+  const pagina = semComentarios(readFileSync(path.join(RAIZ, 'src/pages/HomeNova.jsx'), 'utf8'));
+  const ordem = (teste) => { const i = pagina.indexOf(teste); return Number((pagina.slice(0, i).match(/className="order-(\d) lg:order-none"/g) || []).pop()?.match(/order-(\d)/)[1]); };
+  assert.equal(ordem('teste="carrossel-destaque"'), 2);
+  assert.equal(ordem('<ExplorePorCategoria'), 3);
+  assert.equal(ordem('<FaixaDeNumeros'), 4);
+  assert.equal(ordem('teste="carrossel-semana"'), 5);
+  assert.match(pagina, /<LancesAoVivo \/>/, 'o ticker de lances (prova social) não está na home nova');
+  assert.match(pagina, /<ProvasSociais \/>/, 'quem arrematou / ranking (prova social) não está na home nova');
 });
 
 test('🔴 quem tem ordem definida passa na frente de quem tem mais leilão', () => {

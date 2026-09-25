@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { plataforma } from '@/api/plataformaClient';
-import { Eye, TrendingUp } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 // Flag global para evitar múltiplas instâncias fazendo chamadas simultâneas
 let globalStatsLoading = false;
@@ -9,7 +9,7 @@ export default function LiveStats() {
   const [stats, setStats] = useState(() => {
     const cached = sessionStorage.getItem('live_stats_cache');
     if (cached) return JSON.parse(cached);
-    return { onlineUsers: 0, totalBidsToday: 0 };
+    return { totalBidsToday: 0 };
   });
   const errorCountRef = useRef(0);
   const mountedRef = useRef(true);
@@ -49,9 +49,8 @@ export default function LiveStats() {
     globalStatsLoading = true;
 
     try {
-      const sessions = await plataforma.entities.LiveSession.list('-last_heartbeat', 100);
-      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
-      const uniqueOnlineUsers = sessions.filter(s => new Date(s.last_heartbeat) >= sixtySecondsAgo).length;
+      // 🚫 25/09/2026 — o contador "N online" SAIU (ordem do dono). A consulta às
+      // sessões saiu junto: era uma leitura a mais a cada 5 minutos por nada.
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -63,7 +62,7 @@ export default function LiveStats() {
         .filter(bid => new Date(bid.created_date || bid.timestamp) >= today)
         .reduce((sum, bid) => sum + (Number(bid.bid_amount) || 0), 0);
 
-      const newStats = { onlineUsers: uniqueOnlineUsers, totalBidsToday: totalBidsValue };
+      const newStats = { totalBidsToday: totalBidsValue };
       if (mountedRef.current) {
         setStats(newStats);
         errorCountRef.current = 0;
@@ -85,21 +84,12 @@ export default function LiveStats() {
   // Métrica zerada não aparece: "0 participantes online" em destaque prova que o
   // app está vazio. Escondendo o zero, o número só entra em cena quando ajuda
   // (prova social). Se as duas forem zero, a linha inteira não renderiza.
-  const temOnline = Number(stats.onlineUsers) > 0;
   const temLances = Number(stats.totalBidsToday) > 0;
-  if (!temOnline && !temLances) return null;
+  if (!temLances) return null;
 
   return (
     // PONTO 83: chips em cinza-claro — o bloco voltou para a cor escura do site
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-gray-400">
-      {temOnline && (
-        <span className="inline-flex items-center gap-1.5">
-          <Eye className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="font-semibold text-gray-100 tabular-nums">{stats.onlineUsers}</span>
-          <span>online</span>
-        </span>
-      )}
-      {temOnline && temLances && <span aria-hidden="true" className="text-gray-600">·</span>}
       {temLances && (
         <span className="inline-flex items-center gap-1.5">
           <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
