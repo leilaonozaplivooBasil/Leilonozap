@@ -1581,6 +1581,9 @@ export default function AuctionRoom() {
         currentBalance={userWallet?.balance || 0}
         requiredAmount={addMoney(currentPrice, safeIncrement)}
         freteValor={freteValor}
+        /* ⚡ 25/09 — a gaveta gera o PIX aqui mesmo e, confirmado, atualiza o saldo da sala */
+        currentUser={currentUser}
+        onSaldoAtualizado={refreshWalletBalance}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
