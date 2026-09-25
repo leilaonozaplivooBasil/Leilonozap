@@ -159,24 +159,22 @@ test('a tela só desenha a data quando existe data', () => {
 
 // ─────────────── 17/09/2026 — o card e o desktop da sala ───────────────
 
-test('o card da lista de leilões mostra a data, não só "1 semana"', () => {
+test('o card da lista de leilões mostra a DATA quando o prazo é em semanas — "até 07/10", não "1 semana"', () => {
+  // 🃏 25/09/2026 — PADRÃO DOS CARDS (opção A, escolhida pelo dono): o bloco
+  // "Termina · 1 semana · 07/10 às 12:28" saiu do card, que ficava alto demais
+  // e diferente dos vizinhos. A régua de 03/09 e 17/09 (a data no card, porque
+  // "1 semana" fica parado sete dias) continua: em semanas o prazo curto ao lado
+  // de "Lance atual" É a data ("até 07/10"); a data completa fica no title.
   const card = ler('../src/components/auction/AuctionCard.jsx');
-  // a contagem por semana continua — a data é ADITIVA, igual à Fase 1
   assert.match(card, /const weeks = Math\.floor/, 'a contagem do card foi alterada');
   assert.match(card, /const fimEmTexto = textoDeTermino\(auction\.end_time\)/,
     'o card precisa tirar a data do end_time do próprio leilão');
-  assert.match(card, /data-teste="data-de-termino"/, 'sem âncora não dá pra provar no navegador');
-  // 🔎 A GUARDA VIVE AQUI, e só aqui. No navegador ela é INALCANÇÁVEL: com
-  // `end_time` nulo o contador já devolve "Encerrado" e o bloco todo some, de
-  // modo que apagar a guarda deixa a banca verde — medido em 17/09. Ela
-  // continua valendo como defesa (uma data anterior a 2000 é recusada pela
-  // régua e ainda assim poderia chegar aqui se o contador mudar de critério),
-  // e é esta linha que impede alguém de removê-la achando que não faz nada.
-  assert.match(card, /\{fimEmTexto && \(/, 'o card perdeu a guarda de data vazia');
-  // a data tem de morar DENTRO do bloco do contador, senão aparece em card encerrado
-  const depois = card.split(/\{timeRemaining\.text\}/)[1] || '';
-  assert.match(depois.slice(0, 500), /fimEmTexto &&/,
-    'a data ficou fora do bloco do contador');
+  assert.match(card, /const prazo = mostraPrazo \? prazoDoCard\(timeRemaining, auction\.end_time\) : null;/);
+  assert.match(card, /data-teste=\{prazo\.ehData \? 'data-de-termino' : 'prazo-compacto'\}/, 'sem âncora não dá pra provar no navegador');
+  assert.match(card, /title=\{fimEmTexto \? `Termina \$\{fimEmTexto\}` : undefined\}/, 'a data completa fica no title, com a guarda de data vazia');
+  // o prazo só existe com leilão ativo e contagem viva — em card encerrado não desenha nada
+  assert.match(card, /const mostraPrazo = isActive && !chamada\.emChamada && Boolean\(timeRemaining\) && timeRemaining\.text !== 'Encerrado';/);
+  assert.doesNotMatch(card, /<span className="text-xs">Termina<\/span>/, 'o bloco antigo "Termina" voltou');
 });
 
 test('a barra lateral da sala carrega a data — é o que sobra no desktop', () => {

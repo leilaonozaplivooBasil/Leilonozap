@@ -66,22 +66,21 @@ async function abrir(busca = '') {
   return { ctx, pagina };
 }
 
-test('🔴 com 12 dias pela frente o contador diz "1 semana" — e a data aparece do lado', { skip: semNavegador }, async () => {
+test('🔴 com 12 dias pela frente o card diz a DATA ("até dd/mm"), não "1 semana"', { skip: semNavegador }, async () => {
+  // 🃏 25/09/2026 — padrão dos cards (opção A): o bloco "Termina · 1 semana ·
+  // data" saiu. Em semanas, o prazo curto ao lado de "Lance atual" É a data.
   const { ctx, pagina } = await abrir();
   try {
     const corpo = await pagina.textContent('body');
-    // primeiro a prova de que o problema é real: o contador MESMO diz "1 semana"
-    assert.match(corpo, /1 semana/,
-      'se o contador deixou de dizer "1 semana" aos 12 dias, este teste perdeu o sentido — revisar');
+    assert.ok(!/1 semana/.test(corpo), 'o card voltou a dizer "1 semana" — é o que fazia o cliente achar o leilão travado');
 
     const linha = pagina.locator('[data-teste="data-de-termino"]');
     assert.equal(await linha.count(), 1, 'a data não foi desenhada no card');
     const data = (await linha.textContent()).trim();
-    assert.match(data, /^\d{2}\/\d{2}( às | )\d{2}:\d{2}$/,
-      `a data saiu fora do formato dd/mm às hh:mm: ${JSON.stringify(data)}`);
-
-    // e ela tem que estar VISÍVEL, não escondida atrás de algum overflow
+    assert.match(data, /^até \d{2}\/\d{2}$/, `a data saiu fora do formato "até dd/mm": ${JSON.stringify(data)}`);
     assert.ok(await linha.isVisible(), 'a data está no DOM mas não na tela');
+    // a data completa (com hora) fica no title
+    assert.match(await linha.getAttribute('title'), /^Termina \d{2}\/\d{2} às \d{2}:\d{2}$/);
   } finally { await ctx.close(); }
 });
 
@@ -91,11 +90,9 @@ test('a data confere com o end_time do leilão — 12 dias à frente', { skip: s
     const data = (await pagina.textContent('[data-teste="data-de-termino"]')).trim();
     const esperado = await pagina.evaluate(() => {
       const d = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
-      const dia = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
-      return dia;
+      return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
     });
-    assert.ok(data.startsWith(esperado),
-      `a data mostrada (${data}) não bate com o fim do leilão (${esperado})`);
+    assert.equal(data, `até ${esperado}`, `a data mostrada (${data}) não bate com o fim do leilão (${esperado})`);
   } finally { await ctx.close(); }
 });
 
@@ -113,7 +110,7 @@ test('leilão sem end_time não inventa data — nada de 31/12 às 21:00', { ski
   try {
     const corpo = await pagina.textContent('body');
     assert.ok(!/31\/12 às 21:00/.test(corpo), 'apareceu a Época de 1970 disfarçada de data');
-    assert.ok(!/\d{2}\/\d{2} às \d{2}:\d{2}/.test(corpo), `apareceu uma data onde não há data: ${corpo.slice(0, 200)}`);
+    assert.ok(!/\d{2}\/\d{2}( às \d{2}:\d{2})?/.test(corpo.replace(/R\$\s[\d.,]+/g, '')), `apareceu uma data onde não há data: ${corpo.slice(0, 200)}`);
   } finally { await ctx.close(); }
 });
 

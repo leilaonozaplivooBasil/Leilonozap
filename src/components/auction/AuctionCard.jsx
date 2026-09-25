@@ -36,6 +36,9 @@ import useChamada from '@/hooks/useChamada';
 import { precoArremateAgora } from '@/lib/arremateAgora';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+// 🃏 25/09/2026 — padrão dos cards (opção A, escolhida pelo dono na banca): título em 2
+// linhas, prazo curto ao lado de "Lance atual", linhas reservadas, botões no rodapé
+import { prazoDoCard, CLASSES_DO_TITULO_FIXO } from '@/lib/padraoDoCard';
 import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
@@ -461,6 +464,15 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     '--hover-shadow': '0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
   } : {};
 
+  // 🃏 25/09/2026 — PADRÃO DOS CARDS (dono: "os cards ficam sempre diferentes uns dos
+  // outros em tamanho e diagramação"). O card estica até a altura da linha da grade
+  // (auto-rows-fr na vitrine) e os botões descem pro rodapé (mt-auto): todos os
+  // cards da linha ficam iguais. O prazo vira uma palavra ao lado de "Lance atual"
+  // (src/lib/padraoDoCard.js) — o bloco "Termina · 1 semana · data" saiu.
+  const classesDoCard = `${cardStyles} h-full flex flex-col`;
+  const mostraPrazo = isActive && !chamada.emChamada && Boolean(timeRemaining) && timeRemaining.text !== 'Encerrado';
+  const prazo = mostraPrazo ? prazoDoCard(timeRemaining, auction.end_time) : null;
+
   const textColor = variant === "sai_de_baixo" ? "text-gray-900" : "text-gray-100";
   const secondaryTextColor = variant === "sai_de_baixo" ? "text-gray-600" : "text-gray-400";
 
@@ -476,7 +488,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   return (
     <>
       <Card
-        className={cardStyles}
+        className={classesDoCard}
         style={glassStyle}
         onClick={handleCardClick}
         onMouseEnter={(e) => {
@@ -684,72 +696,55 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
 
-        <CardContent className="p-3 sm:p-4 md:p-5" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
-          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
+        <CardContent className="p-3 sm:p-4 md:p-5 flex-1 flex flex-col" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
+          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere ${CLASSES_DO_TITULO_FIXO}`}>
             {displayTitle}
           </h3>
 
-          {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
-          {/* 📱 25/09/2026 — com 2 cards por linha no celular o card tem ~170px: preço e
-              "Termina" lado a lado quebravam o R$ letra por letra. Abaixo de sm eles
-              empilham; de sm pra cima continuam lado a lado. */}
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between mb-3 sm:gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-0.5 sm:mb-1 flex-wrap">
-                <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
+          {/* 🃏 PREÇO NO PADRÃO: o prazo curto ("até 07/10", "4 dias", "00:09:12") fica
+              na linha do rótulo "Lance atual", à direita; a linha do líder é sempre
+              reservada. A data completa segue no title (e na sala e nos detalhes). */}
+          <div className="mb-3" data-teste="bloco-preco-padrao">
+            <div className="flex items-center justify-between gap-2 mb-0.5 sm:mb-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className={`text-xs sm:text-sm whitespace-nowrap ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
                   {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
-              <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
-                R$ {fmtBR(currentPrice)}
-              </p>
-              {/* 🏆 quem está ganhando agora — visível também com o leilão ativo, não só depois de encerrar */}
-              {isActive && auction.winner_name && (
-                <p className="text-xs text-amber-400 font-semibold truncate mt-0.5">
-                  🏆 {auction.winner_name}
-                </p>
+              {prazo && (
+                <span
+                  data-teste={prazo.ehData ? 'data-de-termino' : 'prazo-compacto'}
+                  title={fimEmTexto ? `Termina ${fimEmTexto}` : undefined}
+                  className={`flex items-center gap-1 font-mono text-[11px] sm:text-sm font-bold whitespace-nowrap shrink-0 ${prazo.urgente ? 'text-red-500 animate-pulse' : 'text-gray-200'}`}
+                >
+                  <Clock className="w-3 h-3" />
+                  {prazo.texto}
+                </span>
+              )}
+              {auction.status === 'scheduled' && timeRemaining && (
+                <span className="flex items-center gap-1 font-mono text-xs sm:text-sm font-bold text-sky-400 whitespace-nowrap shrink-0" title="Começa em">
+                  <Clock className="w-3 h-3" />
+                  {timeRemaining.text}
+                </span>
               )}
             </div>
-
-            {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." no lugar do "Termina" */}
+            <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
+              R$ {fmtBR(currentPrice)}
+            </p>
+            {/* 🏆 quem está ganhando agora — linha SEMPRE reservada, pra altura não variar */}
+            <p data-teste="linha-do-lider" className={`text-xs font-semibold truncate mt-0.5 min-h-[1rem] ${isActive && auction.winner_name ? 'text-amber-400' : secondaryTextColor}`}>
+              {isActive && auction.winner_name ? `🏆 ${auction.winner_name}` : isActive ? '🔥 Seja o primeiro' : ''}
+            </p>
+            {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." */}
             {isActive && chamada.preLancamento && (
-              <div className="text-left sm:text-right flex-shrink-0">
-                <SeloChamada auction={auction} />
-              </div>
-            )}
-
-            {isActive && !chamada.emChamada && timeRemaining && timeRemaining.text !== "Encerrado" && (
-              <div className="text-left sm:text-right flex-shrink-0 flex items-baseline gap-x-1.5 flex-wrap sm:block">
-                <div className={`flex items-center gap-1 ${secondaryTextColor} sm:mb-1`}>
-                  <Clock className="w-3 h-3" />
-                  <span className="text-xs">Termina</span>
-                </div>
-                <div className={`font-mono text-sm sm:text-lg md:text-xl font-bold ${timeRemaining.isUrgent ? 'text-red-600 animate-pulse' : variant === 'sai_de_baixo' ? 'text-gray-900' : 'text-gray-200'}`}>
-                  {timeRemaining.text}
-                </div>
-                {fimEmTexto && (
-                  <div data-teste="data-de-termino" className={`mt-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap ${secondaryTextColor}`}>
-                    {fimEmTexto}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {auction.status === 'scheduled' && timeRemaining && (
-              <div className="text-left sm:text-right flex-shrink-0 flex items-baseline gap-x-1.5 flex-wrap sm:block">
-                <div className="flex items-center gap-1 text-sky-400 sm:mb-1">
-                  <Clock className="w-3 h-3" />
-                  <span className="text-xs font-bold">Começa em</span>
-                </div>
-                <div className="font-mono text-sm sm:text-lg md:text-xl font-bold text-sky-400">
-                  {timeRemaining.text}
-                </div>
-              </div>
+              <div className="mt-1"><SeloChamada auction={auction} /></div>
             )}
           </div>
 
-          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4`}>
+          {/* 🃏 esta linha tem altura reservada mesmo sem lances e sem "Compre já":
+              o botão de baixo nasce na mesma altura em todos os cards */}
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4 min-h-[24px] sm:min-h-[28px]`}>
             <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {temLancesReais && (
                 <>
@@ -809,7 +804,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {isActive ? (
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2 sm:space-y-3 mt-auto">
               {/* O link "Mais Informações" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
@@ -881,7 +876,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               )}
             </div>
           ) : (
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2 sm:space-y-3 mt-auto">
               {/* O link "Ver Detalhes do Lote" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}

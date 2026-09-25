@@ -1099,7 +1099,7 @@ export default function Home() {
               </div> :
 
           <>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6" data-teste="grade-leiloes">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr" data-teste="grade-leiloes">
               {paginatedAuctions.map((auction) => {
                 if (!auction || !auction.id) return null;
                 return (

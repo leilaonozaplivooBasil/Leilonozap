@@ -86,7 +86,7 @@ export default function DestaquesLeiloes({ currentUser }) {
         <Sparkles className="w-5 h-5 text-amber-400" />
         <h2 className="text-lg sm:text-xl font-bold text-white">Destaques</h2>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr" data-teste="grade-destaques">
         {destaques.map((auction, posicao) => (
           <AuctionCard
             key={auction.id}
