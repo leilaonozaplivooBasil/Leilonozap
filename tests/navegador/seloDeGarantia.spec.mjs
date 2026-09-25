@@ -103,12 +103,18 @@ test('🔴 no card largo, o selo NÃO encosta nos botões de ação', { skip: se
   }
 });
 
-test('🎯 o selo está CENTRALIZADO na foto, não colado na esquerda', { skip: semNavegador }, async () => {
-  const { selo, moldura } = await medir('?garantia=1&favorito=1');
-  const centroDoSelo = selo.esquerda + selo.w / 2;
-  const centroDaFoto = moldura.esquerda + moldura.w / 2;
-  const desvio = Math.abs(centroDoSelo - centroDaFoto);
-  assert.ok(desvio <= 2, `o selo está ${desvio.toFixed(1)}px fora do centro da foto`);
+// 🔝 25/09/2026 — dono: "reposicionar a tag NOVO em cima dos cards". O selo
+// sai do meio da foto (cobria o produto) e vai pro canto superior DIREITO, na
+// mesma linha dos botões da esquerda.
+test('🎯 o selo está no CANTO SUPERIOR DIREITO da foto, na linha dos botões', { skip: semNavegador }, async () => {
+  const { selo, moldura, botoes } = await medir('?garantia=1&favorito=1');
+  const folgaDireita = moldura.direita - selo.direita;
+  assert.ok(folgaDireita >= 4 && folgaDireita <= 20, `o selo está a ${folgaDireita.toFixed(1)}px da borda direita — tinha que estar colado no canto`);
+  const folgaTopo = selo.y - moldura.y;
+  assert.ok(folgaTopo >= 4 && folgaTopo <= 20, `o selo está a ${folgaTopo.toFixed(1)}px do topo — tinha que estar em cima`);
+  const topoDosBotoes = Math.min(...botoes.map((b) => b.y));
+  assert.ok(Math.abs(selo.y - topoDosBotoes) <= 12, `o selo (y ${Math.round(selo.y)}) não está na linha dos botões (y ${Math.round(topoDosBotoes)})`);
+  assert.ok(selo.esquerda > Math.max(...botoes.map((b) => b.direita)), 'o selo tem que ficar à DIREITA dos botões');
 });
 
 test('🔴 no card ESTREITO (celular) o selo continua sem encostar nos botões', { skip: semNavegador }, async () => {

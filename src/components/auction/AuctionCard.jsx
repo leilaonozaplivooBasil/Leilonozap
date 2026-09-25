@@ -638,9 +638,16 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               botões (top-14) — centralizado na horizontal, como pedido, e fora da
               faixa ocupada. Medido em tests/navegador/seloDeGarantia.spec.mjs, com
               os DOIS botões na tela. */}
+          {/* 🔝 25/09/2026 (dono: "reposicionar a tag NOVO em cima dos cards"):
+              o selo sai do MEIO da foto — onde cobria o produto, ver print do
+              PS5 e do liquidificador — e vai pro CANTO SUPERIOR DIREITO, na
+              mesma linha dos botões (que ficam à esquerda). Foto limpa, selo
+              visível de cara. Em tela MUITO estreita (< 400px, onde a primeira
+              linha não cabe ao lado do coração) ele desce uma linha, ainda no
+              canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
           {auction.product_source === 'factory_new' && (
             <div
-              className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-10 max-w-[70%] pointer-events-none"
+              className="absolute top-14 min-[400px]:top-2 sm:top-3 right-2 sm:right-3 z-10 max-w-[62%] pointer-events-none"
               data-teste="selo-de-garantia"
             >
               <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[11px] sm:text-sm">
