@@ -12,11 +12,10 @@
  */
 import React, { useState, useRef, useEffect, memo } from "react";
 import { capOf } from '@/lib/fotoLegenda';
-import { addMoney, gteMoney, fmtBR } from '@/lib/money';
+import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -185,7 +184,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   };
 
   // 🆕 FUNÇÃO PARA ENTRAR E DAR LANCE COM VERIFICAÇÃO DE SALDO
-  const handleEnterAuction = async (e) => {
+  const handleEnterAuction = (e) => {
     e.stopPropagation();
 
     if (!auction || !auction.id) {
@@ -201,37 +200,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       return;
     }
 
-    try {
-      const user = JSON.parse(savedUser);
-
-      // 💰 Saldo pela função canônica (15/09/2026): a tabela digital_wallets é
-      // herança vazia do Base44 — a consulta por user_id dava 400 em TODO clique
-      // no cartão e o cliente só entrava na sala porque o catch deixava passar.
-      const wRes = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
-      const wData = wRes?.data || wRes;
-      if (wData?.balance == null) throw new Error('saldo indisponível');
-      const currentBalance = Number(wData.balance) || 0;
-      const minBid = addMoney(auction.current_price, auction.increment);
-
-      // 🐛 FIX: Se saldo insuficiente → Alerta e opção de recarga
-      if (!gteMoney(currentBalance, minBid)) {
-        console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
-
-        if (confirm(`Saldo insuficiente (R$ ${fmtBR(currentBalance)}). O lance mínimo é R$ ${fmtBR(minBid)}.\n\nDeseja adicionar fundos agora?`)) {
-          navigate(createPageUrl("AddFunds"), {
-            state: { returnTo: window.location.pathname + window.location.search }
-          });
-        }
-        return;
-      }
-
-      // Saldo ok - abre sala normalmente
-      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
-    } catch (error) {
-      console.error("Erro ao verificar saldo:", error);
-      // Em caso de erro técnico, permite tentar entrar (o backend validará)
-      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
-    }
+    // ⚡ 25/09/2026 — dono (urgente): "quando o usuário tem pouco ou nenhum saldo e
+    // tenta dar lance, ele recebe o aviso de saldo insuficiente… isso causa
+    // abandono. Ele deve sim conseguir entrar na sala do leilão, e só na hora de
+    // dar o lance receber o aviso." A checagem de saldo que ficava AQUI (um
+    // confirm() branco que barrava a entrada) saiu: a sala já confere na hora do
+    // lance e abre a gaveta de recarga rápida (LowBalanceModal) sem sair dela.
+    navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
   };
 
   const categoryEmojis = {
