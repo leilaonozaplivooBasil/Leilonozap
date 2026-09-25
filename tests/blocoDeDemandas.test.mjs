@@ -10,6 +10,8 @@ import { readFileSync } from 'node:fs';
 import { semComentarios } from './_ajuda.mjs';
 import {
   ORIGEM_BLOCO, EVENTO_ANOTACAO, MAX_TITULO, mostraBloco, demandaDoBloco, pecasDaAnotacao, fechamentoDaAnotacao, anotacoesRecentes, ondeFoiParar,
+  DESTINOS_DO_BLOCO, normalizarDestinoDoBloco, destinoDoBloco, lerDestinoDoBloco, gravarDestinoDoBloco, recadoDaAnotacao,
+  moverNota, ordensParaGravar, tituloEditado, posicaoInicialDoBloco, posicaoDoBloco, lerPosicaoDoBloco, gravarPosicaoDoBloco, LARGURA_DO_BLOCO,
 } from '../src/lib/blocoDeDemandas.js';
 import { rotuloDaOrigem } from '../src/lib/demandas.js';
 
@@ -130,4 +132,96 @@ test('a ordem das gravações no modal: demanda → tarefa → card → fechamen
   const ordem = ["from('xperf_demandas').insert(", "from('metodo_tarefas').insert(", "from('metodo_quadro').insert(", "from('xperf_demandas').update("].map((x) => corpo.indexOf(x));
   assert.ok(ordem.every((i) => i > -1), 'faltou uma das quatro gravações');
   assert.deepEqual([...ordem].sort((a, b) => a - b), ordem, 'a ordem das gravações mudou');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 25/09 — dono: "escolher para onde enviar", "arrastar e editar as notas",
+// "mover o modal, como um bloco de notas suspenso"
+// ═══════════════════════════════════════════════════════════════════════════
+test('🎯 o destino: quatro opções, padrão "Jornada + Quadro" (como sempre foi), lembrado no aparelho', () => {
+  assert.deepEqual(DESTINOS_DO_BLOCO.map((d) => d.id), ['tudo', 'jornada', 'quadro', 'anotar']);
+  assert.equal(normalizarDestinoDoBloco('QUADRO'), 'quadro');
+  assert.equal(normalizarDestinoDoBloco('lixo'), 'tudo'); assert.equal(normalizarDestinoDoBloco(null), 'tudo');
+  assert.deepEqual([destinoDoBloco('tudo').jornada, destinoDoBloco('tudo').quadro], [true, true]);
+  assert.deepEqual([destinoDoBloco('anotar').jornada, destinoDoBloco('anotar').quadro], [false, false]);
+  const mem = new Map(); const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.equal(lerDestinoDoBloco(storage), 'tudo');
+  assert.equal(gravarDestinoDoBloco('jornada', storage), 'jornada'); assert.equal(lerDestinoDoBloco(storage), 'jornada');
+  assert.equal(gravarDestinoDoBloco('x', storage), 'tudo', 'valor inválido vira o padrão');
+});
+
+test('🎯 as peças obedecem ao destino: só jornada não monta card; só quadro não monta tarefa; só anotar não monta nada nem fecha', () => {
+  const demanda = { ...demandaDoBloco('Fechar o caixa', { pessoaId: 'u1', pessoaNome: 'Ana' }), id: 'd1' };
+  const soJ = pecasDaAnotacao(demanda, { hojeISO: '2026-09-25', destino: 'jornada' });
+  assert.ok(soJ.tarefa); assert.equal(soJ.card('t1'), null);
+  const soQ = pecasDaAnotacao(demanda, { hojeISO: '2026-09-25', destino: 'quadro', nome: 'Ana' });
+  assert.equal(soQ.tarefa, null); assert.equal(soQ.card(null).virou_tarefa_id, null); assert.equal(soQ.card(null).coluna, 'aberto');
+  const soA = pecasDaAnotacao(demanda, { hojeISO: '2026-09-25', destino: 'anotar' });
+  assert.equal(soA.tarefa, null); assert.equal(soA.card(null), null);
+  // o padrão continua igual ao de ontem
+  const tudo = pecasDaAnotacao(demanda, { hojeISO: '2026-09-25' });
+  assert.ok(tudo.tarefa && tudo.card('t1')); assert.equal(tudo.destino, 'tudo');
+  // o fechamento: sem tarefa nem card, não fecha (fica recebida nas Demandas)
+  assert.equal(fechamentoDaAnotacao({ hojeISO: '2026-09-25' }), null);
+  assert.equal(fechamentoDaAnotacao({ cardId: 'c1', hojeISO: '2026-09-25' }).status, 'agendada');
+  assert.equal(fechamentoDaAnotacao({ cardId: 'c1', hojeISO: '2026-09-25' }).tarefa_id, null);
+  // o recado diz onde foi parar
+  assert.match(recadoDaAnotacao('X', { tarefaId: 't', cardId: 'c' }), /jornada de hoje e no quadro/);
+  assert.match(recadoDaAnotacao('X', { tarefaId: 't' }), /jornada de hoje$/);
+  assert.match(recadoDaAnotacao('X', { cardId: 'c' }), /entrou no quadro/);
+  assert.match(recadoDaAnotacao('X'), /ficou anotada nas suas Demandas/);
+});
+
+test('↕️ arrastar: mover a nota reordena; quem tem ordem_bloco vem primeiro, na ordem; o resto, mais nova primeiro', () => {
+  const lista = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.deepEqual(moverNota(lista, 2, 0).map((d) => d.id), ['c', 'a', 'b']);
+  assert.deepEqual(moverNota(lista, 0, 2).map((d) => d.id), ['b', 'c', 'a']);
+  assert.deepEqual(moverNota(lista, 1, 1).map((d) => d.id), ['a', 'b', 'c']);
+  assert.deepEqual(moverNota(lista, 0, 9).map((d) => d.id), ['a', 'b', 'c'], 'fora do alcance não mexe');
+  assert.deepEqual(lista.map((d) => d.id), ['a', 'b', 'c'], 'a lista original não é mexida');
+  assert.deepEqual(ordensParaGravar(moverNota(lista, 2, 0)), [{ id: 'c', ordem_bloco: 0 }, { id: 'a', ordem_bloco: 1 }, { id: 'b', ordem_bloco: 2 }]);
+  const linhas = [
+    { id: 1, origem: 'bloco', created_at: '2026-09-20T10:00:00Z' },
+    { id: 2, origem: 'bloco', created_at: '2026-09-25T10:00:00Z', ordem_bloco: 1 },
+    { id: 3, origem: 'bloco', created_at: '2026-09-24T10:00:00Z', ordem_bloco: 0 },
+    { id: 4, origem: 'bloco', created_at: '2026-09-23T10:00:00Z', ordem_bloco: null },
+  ];
+  assert.deepEqual(anotacoesRecentes(linhas).map((d) => d.id), [3, 2, 4, 1]);
+});
+
+test('✏️ editar: o título limpo, ou null se ficou vazio (aí não grava)', () => {
+  assert.equal(tituloEditado('  Ligar   pro  fornecedor '), 'Ligar pro fornecedor');
+  assert.equal(tituloEditado('   '), null); assert.equal(tituloEditado(null), null);
+  assert.equal(tituloEditado('a'.repeat(400)).length, MAX_TITULO);
+});
+
+test('🪟 a janelinha: nasce no canto direito sob o cabeçalho, nunca sai da tela, e lembra onde ficou', () => {
+  assert.deepEqual(posicaoInicialDoBloco({ larguraJanela: 1280 }), { x: 1280 - LARGURA_DO_BLOCO - 16, y: 72 });
+  assert.deepEqual(posicaoInicialDoBloco({ larguraJanela: 300 }), { x: 8, y: 72 }, 'tela menor que o bloco: cola na esquerda');
+  const tela = { larguraJanela: 1280, alturaJanela: 800 };
+  assert.deepEqual(posicaoDoBloco({ x: -50, y: -20 }, tela), { x: 0, y: 0 });
+  assert.deepEqual(posicaoDoBloco({ x: 5000, y: 5000 }, tela), { x: 1280 - LARGURA_DO_BLOCO, y: 800 - 120 }, 'sempre sobra a alça pra puxar de volta');
+  assert.deepEqual(posicaoDoBloco({ x: 100.6, y: 40.2 }, tela), { x: 101, y: 40 });
+  const mem = new Map(); const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.equal(lerPosicaoDoBloco(storage), null);
+  gravarPosicaoDoBloco({ x: 12.7, y: 300 }, storage);
+  assert.deepEqual(lerPosicaoDoBloco(storage), { x: 13, y: 300 });
+  mem.set('nz_bloco_posicao', 'lixo'); assert.equal(lerPosicaoDoBloco(storage), null, 'valor quebrado não derruba nada');
+});
+
+test('🔴 o bloco é uma janela SOLTA: sem o Dialog da casa, pelo portal do body, arrasta pela alça, edita e reordena', () => {
+  const B = ler('../src/components/nav/BlocoDeDemandas.jsx');
+  assert.doesNotMatch(B, /from '@\/components\/ui\/dialog'/, 'o Dialog trava a página atrás — não é um bloco de notas');
+  assert.match(B, /createPortal\(painel, document\.body\)/);
+  assert.match(B, /aria-modal="false"/);
+  for (const id of ['arrastar-bloco', 'fechar-bloco', 'destino-tudo', 'destino-jornada', 'destino-quadro', 'destino-anotar', 'nota-editar', 'nota-salvar', 'nota-subir', 'nota-descer', 'nota-editando']) {
+    assert.ok(B.includes(`data-teste="${id}"`) || B.includes('data-teste={`destino-'), id);
+  }
+  // a edição alcança o que a nota virou
+  assert.match(B, /from\('metodo_tarefas'\)\.update\(\{ titulo \}\)\.eq\('id', nota\.tarefa_id\)/);
+  assert.match(B, /from\('metodo_quadro'\)\.update\(\{ titulo \}\)\.eq\('id', nota\.card_id\)/);
+  // a ordem vai pra coluna própria
+  assert.match(B, /update\(\{ ordem_bloco: o\.ordem_bloco \}\)/);
+  const M = readFileSync(new URL('../supabase/migrations/20260925003352_bloco_de_notas_ordem.sql', import.meta.url), 'utf8');
+  assert.match(M, /add column if not exists ordem_bloco smallint/);
 });
