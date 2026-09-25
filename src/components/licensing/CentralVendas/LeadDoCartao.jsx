@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Handshake, CalendarPlus, Star, Loader2, X, Search, LayoutPanelTop } from 'lucide-react';
 import { toast } from 'sonner';
 import { plataforma } from '@/api/plataformaClient';
@@ -8,7 +8,8 @@ import ModalDoLead from './ModalDoLead';
 import { eventoDoCartao, linkGoogleAgenda, diaDoEvento } from '@/lib/agendaDoQuadro';
 import { tokenDoGoogle, invalidarTokenSePreciso, statusDoErro, erroDoGoogle } from '@/lib/googleAgenda';
 import { eventoGoogleDaReuniao } from '@/lib/metodo';
-import { meusContatos, filtrarPorNome, registroComCarimbo, historicoComRegistro } from '@/lib/leadDoQuadro';
+import { meusContatos, filtrarPorNome, registroComCarimbo, historicoComRegistro, nomeVivoDoLead } from '@/lib/leadDoQuadro';
+import { ClientesVivosContext } from './clientesVivos';
 
 /**
  * 🤝📅 O LEAD E A AGENDA, DENTRO DO CARD DO QUADRO.
@@ -52,6 +53,10 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [contatando, setContatando] = useState(null);
   const [salvandoRegistro, setSalvandoRegistro] = useState(false);
+  // 🔗 25/09 — o nome VIVO da pessoa (o quadro busca todos de uma vez); a
+  // cópia do card (cliente_nome) só vale enquanto a lista não respondeu.
+  const vivos = useContext(ClientesVivosContext);
+  const lead = nomeVivoDoLead(cartao, vivos);
 
   const carregarClientes = async () => {
     if (clientes) return clientes;
@@ -174,7 +179,7 @@ export default function LeadDoCartao({ cartao, dono, hoje, onMudar }) {
         {cartao.cliente_id ? (
           <>
             <span className="inline-flex items-center gap-1 rounded-full px-2 py-1" style={{ background: 'rgba(255,255,255,0.10)' }} data-teste="chip-cliente">
-              <Handshake className="w-3.5 h-3.5" /> {cartao.cliente_nome}
+              <Handshake className="w-3.5 h-3.5" /> {lead.nome}{lead.removido && <span className="ml-1 text-[10px] font-normal text-red-300" data-teste="lead-removido">· removido da lista</span>}
               <button type="button" onClick={desvincular} title="Tirar o cliente do card" data-teste="desvincular-cliente" className="ml-0.5 opacity-70 hover:opacity-100"><X className="w-3 h-3" /></button>
             </span>
             <button type="button" onClick={abrirQualificacao} className="inline-flex items-center gap-1 rounded-full px-2 py-1 hover:bg-white/10" data-teste="qualificar-lead">

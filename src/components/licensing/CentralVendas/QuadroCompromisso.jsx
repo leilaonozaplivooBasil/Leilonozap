@@ -8,8 +8,10 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { plataforma } from '@/api/plataformaAdapter';
+import { pessoasDosCartoes } from '@/lib/leadDoQuadro';
+import { ClientesVivosContext } from './clientesVivos';
 import LeadDoCartao from './LeadDoCartao';
-import { espelhoDoCardNaTarefa, carimboParaTarefa } from '@/lib/espelhoDoDia';
+import { espelhoDoCardNaTarefa, carimboParaTarefa, camposDoCardParaTarefa } from '@/lib/espelhoDoDia';
 import { Button } from '@/components/ui/button';
 import useArrastavel from '@/hooks/useArrastavel';
 import {
@@ -896,7 +898,7 @@ function Cartao({ cartao, dono, hoje, doDia = [], listaNome = null, onMudar, onE
 // `onTarefaEspelhada` avisa a tela de fora (a jornada) que uma tarefa mudou por
 // causa do quadro — sem isso a jornada só saberia no próximo carregamento, e a
 // pessoa que tem as duas abertas veria a lista antiga.
-export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, onTarefaEspelhada, tarefasDoDia = [] }) {
+export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefaCriada, onTarefaEspelhada, onTarefaRemovida, tarefasDoDia = [], clienteFiltro = null, onLimparClienteFiltro }) {
   const uid = currentUser?.id || null;
   // 🔴 13/09/2026 — UTC não é Brasília das 21h às 23h59 (DIR-129/134).
   const hoje = hojeISO || dataISO();
@@ -908,6 +910,8 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   const [painelDe, setPainelDe] = useState(null);      // id da lista com o painel aberto
   const [entrevistando, setEntrevistando] = useState(null); // { lista, assistente }
   const [listaAlvo, setListaAlvo] = useState(null);         // a coluna sob o card arrastado
+  // 🔗 25/09 — o nome VIVO de cada pessoa vinculada (uma consulta pra todos os cards)
+  const [clientesVivos, setClientesVivos] = useState(null);
 
   const carregar = useCallback(async () => {
     if (!uid) { setCarregando(false); return; }
@@ -916,8 +920,19 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
       supabase.from('metodo_quadro').select('*').eq('user_id', uid).order('ordem', { ascending: true }),
     ]);
     setListas(l.error || !Array.isArray(l.data) ? [] : l.data);
-    setCartoes(c.error || !Array.isArray(c.data) ? [] : c.data);
+    const cards = c.error || !Array.isArray(c.data) ? [] : c.data;
+    setCartoes(cards);
     setCarregando(false);
+    // 🔗 25/09 — o chip do card mostra o nome de HOJE da pessoa (renomeou na
+    // Lista? aparece aqui); pessoa apagada da lista vira "removido da lista".
+    const ids = pessoasDosCartoes(cards);
+    if (!ids.length) { setClientesVivos(new Map()); return; }
+    try {
+      const { data } = await supabase.from('customers').select('id,full_name').in('id', ids);
+      const mapa = new Map(ids.map((id) => [id, null]));
+      for (const r of Array.isArray(data) ? data : []) mapa.set(String(r.id), { full_name: r.full_name });
+      setClientesVivos(mapa);
+    } catch { setClientesVivos(null); }
   }, [uid]);
   useEffect(() => { carregar(); }, [carregar]);
   // 📝 24/09/2026 — o bloco de demandas (botão "D") criou um card: recarrega.
@@ -1043,8 +1058,10 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     // sincroniza" impossível de reproduzir.
     const antigo = cartoes.find((c) => c.id === cartaoNovo.id) || null;
     const antes = antigo
-      ? { id: antigo.id, coluna: antigo.coluna, virou_tarefa_id: antigo.virou_tarefa_id }
+      ? { id: antigo.id, coluna: antigo.coluna, virou_tarefa_id: antigo.virou_tarefa_id, titulo: antigo.titulo, hora: antigo.hora, hora_fim: antigo.hora_fim }
       : null;
+    // 🪞 25/09 — título e horário também viajam pra tarefa do dia (só o que mudou)
+    const camposEspelho = camposDoCardParaTarefa(antes, cartaoNovo);
     const espelho = espelhoDoCardNaTarefa(antes, cartaoNovo);
 
     setCartoes((cs) => cs.map((c) => (c.id === cartaoNovo.id ? cartaoNovo : c)));
@@ -1074,6 +1091,12 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
         onTarefaEspelhada?.(espelho);
       } catch { /* espelho — o card já está guardado */ }
     }
+    if (camposEspelho) {
+      try {
+        await supabase.from('metodo_tarefas').update(camposEspelho.campos).eq('id', camposEspelho.tarefaId);
+        onTarefaEspelhada?.({ tarefaId: camposEspelho.tarefaId, campos: camposEspelho.campos });
+      } catch { /* espelho — o card já está guardado */ }
+    }
   };
   // 🖐️ arrastar um card sobre o outro, dentro da mesma lista
   const reordenarCard = async (id, alvoId) => {
@@ -1085,9 +1108,21 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
   };
 
   const excluir = async (cartao) => {
+    // 🪞 25/09 — card que está no dia: pergunta se tira da Jornada/Lista junto
+    // (padrão do diálogo é "OK" = tirar). Cancelar apaga só o card; a tarefa fica.
+    let tirarDoDia = false;
+    if (cartao.virou_tarefa_id && !estaFeito(cartao) && typeof window !== 'undefined') {
+      tirarDoDia = window.confirm(`"${cartao.titulo}" está no seu dia. Tirar da Jornada e da Lista também?`);
+    }
     setCartoes((cs) => cs.filter((c) => c.id !== cartao.id));
     const { error } = await supabase.from('metodo_quadro').delete().eq('id', cartao.id);
-    if (error) { toast.error('Não excluiu — recarregando'); carregar(); }
+    if (error) { toast.error('Não excluiu — recarregando'); carregar(); return; }
+    if (tirarDoDia) {
+      try {
+        await supabase.from('metodo_tarefas').delete().eq('id', cartao.virou_tarefa_id);
+        onTarefaRemovida?.(cartao.virou_tarefa_id);
+      } catch { toast.error('O card saiu, mas a tarefa do dia ficou — tire pela Lista'); }
+    }
   };
 
   const virarTarefa = async (cartao) => {
@@ -1107,10 +1142,23 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
     orfaos.forEach((c) => mudar({ ...c, lista_id: listas[0].id, coluna: ESTADO_ABERTO }));
   }, [listas.length, orfaos.length]);
 
+  // 🔗 25/09 — veio da Lista de Networking ("no quadro: 2")? mostra só os cards daquela pessoa
+  const cartoesVisiveis = clienteFiltro ? cartoes.filter((c) => String(c.cliente_id || '') === String(clienteFiltro)) : cartoes;
+  const nomeDoFiltro = clienteFiltro
+    ? (clientesVivos?.get(String(clienteFiltro))?.full_name || cartoes.find((c) => String(c.cliente_id || '') === String(clienteFiltro))?.cliente_nome || 'esta pessoa')
+    : null;
+
   if (carregando) return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-white/40" /></div>;
 
   return (
+    <ClientesVivosContext.Provider value={clientesVivos}>
     <div className="space-y-4" data-teste="quadro-compromisso">
+      {clienteFiltro && (
+        <div className="flex items-center gap-2 rounded-lg border border-nz-verde/40 bg-nz-verde/10 px-3 py-2 text-[12px] text-nz-tinta" data-teste="filtro-cliente">
+          <span>Mostrando só os cards de <b>{nomeDoFiltro}</b> ({cartoesVisiveis.length})</span>
+          <button type="button" onClick={() => onLimparClienteFiltro?.()} className="ml-auto font-semibold text-nz-verde hover:text-nz-verde-claro" data-teste="limpar-filtro-cliente">ver todos</button>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <Foto user={currentUser} tamanho={40} />
@@ -1146,7 +1194,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
         // altura do próprio conteúdo e a barra minimizada virava um tocinho.
         <div className="flex gap-4 overflow-x-auto pb-4 items-stretch" style={{ minHeight: T.alturaQuadro }}>
           {listas.map((lista, indice) => {
-            const daLista = cartoesDaLista(cartoes, lista.id);
+            const daLista = cartoesDaLista(cartoesVisiveis, lista.id);
             const p = paleta(lista.cor);
 
             // ── COLUNA RECOLHIDA: barra vertical DA COR DELA ──
@@ -1174,7 +1222,7 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
                 key={lista.id}
                 lista={lista}
                 cartoes={daLista}
-                feitos={feitosDaLista(cartoes, lista.id, hoje)}
+                feitos={feitosDaLista(cartoesVisiveis, lista.id, hoje)}
                 dono={currentUser}
                 hoje={hoje}
                 doDia={tarefasDoDia}
@@ -1242,5 +1290,6 @@ export default function QuadroCompromisso({ currentUser, hojeISO, onIr, onTarefa
       )}
 
     </div>
+    </ClientesVivosContext.Provider>
   );
 }

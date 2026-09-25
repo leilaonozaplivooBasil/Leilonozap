@@ -23,7 +23,8 @@ import {
 } from '@/lib/metodo';
 import { ordenarAgenda, ordemValida, ORDENS, ORDEM_PADRAO } from '@/lib/ordemDaAgenda';
 import { seloDaDemanda } from '@/lib/seloDaDemanda';
-import { carimboParaCard } from '@/lib/espelhoDoDia';
+import { carimboParaCard, camposDaTarefaParaCard, cardSemTarefa } from '@/lib/espelhoDoDia';
+import { contagemNoQuadro, rotuloNoQuadro } from '@/lib/leadDoQuadro';
 import { ehAtiva } from '@/lib/esteiraCaptacao';
 // 🗓️ DIR-103 — a conexão com o Google mora fora do componente de propósito:
 // o token vale ~1h e o `useState` daqui morria a cada remontagem, forçando
@@ -313,8 +314,34 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   // da resposta do banco chegar) e duplicaria o dia inteiro. É a trava de
   // idempotência começando aqui, no ponto onde ela é de verdade barata.
   const [diaLido, setDiaLido] = useState(null);
+  // 🔗 25/09/2026 — os cards do quadro que apontam pra uma pessoa ou pra uma
+  // tarefa: é o que dá "no quadro: 2" na Lista de Networking e o "👤 Lead" na
+  // linha da Jornada. Uma leitura leve (5 colunas), junto com as tarefas.
+  const [cardsLigados, setCardsLigados] = useState([]);
+  const [clienteNoQuadro, setClienteNoQuadro] = useState(null); // filtro do quadro por pessoa
+  const carregarCards = useCallback(async () => {
+    if (!uid) return;
+    try {
+      const { data } = await supabase.from('metodo_quadro').select('id,cliente_id,cliente_nome,coluna,virou_tarefa_id').eq('user_id', uid);
+      setCardsLigados(Array.isArray(data) ? data : []);
+    } catch { /* sem os cards a pílula só não aparece */ }
+  }, [uid]);
+  const contagemQuadro = useMemo(() => contagemNoQuadro(cardsLigados, tarefas), [cardsLigados, tarefas]);
+  const abrirQuadroDaPessoa = (clienteId) => { setClienteNoQuadro(clienteId); setVisao('quadro'); };
+  const leadDaTarefa = (t) => {
+    const card = cardsLigados.find((c) => c.virou_tarefa_id === t.id && c.cliente_id);
+    if (!card) return null;
+    return (
+      <button type="button" onClick={() => abrirQuadroDaPessoa(card.cliente_id)} title="Lead deste compromisso — abrir no quadro" data-teste="lead-da-tarefa"
+        className="ml-1.5 inline-flex items-center gap-0.5 rounded-full border border-nz-borda px-1.5 text-[10px] font-semibold text-nz-verde hover:bg-nz-verde/10 align-middle">
+        👤 {card.cliente_nome || 'Lead'}
+      </button>
+    );
+  };
+
   const carregarTarefas = useCallback(() => {
     if (!uid) return;
+    carregarCards();
     plataforma.entities.MetodoTarefa.filter({ user_id: uid, data: dia })
       // 🕐 09/09/2026 — A HORA MANDA. Aqui estava o inverso: ordenava por
       // `ordem` e só desempatava por `hora`. Como toda tarefa nova nascia com
@@ -324,7 +351,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       // PERDIDA uma tarefa que está acontecendo agora (ver ordenarPorHora).
       .then((rows) => { setTarefas(ordenarPorHora(Array.isArray(rows) ? rows : [])); setDiaLido(dia); })
       .catch(() => { setTarefas([]); setDiaLido(dia); });
-  }, [uid, dia]);
+  }, [uid, dia, carregarCards]);
   useEffect(() => { setDiaLido(null); }, [dia]);
   useEffect(() => { carregarTarefas(); }, [carregarTarefas]);
   // 📝 24/09/2026 — o bloco de demandas (botão "D" do cabeçalho) acabou de
@@ -1797,6 +1824,8 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
       return;
     }
     toast.success(`Movida para as ${nova}`);
+    // 🪞 25/09 — o card ligado acompanha o horário novo
+    try { await supabase.from('metodo_quadro').update({ hora: nova }).eq('virou_tarefa_id', movida.id); } catch { /* espelho */ }
   };
 
   const alternarFeito = async (t) => {
@@ -2120,6 +2149,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
     setEditandoId(null);
     try { await plataforma.entities.MetodoTarefa.update(t.id, { titulo, hora, ordem }); }
     catch { toast.error('Erro ao salvar a edição'); carregarTarefas(); }
+    // 🪞 25/09 — título/horário também vão pro card ligado (só o que mudou)
+    const espelhoCard = camposDaTarefaParaCard(t, { ...t, titulo, hora });
+    if (espelhoCard) { try { await supabase.from('metodo_quadro').update(espelhoCard.campos).eq('virou_tarefa_id', t.id); } catch { /* espelho */ } }
     // 🔁 DIR-150 — quando marcado, a MESMA correção entra na rotina
     // permanente: acha o item pelo título ORIGINAL (antes da edição) e
     // troca por hora/título novos; se ele ainda não era recorrente,
@@ -2144,7 +2176,9 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
   const removerTarefa = async (t) => {
     setTarefas((prev) => prev.filter((x) => x.id !== t.id));
     try { await plataforma.entities.MetodoTarefa.delete(t.id); }
-    catch { toast.error('Erro ao apagar'); carregarTarefas(); }
+    catch { toast.error('Erro ao apagar'); carregarTarefas(); return; }
+    // 🪞 25/09 — o card ligado NÃO some (é o backlog): volta pro Aberto, sem vínculo
+    try { await supabase.from('metodo_quadro').update(cardSemTarefa()).eq('virou_tarefa_id', t.id); } catch { /* espelho */ }
   };
 
   // 🎤 Hábito 5 — reuniões da esteira nos próximos 7 dias
@@ -3080,15 +3114,20 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                 hojeISO={dia}
                 onIr={onIr}
                 tarefasDoDia={tarefas}
+                clienteFiltro={clienteNoQuadro}
+                onLimparClienteFiltro={() => setClienteNoQuadro(null)}
+                onTarefaRemovida={(id) => setTarefas((prev) => prev.filter((x) => x.id !== id))}
                 onTarefaCriada={(t) => setTarefas((prev) => [...prev, t])}
                 /* 🪞 22/09/2026 — o quadro acabou de concluir (ou reabrir) uma
                    tarefa do dia. O banco já foi gravado lá; aqui só a lista
                    desta tela acompanha, senão a jornada e a Lista continuariam
                    mostrando o estado velho até alguém recarregar — que é
                    exatamente a queixa do "não sincroniza". */
-                onTarefaEspelhada={({ tarefaId, feito }) => setTarefas((prev) => prev.map(
-                  (x) => (x.id === tarefaId ? { ...x, feito, pronto_em: feito ? new Date().toISOString() : null } : x),
-                ))}
+                onTarefaEspelhada={({ tarefaId, feito, campos }) => setTarefas((prev) => ordenarPorHora(prev.map(
+                  (x) => (x.id === tarefaId
+                    ? { ...x, ...(campos || {}), ...(feito === undefined ? {} : { feito, pronto_em: feito ? new Date().toISOString() : null }) }
+                    : x),
+                )))}
               />
             ) : tarefas.length === 0 ? (
               <div className="text-center py-6 space-y-2">
@@ -3194,6 +3233,7 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                                             · {diasRestritosDaRotina(t.titulo).map((d) => DIAS_SEMANA[d].slice(0, 3)).join(', ')}
                                           </span>
                                         )}
+                                        {leadDaTarefa(t)}
                                       </p>
                                       {foiLiberada && (
                                         <p
@@ -3759,6 +3799,17 @@ export default function CrmMetodo({ painel, currentUser, visaoTotal = false, ges
                             {c.full_name || 'Sem nome'}
                           </p>
                           <p className="text-[11px] text-nz-tinta-fraca truncate">{[c.phone, c.email].filter(Boolean).join(' · ') || 'sem contato'}</p>
+                          {/* 🔗 25/09 — a Lista vê o quadro: quantos cards abertos apontam pra esta pessoa */}
+                          {(() => {
+                            const r = rotuloNoQuadro(contagemQuadro.get(String(c.id)));
+                            if (!r) return null;
+                            return (
+                              <button type="button" onClick={() => { abrirQuadroDaPessoa(c.id); onIr?.('compromisso'); }} title="Abrir o quadro só com os cards desta pessoa" data-teste="pessoa-no-quadro"
+                                className="mt-1 inline-flex items-center gap-1 rounded-full border border-nz-verde/40 bg-nz-verde/10 px-2 py-0.5 text-[10px] font-semibold text-nz-verde hover:bg-nz-verde/20">
+                                <LayoutGrid className="w-3 h-3" /> {r}
+                              </button>
+                            );
+                          })()}
                         </div>
                         {prob ? (
                           <div className="flex items-center gap-2 shrink-0">

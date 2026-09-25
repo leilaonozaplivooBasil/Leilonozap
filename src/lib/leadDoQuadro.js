@@ -89,3 +89,50 @@ export function resumoDaQualificacao(contato) {
   const p = probabilidadeFechamento(contato?.qualificacao_network || {});
   return p ? `${p.total}/15 · ${p.pct}%` : null;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🔗 25/09/2026 — A LISTA VÊ O QUADRO (dono, print da Lista de Networking:
+// "os cards do quadro estão integrados com a lista?"). Cada pessoa da lista
+// ganha "no quadro: N · no dia: M"; e o chip do card lê o nome VIVO da pessoa,
+// não a cópia gravada quando vinculou.
+// ═══════════════════════════════════════════════════════════════════════════
+/** Por pessoa (cliente_id): cards abertos no quadro e quantos deles estão no dia. */
+export function contagemNoQuadro(cartoes = [], tarefasDoDia = []) {
+  const noDia = new Set((Array.isArray(tarefasDoDia) ? tarefasDoDia : []).map((t) => String(t?.id)));
+  const mapa = new Map();
+  for (const c of Array.isArray(cartoes) ? cartoes : []) {
+    if (!c?.cliente_id) continue;
+    const feito = c.coluna === 'feito';
+    const atual = mapa.get(String(c.cliente_id)) || { abertos: 0, noDia: 0, feitos: 0 };
+    if (feito) atual.feitos += 1; else atual.abertos += 1;
+    if (!feito && c.virou_tarefa_id && noDia.has(String(c.virou_tarefa_id))) atual.noDia += 1;
+    mapa.set(String(c.cliente_id), atual);
+  }
+  return mapa;
+}
+
+/** O texto da pílula, ou null se a pessoa não está em card nenhum aberto. */
+export function rotuloNoQuadro(contagem) {
+  if (!contagem || !(contagem.abertos > 0)) return null;
+  const partes = [`no quadro: ${contagem.abertos}`];
+  if (contagem.noDia > 0) partes.push(`no dia: ${contagem.noDia}`);
+  return partes.join(' · ');
+}
+
+/** Os ids de pessoa que os cards apontam (pra buscar o nome vivo numa consulta só). */
+export function pessoasDosCartoes(cartoes = []) {
+  return [...new Set((Array.isArray(cartoes) ? cartoes : []).map((c) => c?.cliente_id).filter(Boolean).map(String))];
+}
+
+/**
+ * O que o chip do card mostra: o nome VIVO da pessoa quando a lista já
+ * respondeu; a cópia do card enquanto não respondeu; e "removido da lista"
+ * quando a pessoa não existe mais (aí o chip oferece desvincular).
+ */
+export function nomeVivoDoLead(cartao, vivos = null) {
+  if (!cartao?.cliente_id) return { nome: null, removido: false };
+  if (!vivos || !(vivos instanceof Map) || !vivos.has(String(cartao.cliente_id))) return { nome: cartao.cliente_nome || 'Cliente', removido: false };
+  const v = vivos.get(String(cartao.cliente_id));
+  if (!v) return { nome: cartao.cliente_nome || 'Cliente', removido: true };
+  return { nome: v.full_name || cartao.cliente_nome || 'Cliente', removido: false };
+}
