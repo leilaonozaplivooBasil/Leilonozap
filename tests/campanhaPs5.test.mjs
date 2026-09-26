@@ -67,6 +67,7 @@ test('🔒 a rota: só na janela, uma vez por pessoa, em lotes, teste só para c
   assert.match(R, /messageVersions: versoes/);
   assert.match(R, /email: 'ofertas@leilaonozap\.com'/, 'campanha sai do ofertas@, nunca do no-reply@ do código de login');
   const V = readFileSync(new URL('../vercel.json', import.meta.url), 'utf8');
-  assert.match(V, /"path": "\/api\/functions\/dispararCampanhaPs5", "schedule": "\*\/5 15-20 26 9 \*"/);
+  // 🗓️ o cron foi só do dia 26/09 e saiu depois do disparo (892 enviados, 0 falhas)
+  assert.doesNotMatch(V, /dispararCampanhaPs5", "schedule"/);
   assert.match(V, /"api\/functions\/dispararCampanhaPs5\.js": \{ "maxDuration": 60 \}/);
 });

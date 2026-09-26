@@ -37,8 +37,6 @@
     { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" },
     { "path": "/api/functions/purgarAudiosAntigos", "schedule": "20 3 * * *" },
     { "path": "/api/functions/alertaCreditoGateway", "schedule": "0 */4 * * *" },
-    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" },
-    { "path": "/api/functions/dispararCampanhaPs5", "schedule": "*/5 15-20 26 9 *" },
-    { "path": "/api/functions/relatorioDepositosZap", "schedule": "*/10 16-20 26 9 *" }
+    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" }
   ]
 }
