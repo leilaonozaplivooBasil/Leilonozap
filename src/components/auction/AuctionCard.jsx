@@ -31,6 +31,7 @@ import FavoriteButton from '../recommendations/FavoriteButton';
 import { proxyImage } from "@/functions/proxyImage";
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): selo de contagem + lance travado
 import useChamada from '@/hooks/useChamada';
+import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 // 🃏 25/09/2026 — padrão dos cards (opção A, escolhida pelo dono na banca): título em 2
@@ -382,6 +383,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const isActive = localStatus === 'active' && auction.status === 'active';
 
   const currentPrice = auction.current_price || auction.starting_price;
+  // 🚀 pré-lançamento: só "Abre hoje às 19h" — sem preço, sem relógio (src/lib/preLancamento.js)
+  const preLancamento = ehPreLancamento(auction);
 
   // 🆕 CALCULA ECONOMIA SE TIVER market_price
   const showPechincaBadge = auction.market_price && auction.market_price > currentPrice;
@@ -714,7 +717,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             <div className="flex items-center justify-between gap-2 mb-0.5 sm:mb-1">
               <div className="flex items-center gap-2 min-w-0">
                 <p className={`text-xs sm:text-sm whitespace-nowrap ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
-                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? (preLancamento ? 'Pré-lançamento' : 'Em breve') : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
@@ -728,16 +731,22 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   {prazo.texto}
                 </span>
               )}
-              {auction.status === 'scheduled' && timeRemaining && (
+              {auction.status === 'scheduled' && !preLancamento && timeRemaining && (
                 <span className="flex items-center gap-1 font-mono text-xs sm:text-sm font-bold text-sky-400 whitespace-nowrap shrink-0" title="Começa em">
                   <Clock className="w-3 h-3" />
                   {timeRemaining.text}
                 </span>
               )}
             </div>
-            <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
-              R$ {fmtBR(currentPrice)}
-            </p>
+            {preLancamento ? (
+              <p data-teste="abertura-pre-lancamento" className="text-base sm:text-lg md:text-xl font-bold text-sky-400 whitespace-nowrap">
+                {textoDeAbertura(auction)}
+              </p>
+            ) : (
+              <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
+                R$ {fmtBR(currentPrice)}
+              </p>
+            )}
             {/* 🏆 quem está ganhando agora — linha SEMPRE reservada, pra altura não variar */}
             <p data-teste="linha-do-lider" className={`text-xs font-semibold truncate mt-0.5 min-h-[1rem] ${isActive && auction.winner_name ? 'text-amber-400' : secondaryTextColor}`}>
               {isActive && auction.winner_name ? `🏆 ${auction.winner_name}` : isActive ? '🔥 Seja o primeiro' : ''}
