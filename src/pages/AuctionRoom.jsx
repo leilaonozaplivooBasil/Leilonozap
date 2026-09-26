@@ -19,6 +19,7 @@ import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
+import { deveCelebrar, fraseDoVendido } from '@/lib/festaDoFim';
 import { statusDaCotacao, bloqueioDoFrete } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
@@ -176,6 +177,9 @@ export default function AuctionRoom() {
   const abortControllerRef = useRef(null);
 
   const isEndingRef = useRef(false);
+  // 🔨 a festa do fim acontece UMA vez, e por transição de estado (src/lib/festaDoFim.js)
+  const celebrouRef = useRef(false);
+  const statusAnteriorRef = useRef(null);
 
   const hasInitializedRef = useRef(false);
 
@@ -299,6 +303,29 @@ export default function AuctionRoom() {
   // We pass a stable ref for endAuction since it's defined below
   const endAuctionRef = useRef(null);
 
+  // 🔨 A FESTA DO FIM — 3 marteladas, balão "VENDIDO para …" e, havendo vencedor,
+  // o modal alguns segundos depois. Guardada por `celebrouRef`: dispara UMA vez,
+  // seja pela resposta do servidor (endAuction) ou pela transição de estado (efeito
+  // abaixo). Ver src/lib/festaDoFim.js para o porquê.
+  const celebrarFim = useCallback(({ winner_id, winner_name } = {}) => {
+    if (celebrouRef.current) return;
+    celebrouRef.current = true;
+    playSound('hammer');
+    setTimeout(() => playSound('hammer'), 300);
+    setTimeout(() => playSound('hammer'), 600);
+    setTimeout(() => {
+      setAuctioneerPhase(4);
+      setAuctioneerMessage(fraseDoVendido(winner_name));
+      setShowAuctioneer(true);
+    }, 900);
+    if (winner_id) {
+      playSound('winner');
+      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
+      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
+      setTimeout(() => setShowWinnerModal(true), 4000);
+    }
+  }, [playSound]);
+
   const {
     timeRemaining,
     auctioneerPhase,
@@ -396,18 +423,10 @@ export default function AuctionRoom() {
         order_status: result.order_status,
       }));
 
-      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real
-      playSound('hammer');
-      setTimeout(() => playSound('hammer'), 300);
-      setTimeout(() => playSound('hammer'), 600);
-
-      setTimeout(() => {
-        setAuctioneerPhase(4);
-        setAuctioneerMessage(result.winner_name ? `🎉 VENDIDO para ${result.winner_name}! 🎉` : "🔨 Leilão encerrado!");
-        setShowAuctioneer(true);
-      }, 900);
-
-      if (result.winner_id) playSound('winner');
+      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real.
+      // A mesma festa também dispara pela transição de estado (ver celebrarFim):
+      // quem não conseguiu falar com o servidor celebra pela sincronização.
+      celebrarFim(result);
 
       // Recarrega o chat — a mensagem de vitória foi criada pelo servidor
       await new Promise(resolve => setTimeout(resolve, 1200));
@@ -419,12 +438,6 @@ export default function AuctionRoom() {
         console.error("❌ [END] Erro ao atualizar mensagens:", error);
       }
 
-      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
-      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
-      if (result.winner_id) {
-        setTimeout(() => setShowWinnerModal(true), 4000);
-      }
-
     } catch (error) {
       console.error("❌ [END] Erro:", error);
     } finally {
@@ -432,10 +445,23 @@ export default function AuctionRoom() {
     }
     // syncAuctionDataOnly/clearSyncIntervals vêm do useAuctionSync declarado DEPOIS —
     // são acessados só em tempo de execução (mesmo padrão que o código já usava).
-  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset]);
+  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset, celebrarFim]);
 
   // Wire up the ref so the timer hook can call endAuction without circular deps
   endAuctionRef.current = endAuction;
+
+  // 🔨 Viu o leilão passar de `active` para `ended`/`sold` — por qualquer caminho
+  // (sync, realtime, resposta própria)? Celebra. Uma vez. Sala aberta num leilão
+  // já encerrado não celebra (anterior nunca foi `active` aqui).
+  useEffect(() => {
+    const atual = auction?.status;
+    if (!atual) return;
+    const anterior = statusAnteriorRef.current;
+    statusAnteriorRef.current = atual;
+    if (deveCelebrar({ anterior, atual, jaCelebrou: celebrouRef.current })) {
+      celebrarFim({ winner_id: auction?.winner_id, winner_name: auction?.winner_name });
+    }
+  }, [auction?.status, auction?.winner_id, auction?.winner_name, celebrarFim]);
 
   // Sync hook
   const {
