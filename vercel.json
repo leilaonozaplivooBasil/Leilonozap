@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "ignoreCommand": "git rev-parse HEAD^ >/dev/null 2>&1 && git diff --quiet HEAD^ HEAD -- . ':(exclude)*.md' ':(exclude)docs/**' ':(exclude)tests/**' ':(exclude).github/**' ':(exclude)supabase/migrations/**'",
   "outputDirectory": "dist",
+  "functions": { "api/functions/dispararCampanhaPs5.js": { "maxDuration": 60 } },
   "framework": "vite",
   "rewrites": [
     { "source": "/c/:cargo", "destination": "/api/convite?cargo=:cargo" },
@@ -36,6 +37,7 @@
     { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" },
     { "path": "/api/functions/purgarAudiosAntigos", "schedule": "20 3 * * *" },
     { "path": "/api/functions/alertaCreditoGateway", "schedule": "0 */4 * * *" },
-    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" }
+    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" },
+    { "path": "/api/functions/dispararCampanhaPs5", "schedule": "*/5 15-20 26 9 *" }
   ]
 }
