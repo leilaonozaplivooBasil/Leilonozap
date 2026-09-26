@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 
@@ -983,7 +984,8 @@ export default function AuctionRoom() {
     // 🎯 LINK DE COMPARTILHAMENTO: rota server-side /l/:id — o WhatsApp precisa dela
     // pra mostrar a FOTO REAL do leilão no preview (a URL da SPA só devolve a logo).
     // Ela redireciona de volta pra esta mesma sala; nada do fluxo de lance muda.
-    const productUrl = `${window.location.origin}/l/${auction.id}`;
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
     const currentPrice = auction.current_price || auction.starting_price;
 
     // 🚀 pré-lançamento: não existe lance ainda — a mensagem leva a abertura

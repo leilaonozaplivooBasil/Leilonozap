@@ -11,6 +11,7 @@
  * ========================================================================
  */
 import React, { useState, useRef, useEffect, memo } from "react";
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import { capOf } from '@/lib/fotoLegenda';
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -250,7 +251,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // Rota server-side (/l/:id): garante o preview do WhatsApp com a FOTO REAL do
     // leilão. Ela só emite as meta tags e redireciona pra /AuctionRoom?id=... —
     // o fluxo de lance segue exatamente o mesmo.
-    const productUrl = `${window.location.origin}/l/${auction.id}`;
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
     const currentPrice = auction.current_price || auction.starting_price;
 
     if (!auction.id || !displayTitle) {
