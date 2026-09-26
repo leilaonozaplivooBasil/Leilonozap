@@ -960,12 +960,16 @@ export default function AuctionRoom() {
     const productUrl = `${window.location.origin}/l/${auction.id}`;
     const currentPrice = auction.current_price || auction.starting_price;
 
+    // 🚀 pré-lançamento: não existe lance ainda — a mensagem leva a abertura
+    const linhaDoLance = ehPreLancamento(auction)
+      ? `🚀 Pré-lançamento · ${textoDeAbertura(auction)}`
+      : `💰 Lance: R$ ${fmtBR(currentPrice)}`;
     const shareText = `🔥 LEILÃO NOZAP!
 
 📱 ${auction.title}
-💰 Lance: R$ ${fmtBR(currentPrice)}
+${linhaDoLance}
 
-⚡ Dê seu lance: ${productUrl}`;
+⚡ ${ehPreLancamento(auction) ? 'Entre e acompanhe' : 'Dê seu lance'}: ${productUrl}`;
 
     if (isAndroid && packageName) {
       const intentUrl = `intent://send?text=${encodeURIComponent(shareText)}#Intent;scheme=whatsapp;package=${packageName};end`;
