@@ -1,4 +1,5 @@
 import { trackAddToCart } from '@/lib/tracking';
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import React, { useState, useEffect, memo } from "react";
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
@@ -14,7 +15,6 @@ import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
 import { Stars } from '../loja/StarRating';
-import { getReferral } from '@/lib/referral';
 import { jaAceitouTermo } from '@/lib/termoAdesao';
 import { exigirAceiteTermo } from '@/lib/termoGate';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
@@ -165,8 +165,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     e.preventDefault();
     e.stopPropagation();
 
-    const ref = getReferral();
-    const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/p/${product.id}`); // rota server-side: preview do WhatsApp com a FOTO do produto
     const phone = licenseePhone ? `55${licenseePhone.replace(/\D/g, '')}` : DEFAULT_STORE_PHONE;
     const message = `Olá! Tenho interesse neste produto da *Loja Virtual Leilão NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
@@ -177,8 +177,8 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     e.preventDefault();
     e.stopPropagation();
 
-    const ref = getReferral();
-    const productUrl = `${window.location.origin}/p/${product.id}${ref ? '?ref=' + ref : ''}`; // rota server-side: preview do WhatsApp com a FOTO do produto
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/p/${product.id}`); // rota server-side: preview do WhatsApp com a FOTO do produto
     const shareMessage = `🛍️ *LOJA VIRTUAL LEILÃO NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${fmtBR(product.price_catalog)}*\n\n🛒 Compre agora:\n${productUrl}`;
     const imageUrl = product.image_urls?.[0];
     // 🔗 25/09/2026 — link LIMPO na área de transferência antes da folha (adesivo do story do Instagram)

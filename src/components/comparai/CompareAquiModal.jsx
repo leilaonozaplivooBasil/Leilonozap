@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Button } from '@/components/ui/button';
@@ -278,7 +279,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
 
     try {
       // /l/:id = rota server-side com a foto real do leilão no preview do WhatsApp
-      const productUrl = `${window.location.origin}/l/${auction.id}`;
+      const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
       const savings = comparisonData?.savings || 0;
       const savingsPercent = comparisonData?.savingsPercent || 0;
       const currentPrice = localAuction.current_price || localAuction.starting_price;
@@ -355,7 +356,7 @@ export default function CompareAquiModal({ auction, isProduct = false, onClose }
       
     } catch (error) {
       if (error.name !== 'AbortError') {
-        const productUrl = `${window.location.origin}/l/${auction.id}`;
+        const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`🔥 Arremate: ${productUrl}`)}`, '_blank');
       }
     } finally {
