@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check, Handshake, PackageX } from "lucide-react";
 import { fmtBR } from "@/lib/money";
 import { MENSAGEM_PRODUTO_GRANDE, MENSAGEM_A_COMBINAR } from "@/lib/freteDoLance";
+// 🔑 sessão vencida → login na mesma tela (26/09/2026)
+import { pedirNovoLogin } from '@/lib/sessaoCliente';
 
 /**
  * PONTO 82 — CEP em UMA linha: input + botão + resultado.
@@ -84,8 +86,19 @@ export default function FreteLanceBanner({
         style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.40)' }}>
         <LogIn className="h-4 w-4 shrink-0 text-amber-400" />
         <span className="min-w-0 flex-1 text-xs text-amber-100">
-          Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.
+          Sua sessão expirou. Entre de novo para calcular o frete e dar o lance.
         </span>
+        {/* 🔴 26/09/2026 — antes só dizia "saia e entre de novo", sem botão: a Lilian
+            (chamado do Paim) ficou presa na sala. Agora abre o login AQUI, e ao
+            entrar a sala recarrega no mesmo leilão. */}
+        <button
+          type="button"
+          onClick={pedirNovoLogin}
+          data-teste="entrar-de-novo"
+          className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-gray-900 hover:bg-amber-300 active:scale-95"
+        >
+          Entrar de novo
+        </button>
       </div>
     );
   }

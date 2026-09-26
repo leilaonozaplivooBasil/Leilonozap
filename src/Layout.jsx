@@ -33,6 +33,9 @@ import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
 import NavegacaoLateralGlobal from "@/components/common/NavegacaoLateralGlobal";
 import { buildAdminMenu } from "@/lib/adminMenu";
+// 🔑 26/09/2026 — crachá vencido: avisa na chegada e recarrega depois do novo login
+import { situacaoDoCracha, pedirNovoLogin, CHAVE_RELOGIN } from '@/lib/sessaoCliente';
+import { toast as avisoNaTela } from 'sonner';
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
@@ -164,6 +167,25 @@ export default function Layout({ children, currentPageName }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // 🔴 26/09/2026 — "SUA SESSÃO EXPIROU" NA HORA DO LANCE (chamado do Paim, cliente Lilian).
+  // O crachá vale 30 dias; o localStorage.currentUser não vence. Quem se cadastrou e
+  // nunca mais entrou continua "logado" na tela, deposita (rota em observação) e só
+  // na cotação do frete descobre que precisa entrar de novo. Aqui o site confere o
+  // crachá NA CHEGADA e avisa uma vez por sessão, com o botão de entrar ali mesmo.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('currentUser')) return;
+      if (sessionStorage.getItem('nz_aviso_sessao_vencida')) return;
+      const situacao = situacaoDoCracha();
+      if (situacao === 'ok') return;
+      sessionStorage.setItem('nz_aviso_sessao_vencida', '1');
+      avisoNaTela.warning('Sua sessão expirou. Entre de novo para dar lance e comprar.', {
+        duration: 12000,
+        action: { label: 'Entrar de novo', onClick: pedirNovoLogin },
+      });
+    } catch { /* storage bloqueado: a sala ainda oferece o botão */ }
+  }, []);
   const [showRefRegister, setShowRefRegister] = useState(false);
   const [referrerName, setReferrerName] = useState('');
   const [cartCount, setCartCount] = useState(0);
@@ -1129,6 +1151,16 @@ export default function Layout({ children, currentPageName }) {
             onSuccess={(user) => {
               setCurrentUser(user);
               setShowLoginModal(false);
+
+              // 🔑 26/09/2026 — veio do "Entrar de novo" (sessão vencida): recarrega
+              // a MESMA tela, para a sala/carteira lerem o usuário e o crachá novos.
+              try {
+                if (sessionStorage.getItem(CHAVE_RELOGIN)) {
+                  sessionStorage.removeItem(CHAVE_RELOGIN);
+                  window.location.reload();
+                  return;
+                }
+              } catch { /* sem storage: segue o fluxo normal */ }
 
               // 👑 REGRA DE DONO ÚNICO — quem JÁ TEM dono no cadastro (referred_by_id)
               // não precisa do link: apaga pra não exibir/atribuir a um dono alheio.
