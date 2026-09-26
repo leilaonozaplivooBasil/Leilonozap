@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Gavel, X, Zap } from "lucide-react";
-import { addMoney, mulMoney, fmtBR, money } from "@/lib/money";
+import { addMoney, fmtBR, money } from "@/lib/money";
+import { opcoesDeLance } from "@/lib/opcoesDeLance";
 
 /**
  * PONTO 82 — Menu flutuante de lance.
@@ -29,6 +30,7 @@ import { addMoney, mulMoney, fmtBR, money } from "@/lib/money";
  */
 export default function BidPopover({
   minBid,
+  currentPrice,
   increment,
   freteValor = 0,
   isLoading = false,
@@ -44,11 +46,12 @@ export default function BidPopover({
   // e os 3 incrementados eram SEMPRE rejeitados pelo servidor — o cliente
   // clicava num botão da própria tela e recebia "valor errado" de volta.
   // A partir do 2º lance, os incrementos voltam a fazer sentido e aparecem.
+  // 🎯 26/09/2026 — degraus FIXOS (50, 100, 500, 1.000, 3.000) + "Escolha":
+  // ver src/lib/opcoesDeLance.js. `currentPrice` é o preço atual do leilão;
+  // sem ele (chamadas antigas) cai no mínimo menos o incremento.
   const opcoes = useMemo(
-    () => (isFirstBid
-      ? [money(minBid)]
-      : [0, 1, 2, 3].map((n) => (n === 0 ? money(minBid) : addMoney(minBid, mulMoney(increment, n))))),
-    [minBid, increment, isFirstBid]
+    () => opcoesDeLance({ currentPrice: currentPrice ?? addMoney(minBid, -increment), increment, isFirstBid }),
+    [currentPrice, minBid, increment, isFirstBid]
   );
 
   const escolher = (valor) => {
@@ -126,16 +129,17 @@ export default function BidPopover({
             </div>
 
             <div className={isFirstBid ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
-              {opcoes.map((valor, i) => (
+              {opcoes.map(({ valor, rotulo, minimo }) => (
                 <button
                   key={valor}
                   type="button"
+                  data-teste="opcao-de-lance"
                   onClick={() => escolher(valor)}
                   disabled={isLoading}
                   className="flex min-h-[56px] flex-col items-start justify-center rounded-2xl px-3 py-2 text-left transition-colors disabled:opacity-60"
                   style={{
-                    background: i === 0 ? 'rgba(16,185,129,0.16)' : 'rgba(255,255,255,0.05)',
-                    border: `1px solid ${i === 0 ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.10)'}`,
+                    background: minimo ? 'rgba(16,185,129,0.16)' : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${minimo ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.10)'}`,
                   }}
                 >
                   <span className="flex items-center gap-1 text-[15px] font-bold text-white tabular-nums">
@@ -143,7 +147,7 @@ export default function BidPopover({
                     R$ {fmtBR(valor)}
                   </span>
                   <span className="text-[10px] leading-tight text-gray-400">
-                    {i === 0 ? (isFirstBid ? 'lance inicial' : 'lance mínimo') : `+ R$ ${fmtBR(mulMoney(increment, i))} sobre o mínimo`}
+                    {rotulo}
                     {freteValor > 0 && ` · com frete R$ ${fmtBR(addMoney(valor, freteValor))}`}
                   </span>
                 </button>
@@ -161,7 +165,7 @@ export default function BidPopover({
                   value={valorLivre}
                   onChange={(e) => setValorLivre(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); confirmarLivre(); } }}
-                  placeholder={`Digitar valor (mín. R$ ${fmtBR(minBid)})`}
+                  placeholder={`Escolha o valor (mín. R$ ${fmtBR(minBid)})`}
                   min={minBid}
                   className="min-h-[48px] flex-1 min-w-0 rounded-2xl border border-white/12 bg-black/40 px-4 text-white placeholder:text-gray-500 focus:border-emerald-500 focus:outline-none"
                 />

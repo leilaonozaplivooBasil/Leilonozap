@@ -52,6 +52,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
         <div className="min-w-0 flex-1">
           <BidPopover
             minBid={minBid}
+            currentPrice={money(currentPrice)}
             increment={increment}
             freteValor={freteValor}
             isLoading={isLoading}
