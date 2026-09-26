@@ -22,14 +22,19 @@ export default async function handler(req, res) {
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Supabase env ausente' });
 
     const nowISO = new Date().toISOString();
-    const r = await sb(`auctions?status=eq.scheduled&end_time=lte.${encodeURIComponent(nowISO)}&select=id,end_time,raw_base44`);
+    const r = await sb(`auctions?status=eq.scheduled&end_time=lte.${encodeURIComponent(nowISO)}&select=id,end_time,raw_base44,starting_price`);
     const rows = await r.json().catch(() => []);
     if (!Array.isArray(rows) || rows.length === 0) {
       return res.status(200).json({ success: true, activated: 0 });
     }
 
     let activated = 0;
+    let pulados = 0;
     for (const a of rows) {
+      // 🚀 26/09/2026 — pré-lançamento sem lance inicial (src/lib/preLancamento.js):
+      // fica em cartaz como "Abre hoje às 19h", mas NÃO abre sozinho. O dono define
+      // lance inicial, incremento e duração; até lá continua `scheduled`.
+      if (a?.raw_base44?.pre_lancamento === true && !(Number(a.starting_price) > 0)) { pulados++; continue; }
       const durMin = Number(a?.raw_base44?.schedule_meta?.duration_min) || 720;
       const newEnd = new Date(Date.now() + durMin * 60000).toISOString();
       const raw = a.raw_base44 && typeof a.raw_base44 === 'object' ? { ...a.raw_base44 } : {};
@@ -40,7 +45,7 @@ export default async function handler(req, res) {
       });
       if (u.ok) activated++;
     }
-    return res.status(200).json({ success: true, activated });
+    return res.status(200).json({ success: true, activated, pulados });
   } catch (e) {
     return res.status(500).json({ success: false, error: String(e?.message || e) });
   }

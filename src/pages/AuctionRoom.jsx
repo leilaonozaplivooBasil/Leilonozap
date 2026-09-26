@@ -18,6 +18,7 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
 import { statusDaCotacao, bloqueioDoFrete } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
@@ -1013,6 +1014,8 @@ export default function AuctionRoom() {
   const getDisplayTime = () => {
     if (!auction) return "Carregando...";
 
+    // 🚀 pré-lançamento: a sala não diz "Encerrado" para um leilão que ainda vai abrir
+    if (ehPreLancamento(auction)) return "Pré-lançamento";
     if (auction.status !== "active") return "Encerrado";
 
     if (timeRemaining !== null) {
@@ -1090,7 +1093,10 @@ export default function AuctionRoom() {
   // data nenhuma, que é exatamente o rótulo de resolução de semana que gerou o
   // chamado da Caixa de Som Mondial. A barra lateral (que só existe no desktop)
   // passa a carregar a mesma frase, vinda da MESMA régua.
-  const fimEmTexto = textoDeTermino(auction?.end_time);
+  const preLancamento = ehPreLancamento(auction);
+  const abertura = preLancamento ? textoDeAbertura(auction) : '';
+  // no pré-lançamento o end_time é a hora de ABRIR — não é término, não mostra "Termina"
+  const fimEmTexto = preLancamento ? '' : textoDeTermino(auction?.end_time);
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
   const currentPrice = money(auction.current_price || auction.starting_price);
   // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
@@ -1205,6 +1211,8 @@ export default function AuctionRoom() {
             endTime={auction?.end_time}
             isAuctionActive={isAuctionActive}
             isWarMode={isWarMode}
+            preLancamento={preLancamento}
+            abertura={abertura}
             onInfo={() => setShowMobilePanel(true)}
             leaderName={auction?.winner_name}
             thumbUrl={auction?.image_urls?.[0] || null}
@@ -1246,7 +1254,11 @@ export default function AuctionRoom() {
             <div className="product-panel__body">
               <h2 className="product-panel__title">{auction.title}</h2>
               <div className="product-panel__meta">
-                <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
+                {preLancamento ? (
+                  <span className="product-panel__price" data-teste="abertura-pre-lancamento-sala">{abertura}</span>
+                ) : (
+                  <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
+                )}
                 <span className="product-panel__timer">{displayTime}</span>
                 {fimEmTexto && (
                   <span data-teste="data-de-termino-sala" className="product-panel__fim">
