@@ -59,5 +59,6 @@ test('🔒 a rota: horário, uma vez por horário, destino só de RELATORIO_DEPO
   assert.match(S, /ALERTA_WHATSAPP: destino/);
   assert.doesNotMatch(S, /55\d{10,11}/, 'nenhum número de telefone chumbado no código');
   const V = readFileSync(new URL('../vercel.json', import.meta.url), 'utf8');
-  assert.match(V, /"path": "\/api\/functions\/relatorioDepositosZap", "schedule": "\*\/10 16-20 26 9 \*"/);
+  // 🗓️ o cron foi só do dia 26/09 (13:50 → 17:30) e saiu depois do último envio
+  assert.doesNotMatch(V, /relatorioDepositosZap", "schedule"/);
 });
