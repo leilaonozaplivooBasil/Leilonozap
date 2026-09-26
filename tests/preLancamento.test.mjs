@@ -47,3 +47,19 @@ test('⏸️ o cron de agendados NÃO abre um pré-lançamento sem lance inicial
   assert.match(A, /select=id,end_time,raw_base44,starting_price/);
   assert.match(A, /if \(a\?\.raw_base44\?\.pre_lancamento === true && !\(Number\(a\.starting_price\) > 0\)\) \{ pulados\+\+; continue; \}/);
 });
+
+test('📤 compartilhar um pré-lançamento: nada de "Lance: R$ 0,00" — card, sala, preview do link e imagem', () => {
+  const C = ler('../src/components/auction/AuctionCard.jsx');
+  assert.match(C, /\? `🚀 Pré-lançamento · \$\{textoDeAbertura\(auction\)\}`\n\s*: `💰 Lance: R\$ \$\{fmtBR\(currentPrice\)\}`/);
+  assert.match(C, /\$\{linhaDoLance\}\n\n⚡ \$\{chamada\}: \$\{productUrl\}/);
+  const R = ler('../src/pages/AuctionRoom.jsx');
+  assert.match(R, /\$\{linhaDoLance\}\n\n⚡ \$\{ehPreLancamento\(auction\) \? 'Entre e acompanhe' : 'Dê seu lance'\}: \$\{productUrl\}/);
+  const L = ler('../api/leilao.js');
+  assert.match(L, /import \{ ehPreLancamento, textoDeAbertura \} from '\.\.\/src\/lib\/preLancamento\.js';/);
+  assert.match(L, /const desc = preLancamento\n\s*\? `Pré-lançamento: \$\{textoDeAbertura\(a\)\.toLowerCase\(\)\}/);
+  assert.match(L, /select=id,title,current_price,starting_price,image_urls,status,product_id,end_time/);
+  const O = ler('../api/og-leilao.js');
+  assert.match(O, /preLancamento \? 'PRÉ-LANÇAMENTO' : encerrado \? 'ARREMATADO POR' : 'LANCE ATUAL'/);
+  assert.match(O, /preLancamento \? textoDeAbertura\(a\) : money\(preco\)/);
+  assert.match(O, /select=title,current_price,starting_price,image_urls,status,end_time/);
+});

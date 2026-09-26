@@ -258,12 +258,17 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       return;
     }
 
+    // 🚀 pré-lançamento: não existe lance ainda — a mensagem leva a abertura
+    const linhaDoLance = ehPreLancamento(auction)
+      ? `🚀 Pré-lançamento · ${textoDeAbertura(auction)}`
+      : `💰 Lance: R$ ${fmtBR(currentPrice)}`;
+    const chamada = ehPreLancamento(auction) ? 'Entre e acompanhe' : 'Dê seu lance';
     const shareMessage = `🔨📦 LEILÃO NO🔥ZAP!
 
 📱 ${displayTitle}
-💰 Lance: R$ ${fmtBR(currentPrice)}
+${linhaDoLance}
 
-⚡ Dê seu lance: ${productUrl}`;
+⚡ ${chamada}: ${productUrl}`;
     // 🔗 25/09/2026 — dono: "copia o link, cola no adesivo do story do Instagram
     // e dá link inválido". O link é curto; o que a pessoa colava era a MENSAGEM
     // inteira (o "Copiar" da folha junta texto + link). Então o link LIMPO vai

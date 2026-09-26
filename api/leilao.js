@@ -8,6 +8,8 @@
 // usa a logo como imagem e AINDA redireciona — o usuário nunca fica preso.
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
+import { ehPreLancamento, textoDeAbertura } from '../src/lib/preLancamento.js';
+
 const SITE = 'https://leilaonozap.net';
 
 const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -21,7 +23,7 @@ export default async function handler(req, res) {
 
     let a = null;
     try {
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/auctions?select=id,title,current_price,starting_price,image_urls,status,product_id&id=eq.${encodeURIComponent(id)}&limit=1`, {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/auctions?select=id,title,current_price,starting_price,image_urls,status,product_id,end_time&id=eq.${encodeURIComponent(id)}&limit=1`, {
         headers: { apikey: SR, Authorization: `Bearer ${SR}` },
       });
       const rows = await r.json();
@@ -67,7 +69,11 @@ export default async function handler(req, res) {
     const title = a?.title ? `${a.title} — Leilão NoZap` : 'Leilão — Leilão NoZap';
     const price = Number(a?.current_price) > 0 ? Number(a.current_price) : Number(a?.starting_price) || 0;
     const encerrado = a?.status && a.status !== 'active';
-    const desc = price > 0
+    // 🚀 pré-lançamento (src/lib/preLancamento.js): agendado sem lance inicial
+    const preLancamento = ehPreLancamento(a);
+    const desc = preLancamento
+      ? `Pré-lançamento: ${textoDeAbertura(a).toLowerCase()}. Entre na sala e acompanhe no Leilão NoZap!`
+      : price > 0
       ? (encerrado
         ? `Arrematado por ${money(price)}. Veja outros leilões no Leilão NoZap!`
         : `Lance atual ${money(price)}. Dê seu lance agora no Leilão NoZap!`)
