@@ -12,7 +12,7 @@ import { plataforma } from "@/api/plataformaClient";
 const Auction = plataforma.entities.Auction;
 const User = { me: () => plataforma.auth.me() };
 const AppUser = plataforma.entities.AppUser;
-import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkLocation } from "@/functions/checkLocation";
 
@@ -42,6 +42,7 @@ import { useSectionTracking } from '@/lib/tracking';
 import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
 // 🔎 D4 — a busca precisa PARECER que buscou (áudio do dono, 11/09 às 14h08)
 import { mostrarBlocosDeDescoberta, recadoDaBusca } from '@/lib/buscaDaVitrine';
+import foguinho from '@/assets/foguinho-animado.webp';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -920,17 +921,20 @@ export default function Home() {
                   + contador, tudo numa linha só. Nada de informação perdida. */}
               <div className="flex items-center gap-2.5 flex-nowrap">
                 {/* PONTO 85 — pontinho verde removido: o foguinho já sinaliza que está no ar */}
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
+                {/* 🔥 27/09/2026 — o foguinho é o charme da página (dono) e continua
+                    animado: era um VÍDEO (358 KB no iPhone, 225 KB nos outros) e agora é
+                    a MESMA chama em WebP animado (78 KB, 34 quadros, loop de ~3 s), a que
+                    já roda na página Arremate & Devoluções. Imagem animada também não
+                    depende de autoplay de vídeo, que o iPhone corta no modo economia. */}
+                <img
+                  src={foguinho}
+                  alt=""
                   aria-hidden="true"
-                  className="w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 pointer-events-none object-contain">
-                  <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
-                  <source src="/videos/foguinho-animado.webm" type="video/webm" />
-                  <Flame className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400 animate-fire" />
-                </video>
+                  width={28}
+                  height={28}
+                  decoding="async"
+                  className="w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 pointer-events-none object-contain"
+                />
                 {/* PONTO 83 — tinta clara de volta, mantendo o peso FINO do PONTO 82 */}
                 <h1 className="truncate text-xl font-medium tracking-[-0.01em] text-white sm:text-2xl lg:text-3xl">
                   Leilões <span className="font-semibold text-emerald-400">Ativos</span>
