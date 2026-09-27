@@ -140,6 +140,12 @@ export default defineConfig(({ command }) => ({
         // lazy. O resto (react + radix + lucide + framer + supabase) fica no bundle
         // padrão pra manter ordem de inicialização correta.
         manualChunks(id) {
+          // 🧩 27/09/2026 — o React (e o helper do Babel) estavam sendo PUXADOS para
+          // dentro de vendor-charts/vendor-pdf, porque o Rollup leva para o chunk manual
+          // as dependências que ninguém reivindicou. Resultado: toda página baixava
+          // gráficos e PDF (~1,1 MB) só para ter o React. Agora eles têm dono.
+          if (/node_modules\/(react|react-dom|react-is|scheduler|prop-types|object-assign|use-sync-external-store|tiny-invariant|clsx|@babel\/runtime)\//.test(id)) return 'vendor-base';
+          if (id.startsWith('\0') && !id.includes('node_modules')) return 'vendor-base';
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('pdfjs')) return 'vendor-pdf';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
