@@ -3,6 +3,13 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+import { arquivosDaPrimeiraTela, filtrarPrecache } from './src/lib/precacheEssencial.js'
+
+// 🪶 Pasta onde o build grava (dist por padrão, ou o --outDir). O filtro do
+// precache lê o index.html gerado ali para saber o que a primeira tela usa.
+let pastaDeSaida = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'dist')
+const lembrarPastaDeSaida = { name: 'lembrar-pasta-de-saida', configResolved(c) { pastaDeSaida = path.resolve(c.root, c.build.outDir) } }
 
 // 🔄 CAMADA 1 — carimbo de versão do deploy.
 // Reescreve /version.json em cada build; o app compara esse valor a cada 60s
@@ -34,6 +41,7 @@ export default defineConfig(({ command }) => ({
   // produção: remove console.* e debugger do bundle (mantém em dev)
   esbuild: command === 'build' ? { drop: ['console', 'debugger'] } : {},
   plugins: [
+    lembrarPastaDeSaida,
     // 🔴 21/08/2026 — O PLUGIN DA BASE44 SAIU DAQUI.
     // Era `base44({ legacySDKImports, hmrNotifier, navigationNotifier,
     // visualEditAgent })`. São ferramentas do EDITOR VISUAL da plataforma
@@ -106,12 +114,40 @@ export default defineConfig(({ command }) => ({
         // pegando o index.html mais novo (que referencia os bundles certos).
         globPatterns: ['**/*.{js,css,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // 🪶 27/09/2026 — precache só da PRIMEIRA TELA (ver src/lib/precacheEssencial.js).
+        // Antes: 322 arquivos (~9 MB) baixados na primeira visita. O resto do JS
+        // entra no cache `assets-imutaveis` abaixo, na primeira vez que é usado.
+        // 🛠️ 27/09/2026 — o plugin liga `navigateFallback: 'index.html'` POR PADRÃO.
+        // Como o index.html não está no precache (decisão de 10/08, abaixo), a linha
+        // `createHandlerBoundToURL("index.html")` estourava ao montar o service worker
+        // e NENHUMA regra depois dela era registrada — o cache de imagens nunca
+        // funcionou. Sem fallback, a navegação vai pra rede, que já era o que acontecia.
+        navigateFallback: null,
+        manifestTransforms: [
+          async (entradas) => {
+            let html = '';
+            try { html = readFileSync(path.join(pastaDeSaida, 'index.html'), 'utf8'); } catch { /* sem HTML: não filtra */ }
+            return { manifest: filtrarPrecache(entradas, arquivosDaPrimeiraTela(html)), warnings: [] };
+          },
+        ],
         // dados dinâmicos (Base44/Supabase) NUNCA em cache — sempre rede
         runtimeCaching: [
+          // 🪶 JS e CSS do próprio site com hash no nome: guarda na primeira vez que
+          // a tela é aberta e serve do cache dali em diante (o nome muda a cada
+          // versão, então nunca fica velho). Cobre também quem está com uma aba
+          // antiga aberta durante um deploy e já tinha passado pela tela.
+          {
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /^\/assets\/.+\.(?:js|css)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'assets-imutaveis', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
           {
             urlPattern: /^https:\/\/gezvviyegtxytnwjkrjv\.supabase\.co\/storage\/.*/i,
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'supabase-imagens', expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 7 } },
+            // statuses [200]: só guarda resposta legível. <img> comum gera resposta
+            // "opaca", que o Chrome conta como ~7 MB cada no espaço do aparelho —
+            // essas seguem sem cache, exatamente como hoje.
+            options: { cacheName: 'supabase-imagens', cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 7 } },
           },
         ],
       },
@@ -140,6 +176,12 @@ export default defineConfig(({ command }) => ({
         // lazy. O resto (react + radix + lucide + framer + supabase) fica no bundle
         // padrão pra manter ordem de inicialização correta.
         manualChunks(id) {
+          // 🧩 27/09/2026 — o React (e o helper do Babel) estavam sendo PUXADOS para
+          // dentro de vendor-charts/vendor-pdf, porque o Rollup leva para o chunk manual
+          // as dependências que ninguém reivindicou. Resultado: toda página baixava
+          // gráficos e PDF (~1,1 MB) só para ter o React. Agora eles têm dono.
+          if (/node_modules\/(react|react-dom|react-is|scheduler|prop-types|object-assign|use-sync-external-store|tiny-invariant|clsx|@babel\/runtime)\//.test(id)) return 'vendor-base';
+          if (id.startsWith('\0') && !id.includes('node_modules')) return 'vendor-base';
           if (!id.includes('node_modules')) return undefined;
           if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('pdfjs')) return 'vendor-pdf';
           if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';

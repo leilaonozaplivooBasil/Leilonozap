@@ -1846,7 +1846,7 @@ Como funciona a plataforma:
   que pode se arrepender. Não pode.
 
 🎟️ O BÔNUS DE 10% — o que ele é DE VERDADE:
-  Nasce do DEPÓSITO de R$ 100 ou mais. NÃO nasce de ter o lance superado — ser superado
+  Nasce do DEPÓSITO a partir de R$ 27 (todo depósito aceito). NÃO nasce de ter o lance superado — ser superado
   não gera bônus nenhum. Nasce BLOQUEADO, não vira saldo gastável na hora do depósito, e
   vai sendo liberado em pedaços conforme a pessoa DÁ LANCE. O que é liberado só serve pra
   compra na Loja Virtual, e também não vira dinheiro nem saque. Não sabe em que pé está o

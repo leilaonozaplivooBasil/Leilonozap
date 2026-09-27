@@ -5,6 +5,7 @@
 import { oid } from '../_lib/oid.js';
 import { montarRawArremate } from '../_lib/rawArremate.js';
 import { exigirSessao } from '../_lib/sessao.js';
+import { DEPOSITO_MINIMO, abaixoDoMinimo } from '../../src/lib/depositoMinimo.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -98,6 +99,12 @@ export default async function handler(req, res) {
     const description = String(body?.description || 'Pagamento - Leilão NoZap').slice(0, 200);
 
     if (amount <= 0) return res.status(200).json({ success: false, error: 'Valor inválido' });
+    // 💰 27/09/2026 (dono: "27 mínimo") — piso de depósito em carteira validado AQUI,
+    // não só na tela. Antes esta rota gerava PIX de R$ 22,19 (lance + frete) para uma
+    // conta zerada. Arremate (auction_id) e aporte de investidor não passam pelo piso.
+    if (isWalletDeposit && !body?.is_investor_capital && abaixoDoMinimo(amount)) {
+      return res.status(200).json({ success: false, error: `Depósito mínimo R$ ${DEPOSITO_MINIMO},00`, minimo: DEPOSITO_MINIMO });
+    }
     if (!buyerEmail) return res.status(200).json({ success: false, error: 'E-mail obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 

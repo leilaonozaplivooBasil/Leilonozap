@@ -12,10 +12,11 @@
 // webhook do Mercado Pago → saldo_disponivel). Aqui só se decide a forma:
 // os pacotes, qual sugerir, o que mandar pro servidor e como ler a resposta.
 import { money } from './money.js';
+import { DEPOSITO_MINIMO, PACOTES_DE_DEPOSITO } from './depositoMinimo.js';
 
-export const PACOTES_RAPIDOS = Object.freeze([27, 50, 100, 500, 1000, 3000]);
-/** O mesmo piso da tela de adicionar saldo. */
-export const VALOR_MINIMO = 5;
+export const PACOTES_RAPIDOS = PACOTES_DE_DEPOSITO;
+/** 27/09/2026 — o piso único de depósito (src/lib/depositoMinimo.js), o mesmo do servidor. */
+export const VALOR_MINIMO = DEPOSITO_MINIMO;
 /** Teto de uma recarga pela gaveta — acima disso, a tela completa (cartão, parcelas). */
 export const VALOR_MAXIMO = 50000;
 
@@ -42,7 +43,7 @@ export function valorDigitado(texto) {
 export function problemaDoValor(valor) {
   const v = Number(valor) || 0;
   if (v <= 0) return 'Escolha um pacote ou digite o valor.';
-  if (v < VALOR_MINIMO) return `O mínimo é R$ ${VALOR_MINIMO},00.`;
+  if (v < VALOR_MINIMO) return `Depósito mínimo R$ ${VALOR_MINIMO},00.`;
   if (v > VALOR_MAXIMO) return 'Para valores acima de R$ 50.000,00, use a tela completa de adicionar saldo.';
   return null;
 }

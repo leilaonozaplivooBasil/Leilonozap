@@ -40,12 +40,9 @@ export default function BidPopover({
   const [aberto, setAberto] = useState(false);
   const [valorLivre, setValorLivre] = useState("");
 
-  // 🎯 PONTO 86 (19/08/2026) — o PRIMEIRO lance só aceita um valor EXATO
-  // (o preço inicial, sem incremento — regra do submitAtomicBid). Antes esta
-  // tela oferecia 4 botões (mínimo + 3 incrementados) mesmo no primeiro lance,
-  // e os 3 incrementados eram SEMPRE rejeitados pelo servidor — o cliente
-  // clicava num botão da própria tela e recebia "valor errado" de volta.
-  // A partir do 2º lance, os incrementos voltam a fazer sentido e aparecem.
+  // 🎯 27/09/2026 — no PRIMEIRO lance a folha mostra o preço inicial e os
+  // degraus como valores diretos de abertura (R$ 50, R$ 100…), mais o campo
+  // livre; o servidor aceita qualquer primeiro lance ≥ inicial (submitAtomicBid).
   // 🎯 26/09/2026 — degraus FIXOS (50, 100, 500, 1.000, 3.000) + "Escolha":
   // ver src/lib/opcoesDeLance.js. `currentPrice` é o preço atual do leilão;
   // sem ele (chamadas antigas) cai no mínimo menos o incremento.
@@ -128,7 +125,7 @@ export default function BidPopover({
               </button>
             </div>
 
-            <div className={isFirstBid ? "grid grid-cols-1 gap-2" : "grid grid-cols-2 gap-2"}>
+            <div className="grid grid-cols-2 gap-2">
               {opcoes.map(({ valor, rotulo, minimo }) => (
                 <button
                   key={valor}
@@ -154,10 +151,9 @@ export default function BidPopover({
               ))}
             </div>
 
-            {/* 🎯 sem campo livre no primeiro lance — só o valor exato é aceito,
-                digitar qualquer outra coisa aqui só levaria a um erro garantido */}
-            {!isFirstBid && (
-              <div className="mt-3 flex gap-2">
+            {/* 🎯 27/09/2026 — "Outro valor (digitar)" também no primeiro lance:
+                o servidor passou a aceitar qualquer primeiro lance ≥ preço inicial */}
+            <div className="mt-3 flex gap-2">
                 <input
                   type="number"
                   step="0.01"
@@ -179,7 +175,6 @@ export default function BidPopover({
                   Confirmar
                 </button>
               </div>
-            )}
           </div>
         </div>,
         document.body
