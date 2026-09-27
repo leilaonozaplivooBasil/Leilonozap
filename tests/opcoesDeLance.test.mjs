@@ -33,9 +33,28 @@ test('🧮 mínimo que não é degrau entra na frente, marcado', () => {
   assert.deepEqual(valores(opcoesDeLance({ currentPrice: 10000, increment: 5000 })), [15000]);
 });
 
-test('1️⃣ o primeiro lance continua sendo só o preço inicial exato', () => {
+test('1️⃣ primeiro lance: inicial + degraus como valor direto de abertura (27/09)', () => {
+  // iPhone 17: "R$ 27,00 · 50 · 100 · 500 · 1.000 · 3.000 e outro valor"
   const o = opcoesDeLance({ currentPrice: 27, increment: 50, isFirstBid: true });
-  assert.deepEqual(o, [{ valor: 27, rotulo: 'lance inicial', minimo: true }]);
+  assert.deepEqual(valores(o), [27, 50, 100, 500, 1000, 3000]);
+  assert.deepEqual(o[0], { valor: 27, rotulo: 'lance inicial', minimo: true });
+  assert.equal(o[1].minimo, false);
+  assert.equal(o[1].rotulo, 'abrir direto neste valor');
+  // degrau igual ou abaixo do inicial não aparece
+  assert.deepEqual(valores(opcoesDeLance({ currentPrice: 100, increment: 50, isFirstBid: true })), [100, 500, 1000, 3000]);
+  // inicial acima de todos os degraus: só o inicial
+  assert.deepEqual(valores(opcoesDeLance({ currentPrice: 5000, increment: 100, isFirstBid: true })), [5000]);
+});
+
+test('🔓 servidor e tela aceitam primeiro lance ≥ inicial (não mais "exatamente")', () => {
+  const S = readFileSync(new URL('../api/functions/submitAtomicBid.js', import.meta.url), 'utf8');
+  assert.match(S, /isFirstBid && money\(bidAmount\) < money\(minBid\)/);
+  assert.doesNotMatch(S, /precisa ser exatamente/);
+  const I = readFileSync(new URL('../src/components/auction/BidInput.jsx', import.meta.url), 'utf8');
+  assert.match(I, /isFirstBid && !gteMoney\(finalAmount, minBid\)/);
+  assert.doesNotMatch(I, /precisa ser exatamente/);
+  const P = readFileSync(new URL('../src/components/auction/BidPopover.jsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(P, /\{!isFirstBid && \(/, 'o campo "Escolha o valor" aparece também no primeiro lance');
 });
 
 test('🪟 a folha usa os degraus e recebe o preço atual', () => {
