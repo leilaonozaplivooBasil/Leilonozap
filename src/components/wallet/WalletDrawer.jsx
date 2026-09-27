@@ -32,8 +32,11 @@ import { useCopiarPix } from '@/hooks/useCopiarPix';
 import BidStateTag from '@/components/wallet/BidStateTag';
 import PassaporteCard from '@/components/wallet/PassaporteCard';
 import { jaAceitouPassaporte, registrarAceitePassaporte } from '@/lib/passaporteTermo';
+import { DEPOSITO_MINIMO, PACOTES_DE_DEPOSITO, TEXTO_DO_MINIMO } from '@/lib/depositoMinimo';
 
-const QUICK_AMOUNTS = [100, 200, 500, 1000];
+// 💰 27/09/2026 — os mesmos pacotes da recarga rápida na sala e o piso único
+// de depósito (src/lib/depositoMinimo.js), que o servidor também exige.
+const QUICK_AMOUNTS = PACOTES_DE_DEPOSITO;
 // 💳 Mesma taxa do cartão aplicada no backend (createMPWalletDeposit) — só para exibir
 // o valor cobrado no cartão antes de seguir para o checkout completo.
 const CARD_SURCHARGE_RATE = 0.0499;
@@ -178,7 +181,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   // Passa despercebido porque o botão do PIX, ao lado, COBRA ALI MESMO (gera o
   // QR dentro da gaveta). Quem testa PIX não vê o problema nunca.
   const handlePayWithCard = () => {
-    if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
+    if (effectiveAmount < DEPOSITO_MINIMO) { toast.error(TEXTO_DO_MINIMO); return; }
     if (precisaAceite && !aceiteTermos) { pedirAceite(); return; }
     if (precisaAceite) { registrarAceitePassaporte(currentUser).catch(() => { /* segue */ }); }
     onClose();
@@ -188,7 +191,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   };
 
   const handleGeneratePix = async () => {
-    if (effectiveAmount < 100) { toast.error('Valor mínimo: R$ 100,00'); return; }
+    if (effectiveAmount < DEPOSITO_MINIMO) { toast.error(TEXTO_DO_MINIMO); return; }
     if (precisaAceite && !aceiteTermos) { pedirAceite(); return; }
     setGenerating(true);
     // registra o aceite antes de qualquer cobrança (trilha de auditoria no servidor)
@@ -541,16 +544,16 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       </span>
                     </label>
                   )}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     {QUICK_AMOUNTS.map((v) => (
                       <button
                         key={v}
                         onClick={() => { setRechargeAmount(v); setCustomAmount(''); }}
-                        className={`h-14 rounded-xl border-2 font-bold text-lg transition-all ${rechargeAmount === v
+                        className={`h-14 rounded-xl border-2 font-bold text-base tabular-nums transition-all ${rechargeAmount === v
                           ? 'border-green-500 bg-green-500/15 text-green-300'
                           : 'border-gray-700 bg-gray-800/40 text-white hover:border-green-500/50'}`}
                       >
-                        R$ {v},00
+                        R$ {fmtBR(v)}
                       </button>
                     ))}
                   </div>
@@ -587,7 +590,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   </div>
 
                   {/* Aviso claro da taxa do cartão — o saldo creditado é sempre o valor escolhido */}
-                  {paymentMethod === 'CARD' && effectiveAmount >= 100 && (
+                  {paymentMethod === 'CARD' && effectiveAmount >= DEPOSITO_MINIMO && (
                     <div className="rounded-xl border border-yellow-500/40 bg-yellow-600/10 p-3.5 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-gray-300">Valor que cai na carteira:</span>
@@ -608,16 +611,16 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   {paymentMethod === 'PIX' ? (
                     <Button
                       onClick={handleGeneratePix}
-                      disabled={generating || effectiveAmount < 100}
+                      disabled={generating || effectiveAmount < DEPOSITO_MINIMO}
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                     >
                       {generating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <QrCode className="w-5 h-5 mr-2" />}
-                      {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= 100 ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
+                      {generating ? 'Gerando PIX...' : `Gerar PIX${effectiveAmount >= DEPOSITO_MINIMO ? ` de R$ ${fmtBR(effectiveAmount)}` : ''}`}
                     </Button>
                   ) : (
                     <Button
                       onClick={handlePayWithCard}
-                      disabled={effectiveAmount < 100}
+                      disabled={effectiveAmount < DEPOSITO_MINIMO}
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 text-white font-bold"
                     >
                       <CreditCard className="w-5 h-5 mr-2" />
@@ -628,7 +631,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                       Continuar no Cartão
                     </Button>
                   )}
-                  <p className="text-xs text-gray-500 text-center">Valor mínimo R$ 100,00 · Pagamento seguro</p>
+                  <p className="text-xs text-gray-500 text-center">{TEXTO_DO_MINIMO} · Pagamento seguro</p>
                 </div>
               )}
 
