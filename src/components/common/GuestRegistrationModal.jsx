@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { User as UserIcon, Sparkles, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { getReferral } from '@/lib/referral';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { telefoneValido } from '@/lib/telefoneBR';
 // 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
 // na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
 
@@ -75,7 +76,8 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
       return;
     }
 
-    if (phone.length < 10) {
+    // 📱 27/09/2026 — a MESMA régua do servidor (publicRegister): DDD que existe + número completo
+    if (!telefoneValido(phone)) {
       setErrorMessage("❌ Telefone inválido. Use DDD + número, ex.: (21) 99999-9999");
       return;
     }

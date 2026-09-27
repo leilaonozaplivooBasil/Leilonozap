@@ -12,6 +12,7 @@ import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
 import { saveSession } from '@/lib/session';
 import { getReferral, saveReferral } from '@/lib/referral';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { telefoneValido } from '@/lib/telefoneBR';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -101,6 +102,8 @@ export default function Cadastro() {
   const sendCode = async () => {
     if (!form.full_name || !form.email || !form.password) { toast.error('Preencha nome, e-mail e senha.'); return; }
     if (!onlyDigits(form.cpf)) { toast.error('CPF é obrigatório.'); return; }
+    // 📱 27/09/2026 — dono: telefone WhatsApp é obrigatório no cadastro (a rota também exige)
+    if (!telefoneValido(form.phone)) { toast.error('Telefone/WhatsApp é obrigatório: DDD + número, ex.: (21) 99999-9999'); return; }
     if (form.password.length < 6) { toast.error('Senha de no mínimo 6 caracteres.'); return; }
     setSending(true);
     try {
@@ -234,7 +237,7 @@ export default function Cadastro() {
               <Field icon={UserIcon} placeholder="Nome completo" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
               <Field icon={Mail} placeholder="E-mail" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} />
               <div className="grid grid-cols-2 gap-3">
-                <Field icon={Phone} placeholder="WhatsApp" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
+                <Field icon={Phone} placeholder="WhatsApp (obrigatório)" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
                 <Field icon={Hash} placeholder="CPF" value={form.cpf} onChange={(v) => setForm({ ...form, cpf: v })} />
               </div>
               <Field icon={Lock} placeholder="Crie uma senha" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />

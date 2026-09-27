@@ -14,6 +14,7 @@ import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 import { useSectionTracking, trackLead } from '@/lib/tracking';
 import { PIXEL_LEILOES } from '@/lib/metaPixel';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { telefoneValido } from '@/lib/telefoneBR';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -225,6 +226,11 @@ export default function Register() {
     }
     if (!email.includes('@')) {
       setErrorMessage("❌ Por favor, insira um E-mail válido.");
+      return;
+    }
+    // 📱 27/09/2026 — a MESMA régua do servidor (publicRegister)
+    if (!telefoneValido(phone)) {
+      setErrorMessage("❌ Telefone inválido. Use DDD + número, ex.: (21) 99999-9999");
       return;
     }
     if (!validateCPF(cpf)) {
