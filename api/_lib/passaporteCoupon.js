@@ -27,7 +27,10 @@ const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL 
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const PCT_PASSAPORTE = 10;
-export const DEPOSITO_MINIMO = 100;
+// 💰 27/09/2026 — dono (áudio): "a partir dos 27 já ganha 10%". Antes o cupom
+// só nascia em depósito de R$ 100 ou mais. Agora vale o MESMO piso do depósito
+// (src/lib/depositoMinimo.js): todo depósito aceito ganha o cupom de 10%.
+export const DEPOSITO_MINIMO = 27;
 
 const money = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const enc = encodeURIComponent;

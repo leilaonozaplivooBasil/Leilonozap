@@ -146,7 +146,7 @@ describe('a persona', () => {
     // Ele vem do aporte de R$ 100+ (PCT_PASSAPORTE=10, DEPOSITO_MINIMO=100) e
     // nasce bloqueado, liberando em fatias conforme a pessoa dá lance.
     const p = personaDaLeila({ nome: null, identificado: true, temMemoria: false });
-    assert.match(p, /Nasce do DEPÓSITO de R\$ 100 ou mais, não de ter o lance superado/);
+    assert.match(p, /Nasce do DEPÓSITO a partir de R\$ 27 \(todo depósito aceito\), não de ter o lance superado/);
     assert.match(p, /Nasce BLOQUEADO/);
   });
 

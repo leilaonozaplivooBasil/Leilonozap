@@ -23,7 +23,7 @@ const CLAUSULAS = [
     n: '2',
     titulo: 'CRÉDITO DE PARTICIPAÇÃO',
     itens: [
-      'Depósito antecipado mínimo de R$ 100,00 via PIX ou Cartão, creditado como crédito de consumo na carteira digital. Depósitos de R$ 100 ou mais geram um cupom Passaporte de 10% do valor depositado, que nasce bloqueado: cada leilão disputado e não arrematado libera, ao terminar, 10% do lance dado naquele leilão (até o limite do cupom) para uso exclusivo na Loja Virtual; o cupom não soma ao saldo de lance, não é sacável e não tem validade após liberado.',
+      'Depósito antecipado mínimo de R$ 27,00 via PIX ou Cartão, creditado como crédito de consumo na carteira digital. Depósitos a partir de R$ 27 geram um cupom Passaporte de 10% do valor depositado, que nasce bloqueado: cada leilão disputado e não arrematado libera, ao terminar, 10% do lance dado naquele leilão (até o limite do cupom) para uso exclusivo na Loja Virtual; o cupom não soma ao saldo de lance, não é sacável e não tem validade após liberado.',
     ],
   },
   {

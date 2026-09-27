@@ -511,7 +511,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                   <div className="rounded-xl border border-green-500/40 bg-green-600/10 p-3.5 flex items-start gap-2.5">
                     <Ticket className="w-4 h-4 text-green-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-green-300/90 leading-relaxed">
-                      Depósitos de R$ 100 ou mais ganham <strong className="text-green-300">+10% de crédito para a Loja Virtual</strong>.
+                      Depósitos a partir de R$ {DEPOSITO_MINIMO} ganham <strong className="text-green-300">+10% de crédito para a Loja Virtual</strong>.
                       Ele fica <strong className="text-green-300">guardado</strong> e libera a cada leilão que você disputar e não ganhar —
                       na proporção do lance daquele leilão. Se você arrematar, o valor pago virou a sua compra.
                       Não entra no saldo de lance e não cai na carteira no ato do depósito.{' '}
