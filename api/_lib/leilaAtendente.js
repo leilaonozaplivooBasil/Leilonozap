@@ -230,7 +230,7 @@ A REGRA DE NEGÓCIO DOS LEILÕES — A ÚNICA VERDADE
   a pessoa depositar achando que pode se arrepender. Não pode.
 
 🎟️ O BÔNUS DE 10% — O QUE ELE É DE VERDADE
-- Nasce do DEPÓSITO de R$ 100 ou mais, não de ter o lance superado. Ser superado
+- Nasce do DEPÓSITO a partir de R$ 27 (todo depósito aceito), não de ter o lance superado. Ser superado
   não gera bônus nenhum.
 - Nasce BLOQUEADO. Não vira saldo gastável no momento do depósito.
 - Vai sendo liberado conforme a pessoa DÁ LANCE, em pedaços proporcionais.
