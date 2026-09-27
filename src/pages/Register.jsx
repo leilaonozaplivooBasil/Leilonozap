@@ -15,6 +15,7 @@ import { useSectionTracking, trackLead } from '@/lib/tracking';
 import { PIXEL_LEILOES } from '@/lib/metaPixel';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 import { telefoneValido } from '@/lib/telefoneBR';
+import { garantirScriptGoogle } from '@/lib/googleLogin';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -104,6 +105,7 @@ export default function Register() {
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    garantirScriptGoogle();
     const renderGoogleButton = (clientId) => {
       if (cancelled) return;
       if (window.google?.accounts?.id) {
@@ -112,8 +114,11 @@ export default function Register() {
         if (el) {
           window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 320, text: 'signup_with', locale: 'pt-BR' });
         }
-      } else if (attempts < 20) {
+      } else if (attempts < 60) {
+        // 27/09/2026 — o script do Google agora vem sob demanda (src/lib/googleLogin.js):
+        // pede e espera até 15 s, em vez de 5 s, para caber em internet lenta.
         attempts += 1;
+        garantirScriptGoogle();
         setTimeout(() => renderGoogleButton(clientId), 250);
       }
     };

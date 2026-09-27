@@ -1,3 +1,4 @@
+import { depoisDaTela } from './terceirosDepoisDaTela.js';
 // 📊 META PIXEL — carregamento e disparo, para MAIS DE UM pixel no mesmo site.
 //
 // Este arquivo existe por causa de uma armadilha concreta (31/08/2026).
@@ -38,16 +39,25 @@ let scriptCarregado = false;
 // dele, porque aqui ele é chamado uma vez por ID.
 function carregarScript() {
   if (scriptCarregado || typeof window === 'undefined') return;
-   
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window, document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-   
+  // 🐢➡️🐇 27/09/2026 — o snippet oficial da Meta faz duas coisas: cria a FILA
+  // `fbq` e anexa o script. A fila continua nascendo na hora (todo evento fica
+  // guardado nela); o script só entra depois que a página abriu
+  // (src/lib/terceirosDepoisDaTela.js). Quando ele chega, esvazia a fila.
+  const f = window;
+  if (!f.fbq) {
+    const n = function () {
+      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    };
+    f.fbq = n;
+    if (!f._fbq) f._fbq = n;
+    n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = [];
+    depoisDaTela(() => {
+      const t = document.createElement('script');
+      t.async = !0;
+      t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+      document.head.appendChild(t);
+    });
+  }
   scriptCarregado = true;
 }
 

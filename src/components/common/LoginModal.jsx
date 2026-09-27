@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { garantirScriptGoogle } from '@/lib/googleLogin';
 
 export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, theme }) {
   const navigate = useNavigate();
@@ -82,6 +83,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    garantirScriptGoogle();
 
     const renderGoogleButton = (clientId) => {
       if (cancelled) return;
@@ -100,8 +102,11 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             locale: 'pt-BR'
           });
         }
-      } else if (attempts < 20) {
+      } else if (attempts < 60) {
+        // 27/09/2026 — o script do Google agora vem sob demanda (src/lib/googleLogin.js):
+        // pede e espera até 15 s, em vez de 5 s, para caber em internet lenta.
         attempts += 1;
+        garantirScriptGoogle();
         setTimeout(() => renderGoogleButton(clientId), 250);
       }
     };
