@@ -33,3 +33,11 @@ test('🖥️ as telas de cadastro exigem o telefone antes de enviar', () => {
   const C = ler('../src/pages/Cadastro.jsx');
   assert.match(C, /if \(!telefoneValido\(form\.phone\)\)/);
 });
+
+test('as quatro telas que cadastram usam a mesma régua do servidor', () => {
+  for (const arq of ['../src/components/common/GuestRegistrationModal.jsx', '../src/components/sellers/SellerFormModal.jsx', '../src/pages/Register.jsx', '../src/pages/Cadastro.jsx']) {
+    const T = readFileSync(new URL(arq, import.meta.url), 'utf8');
+    assert.match(T, /import \{ telefoneValido \} from ["']@\/lib\/telefoneBR["']/, arq);
+    assert.match(T, /if \(!telefoneValido\((form\.)?phone\)\)/, arq);
+  }
+});

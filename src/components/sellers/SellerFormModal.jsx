@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { plataforma } from "@/api/plataformaClient";
 import { Camera, Search, Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { telefoneValido } from "@/lib/telefoneBR";
 
 function slugify(str) {
   return (str || "")
@@ -109,8 +110,9 @@ export default function SellerFormModal({ open, onClose, onCreated, onUpdated, e
       toast.error("Informe o nome do vendedor.");
       return;
     }
-    if (!phone.trim()) {
-      toast.error("Informe o WhatsApp do vendedor.");
+    // 📱 27/09/2026 — a MESMA régua do servidor (registerSeller)
+    if (!telefoneValido(phone)) {
+      toast.error("Informe o WhatsApp do vendedor com DDD, ex.: (21) 99999-9999.");
       return;
     }
 
