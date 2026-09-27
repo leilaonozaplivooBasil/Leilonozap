@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { preservarDadosSensiveis } from '@/lib/dadosSensiveisDoUsuario';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
@@ -221,7 +222,8 @@ export default function InvestorDashboard() {
 
       const userFromStorage = JSON.parse(savedUserJSON);
       const freshUsers = await plataforma.entities.AppUser.filter({ id: userFromStorage.id });
-      const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+      // 🔐 cpf/pix não vêm mais do banco pelo navegador — preserva o que o login trouxe
+      const user = freshUsers && freshUsers.length > 0 ? preservarDadosSensiveis(freshUsers[0], userFromStorage) : userFromStorage;
 
       try {
         await plataforma.entities.AppUser.update(user.id, {
