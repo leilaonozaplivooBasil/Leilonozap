@@ -10,7 +10,11 @@
 // se o mínimo do leilão não coincidir com nenhum degrau, ele entra primeiro,
 // como "lance mínimo". "Escolha" é o campo livre, que já existia.
 //
-// Regra do PRIMEIRO lance não muda: só o preço inicial exato (submitAtomicBid).
+// 27/09/2026 — dono: "R$ 27,00 · 50 · 100 · 500 · 1.000 · 3.000 e outro valor
+// (digitar)" também no PRIMEIRO lance. Antes o primeiro lance era um botão só
+// (o preço inicial exato, regra antiga do submitAtomicBid). Agora, sem lance
+// ainda, os degraus entram como VALORES DIRETOS de abertura (R$ 50, R$ 100…),
+// não como acréscimo — e o servidor aceita qualquer primeiro lance ≥ inicial.
 import { addMoney, gteMoney, money } from './money.js';
 
 export const DEGRAUS = [50, 100, 500, 1000, 3000];
@@ -21,7 +25,11 @@ export const DEGRAUS = [50, 100, 500, 1000, 3000];
  */
 export function opcoesDeLance({ currentPrice, increment, isFirstBid = false }) {
   const atual = money(currentPrice);
-  if (isFirstBid) return [{ valor: atual, rotulo: 'lance inicial', minimo: true }];
+  if (isFirstBid) {
+    // preço inicial primeiro (destacado) + degraus ACIMA dele como valor de abertura
+    const diretos = DEGRAUS.filter((d) => money(d) > atual).map((d) => ({ valor: money(d), rotulo: 'abrir direto neste valor', minimo: false }));
+    return [{ valor: atual, rotulo: 'lance inicial', minimo: true }, ...diretos];
+  }
   const inc = money(increment) > 0 ? money(increment) : 1;
   const minimo = addMoney(atual, inc);
   const degraus = DEGRAUS.filter((d) => gteMoney(d, inc)).map((d) => ({ valor: addMoney(atual, d), rotulo: `+ R$ ${d.toLocaleString('pt-BR')}`, minimo: false }));
