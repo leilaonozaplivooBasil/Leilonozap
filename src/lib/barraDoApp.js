@@ -12,7 +12,8 @@
 
 export const ITENS_DA_BARRA = Object.freeze([
   { id: 'comprar',  rotulo: 'Comprar',  pagina: 'Catalog', paginas: ['Catalog', 'CatalogProductDetails'] },
-  { id: 'leiloes',  rotulo: 'Leilões',  pagina: 'Home',    paginas: ['Home', 'Recepcao', 'LuxuryCollection'] },
+  // 🎯 27/09/2026 — "Leilões" abre a Home já rolada até os Destaques (src/lib/rolarParaDestaques.js)
+  { id: 'leiloes',  rotulo: 'Leilões',  pagina: 'Home',    paginas: ['Home', 'Recepcao', 'LuxuryCollection'], ancora: 'destaques' },
   { id: 'lucre',    rotulo: 'Lucre',    pagina: 'Lucre',   paginas: ['Lucre', 'Partners'] },
   { id: 'carrinho', rotulo: 'Carrinho', pagina: 'Cart',    paginas: ['Cart', 'CatalogCheckout'] },
 ]);

@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { ANCORA_DESTAQUES, querDestaques, rolarAte } from '@/lib/rolarParaDestaques';
 import { supabase } from '@/api/supabaseClient';
 import { Sparkles } from 'lucide-react';
 import AuctionCard from '@/components/auction/AuctionCard';
@@ -78,10 +80,36 @@ export default function DestaquesLeiloes({ currentUser }) {
     return () => { alive = false; };
   }, []);
 
+  // 🎯 27/09/2026 — "Leilões" na barra do app chega com #destaques: assim que
+  // os cards existirem, a janela rola até aqui. Uma segunda passada corrige o
+  // salto do banner (a imagem do topo termina de carregar e empurra tudo),
+  // mas só se a pessoa não mexeu na tela nesse meio-tempo.
+  const location = useLocation();
+  const blocoRef = useRef(null);
+  const temDestaques = destaques.length > 0;
+  useEffect(() => {
+    if (!temDestaques || !querDestaques(location.hash)) return undefined;
+    let mexeu = false;
+    const marcou = () => { mexeu = true; };
+    const opcoes = { passive: true, once: true };
+    window.addEventListener('touchstart', marcou, opcoes);
+    window.addEventListener('wheel', marcou, opcoes);
+    window.addEventListener('keydown', marcou, opcoes);
+    const quadro = requestAnimationFrame(() => rolarAte(blocoRef.current));
+    const correcao = setTimeout(() => { if (!mexeu) rolarAte(blocoRef.current, { suave: false }); }, 900);
+    return () => {
+      cancelAnimationFrame(quadro);
+      clearTimeout(correcao);
+      window.removeEventListener('touchstart', marcou);
+      window.removeEventListener('wheel', marcou);
+      window.removeEventListener('keydown', marcou);
+    };
+  }, [temDestaques, location.hash, location.key]);
+
   if (destaques.length === 0) return null;
 
   return (
-    <div className="mb-8">
+    <div id={ANCORA_DESTAQUES} ref={blocoRef} className="mb-8">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="w-5 h-5 text-amber-400" />
         <h2 className="text-lg sm:text-xl font-bold text-white">Destaques</h2>

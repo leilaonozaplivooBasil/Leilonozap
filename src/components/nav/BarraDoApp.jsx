@@ -56,7 +56,7 @@ export default function BarraDoApp({ currentPageName, cartCount = 0 }) {
           return (
             <li key={item.id} className="min-w-0">
               <Link
-                to={createPageUrl(item.pagina)}
+                to={`${createPageUrl(item.pagina)}${item.ancora ? `#${item.ancora}` : ''}`}
                 aria-current={aceso ? 'page' : undefined}
                 data-teste={`barra-${item.id}`}
                 className="flex h-full flex-col items-center justify-center gap-1 transition-transform active:scale-95"
