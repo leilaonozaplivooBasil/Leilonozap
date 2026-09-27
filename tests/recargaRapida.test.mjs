@@ -23,13 +23,16 @@ test('os pacotes são os do dono, e o sugerido é o MENOR que cobre o que falta'
   assert.equal(pacoteSugerido(0), null); assert.equal(pacoteSugerido(undefined), null);
 });
 
-test('"digite o valor": aceita 150, 150,50 e 1.500,00; o mínimo é R$ 5', () => {
+test('"digite o valor": aceita 150, 150,50 e 1.500,00; o mínimo é R$ 27 (piso único de depósito)', () => {
   assert.equal(valorDigitado('150'), 150);
   assert.equal(valorDigitado('150,50'), 150.5);
   assert.equal(valorDigitado('1.500,00'), 1500);
   assert.equal(valorDigitado('R$ 27'), 27);
   assert.equal(valorDigitado(''), null); assert.equal(valorDigitado('abc'), null); assert.equal(valorDigitado('0'), null);
-  assert.equal(problemaDoValor(4.99), `O mínimo é R$ ${VALOR_MINIMO},00.`);
+  assert.equal(VALOR_MINIMO, 27);
+  assert.equal(problemaDoValor(4.99), `Depósito mínimo R$ ${VALOR_MINIMO},00.`);
+  assert.equal(problemaDoValor(22.19), `Depósito mínimo R$ ${VALOR_MINIMO},00.`, 'lance de R$ 8 + frete não passa mais');
+  assert.equal(problemaDoValor(26.99), `Depósito mínimo R$ ${VALOR_MINIMO},00.`);
   assert.equal(problemaDoValor(null), 'Escolha um pacote ou digite o valor.');
   assert.match(problemaDoValor(60000), /tela completa/);
   assert.equal(problemaDoValor(27), null);
