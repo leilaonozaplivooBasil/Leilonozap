@@ -8,6 +8,7 @@
  * Este hook adiciona uma camada extra de verificação no momento em que a página carrega.
  */
 import { useState, useEffect } from 'react';
+import { preservarDadosSensiveis } from '@/lib/dadosSensiveisDoUsuario';
 import { useNavigate } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
 import { createPageUrl } from '@/utils';
@@ -48,7 +49,8 @@ export function useSecureRole(allowedRoles = [], redirectTo = 'Home') {
                 try {
                     const dbUsers = await AppUser.filter({ id: cached.id });
                     if (dbUsers && dbUsers.length > 0) {
-                        verifiedUser = dbUsers[0];
+                        // 🔐 cpf/pix não vêm mais do banco pelo navegador — preserva o que o login trouxe
+                        verifiedUser = preservarDadosSensiveis(dbUsers[0], cached);
                         // Atualiza o cache local com os dados mais recentes do banco
                         localStorage.setItem('currentUser', JSON.stringify(verifiedUser));
                     }
