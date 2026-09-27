@@ -2,6 +2,7 @@
 // Sem OTP (mantém a UX atual da tela). Valida duplicados, gera referral_code, resolve o indicador
 // pelo ref_code (link de indicação) e grava a senha como bcrypt na tabela isolada app_users_auth.
 import crypto from 'crypto';
+import { telefoneBR } from '../../src/lib/telefoneBR.js';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
@@ -36,7 +37,10 @@ export default async function handler(req, res) {
     const full_name = String(body?.full_name || '').trim();
     const email = String(body?.email || '').trim().toLowerCase();
     const password = String(body?.password || '');
-    const phone = body?.phone ? String(body.phone).replace(/\D/g, '') : '';
+    // 📱 27/09/2026 — dono: "telefone WhatsApp é campo obrigatório no cadastro". Os
+    // formulários já exigiam; a rota não — 111 contas sem telefone entraram por aqui.
+    const tel = telefoneBR(body?.phone);
+    const phone = tel ? tel.nacional : '';
     const cpf = body?.cpf ? String(body.cpf).replace(/\D/g, '') : '';
     const ref_code = String(body?.ref_code || '').trim();
     const extra = {
@@ -52,6 +56,7 @@ export default async function handler(req, res) {
     };
 
     if (!full_name || !email || !password) return res.status(400).json({ success: false, error: 'Nome, e-mail e senha são obrigatórios' });
+    if (!phone) return res.status(400).json({ success: false, error: 'Telefone/WhatsApp é obrigatório: DDD + número, ex.: (21) 99999-9999', campo: 'phone' });
     if (password.length < 8) return res.status(400).json({ success: false, error: 'Senha deve ter ao menos 8 caracteres' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -102,7 +107,7 @@ export default async function handler(req, res) {
     const nameParts = full_name.split(/\s+/).filter(Boolean);
     const payload = {
       id, base44_id: id, full_name, email, password: null,
-      phone: phone || null, cpf: cpf || null,
+      phone, cpf: cpf || null,
       display_first_name: extra.display_first_name || nameParts[0] || null,
       display_last_name: extra.display_last_name || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : null),
       role: 'user', career_levels: ['usuario'], primary_career_level: 'usuario',

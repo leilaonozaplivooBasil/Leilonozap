@@ -7,6 +7,7 @@
 // ascendente automaticamente, até achar o primeiro cargo que tem permissão (normalmente o
 // Licenciado responsável). Isso evita perder o cadastro e mantém o rebate certo.
 import crypto from 'crypto';
+import { telefoneBR } from '../../src/lib/telefoneBR.js';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 import { REDE, bestNetworkLevel } from '../_lib/networkChain.js';
@@ -40,7 +41,10 @@ export default async function handler(req, res) {
 
     const full_name = String(body?.full_name || '').trim();
     const email = String(body?.email || '').trim().toLowerCase();
-    const phone = String(body?.phone || '').replace(/\D/g, '');
+    // 📱 27/09/2026 — telefone WhatsApp obrigatório e válido (mesma régua do publicRegister)
+    const tel = telefoneBR(body?.phone);
+    const phone = tel ? tel.nacional : '';
+    if (!phone) return res.status(400).json({ success: false, error: 'Telefone/WhatsApp é obrigatório: DDD + número, ex.: (21) 99999-9999', campo: 'phone' });
     const cpf = String(body?.cpf || '').replace(/\D/g, '');
     const store_name = String(body?.store_name || '').trim() || null;
     const avatar_url = body?.avatar_url || null;
@@ -108,7 +112,7 @@ export default async function handler(req, res) {
     const id = oid();
     const now = new Date().toISOString();
     const payload = {
-      id, base44_id: id, full_name, email: email || null, password: null, phone: phone || null, cpf: cpf || null,
+      id, base44_id: id, full_name, email: email || null, password: null, phone, cpf: cpf || null,
       role: 'user',
       career_levels: ['vendedor'], primary_career_level: 'vendedor', // 💰 é o que faz os 10% caírem pra ele
       is_seller: true,
