@@ -61,7 +61,7 @@ describe('o conhecimento do Zeca sobre o dinheiro do cliente', () => {
   });
 
   test('🔴 o bônus é ensinado como vindo do DEPÓSITO, e nascendo bloqueado', () => {
-    assert.match(ROUTER, /Nasce do DEPÓSITO de R\$ 100 ou mais/);
+    assert.match(ROUTER, /Nasce do DEPÓSITO a partir de R\$ 27/);
     assert.match(ROUTER, /NÃO nasce de ter o lance superado/);
     assert.match(ROUTER, /Nasce BLOQUEADO/);
   });
@@ -79,7 +79,7 @@ describe('o conhecimento do Zeca sobre o dinheiro do cliente', () => {
     // mentir de novo — em número, que é pior.
     const cupom = readFileSync(new URL('../api/_lib/passaporteCoupon.js', import.meta.url), 'utf8');
     assert.match(cupom, /PCT_PASSAPORTE\s*=\s*10\b/, 'o percentual mudou no código');
-    assert.match(cupom, /DEPOSITO_MINIMO\s*=\s*100\b/, 'o depósito mínimo mudou no código');
+    assert.match(cupom, /DEPOSITO_MINIMO\s*=\s*27\b/, 'o depósito mínimo mudou no código');
   });
 
   test('🔴 requestWithdrawal continua sem tocar no saldo de lances', () => {

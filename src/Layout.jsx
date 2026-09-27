@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { preservarDadosSensiveis } from '@/lib/dadosSensiveisDoUsuario';
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ShareAppModal from "@/components/common/ShareAppModal";
@@ -366,7 +367,8 @@ export default function Layout({ children, currentPageName }) {
       const usersInDB = await AppUser.filter({ id: userFromStorage.id });
 
       if (usersInDB && usersInDB.length > 0) {
-        const freshUser = usersInDB[0];
+        // 🔐 cpf/pix não vêm mais do banco pelo navegador — preserva o que o login trouxe
+        const freshUser = preservarDadosSensiveis(usersInDB[0], userFromStorage);
 
         localStorage.setItem('currentUser', JSON.stringify(freshUser));
         setCurrentUser(freshUser);

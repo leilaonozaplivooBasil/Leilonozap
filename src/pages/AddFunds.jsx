@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { fmtBR } from '@/lib/money';
+import { DEPOSITO_MINIMO, TEXTO_DO_MINIMO } from '@/lib/depositoMinimo';
 import { useNavigate, useLocation } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,8 +94,8 @@ export default function AddFunds() {
   };
 
   const handleProceedToPayment = async () => {
-    if (!selectedAmount || selectedAmount < 5) {
-      alert("O valor mínimo para depósito é R$ 5,00");
+    if (!selectedAmount || selectedAmount < DEPOSITO_MINIMO) {
+      alert(`${TEXTO_DO_MINIMO}.`);
       return;
     }
 
@@ -234,7 +235,7 @@ export default function AddFunds() {
                      <div className="flex-1">
                        <Input
                          type="text"
-                         placeholder="Digite o valor (mínimo R$ 5)"
+                         placeholder={`Digite o valor (mínimo R$ ${DEPOSITO_MINIMO})`}
                          value={customAmount}
                          onChange={handleCustomAmountChange}
                          className="backdrop-blur-sm bg-black/30 border-white/20 text-white text-lg h-16 rounded-2xl focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-500"

@@ -1,4 +1,5 @@
 import { itensDoPedido, dinheiroDoPedido, itensSemNome } from '@/lib/itensDoPedido';
+import { DEPOSITO_MINIMO } from '@/lib/depositoMinimo';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -42,7 +43,8 @@ const KINDS_DIGITAIS = new Set([
 // Passaporte (creditarBonusPassaporte em mpWebhook.js) — é o mesmo benefício pro cliente,
 // só o rótulo interno é diferente. Por isso conta como Passaporte aqui também, senão ficava
 // invisível na Gestão de Pedidos mesmo tendo o crédito automático igual.
-const isPassaporte = (o) => o?.kind === 'passaporte' || (o?.kind === 'wallet_deposit' && Number(o.total_amount || o.sale_price || 0) >= 100);
+// 27/09/2026 — o bônus de 10% vale a partir de R$ 27 (mesmo piso do depósito).
+const isPassaporte = (o) => o?.kind === 'passaporte' || (o?.kind === 'wallet_deposit' && Number(o.total_amount || o.sale_price || 0) >= DEPOSITO_MINIMO);
 const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind) || isPassaporte(o);
 const STATUS_PAGO = new Set(['paid', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue']);
 // 🎫 Passaporte é entrega automática: assim que o pagamento confirma, o crédito já cai na
