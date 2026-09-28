@@ -7,6 +7,7 @@ import { Search, Landmark, Loader2, ShieldCheck, AlertTriangle } from 'lucide-re
 import { toast } from 'sonner';
 import ComissaoUsuarioCard from '@/components/comissoes/ComissaoUsuarioCard';
 import { AVISO_COMISSAO, LINK_APROVACAO } from '@/lib/comissaoSoConsulta';
+import { jaPagoDaPessoa } from '@/lib/pagamentoManualDeComissao';
 
 // 🏦 PAGAMENTOS DE COMISSÕES — extrato por pessoa (23/09/2026 → 24/09/2026)
 // Nasceu em 12/08 como "banco interno" pra pagar PIX na mão e marcar pago. O
@@ -78,13 +79,13 @@ export default function PagamentosComissoes() {
       }
       const g = byUser[c.user_id];
       g.commissions.push(c);
-      if (c.status === 'paid') g.totalPago += c.amount || 0;
-      else if (c.status === 'pending' || c.status === 'confirmed') g.pendentes.push(c);
+      if (c.status === 'pending' || c.status === 'confirmed') g.pendentes.push(c);
     });
-    // o que já foi pago na mão também é "já pago" no extrato, mesmo sem
-    // registro de commission_records marcado — é dinheiro que saiu de verdade.
+    // "Já pago" = pagamentos manuais + linhas pagas que não vieram deles.
+    // 28/09/2026: com o pagamento POR LINHA, a mesma linha é "paid" E está num
+    // pagamento manual — somar os dois contaria o dinheiro duas vezes.
     Object.values(byUser).forEach((g) => {
-      g.totalPago += g.pagamentosManuais.reduce((s, p) => s + (Number(p.valor) || 0), 0);
+      g.totalPago = jaPagoDaPessoa(g.commissions, g.pagamentosManuais);
     });
     return Object.values(byUser).sort((a, b) => b.totalPendente - a.totalPendente);
   }, [commissions, usersById, manuaisByUser]);
