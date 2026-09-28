@@ -11,6 +11,7 @@ import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCo
 import { enviarAviso } from './avisosPorEmail.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
 import { oid } from './oid.js';
+import { executivoDoArremate, PCT_EXECUTIVO_LEILAO, leilaoNaRegraDoExecutivo } from './executivoDoLeilao.js';
 // 📒 Livro-caixa da reserva. Import de MESMO diretório (./) — a forma segura já
 // usada nas linhas acima. Nunca de api/functions/ pra fora (ver submitAtomicBid.js).
 import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
@@ -580,6 +581,42 @@ export async function finalizeOneAuction(auction) {
             }
           }
         } catch (e) { console.warn('[FINALIZE] comissão licenciado:', e?.message); }
+      }
+
+      // 🎯 28/09/2026 — EXECUTIVO GANHA 10% NO ARREMATE (regra nova do dono).
+      // Sai da fatia que a empresa retinha: 5% indicador + 10% executivo + o
+      // resto retido = os mesmos 30%. Só leilão real (nem teste, nem plano de
+      // investimento). Quem é o executivo, e quem fica fora: executivoDoLeilao.js.
+      // Mesmo cuidado dos 5%: só conta como distribuído se o crédito ENTROU.
+      if (!auction.is_investment_plan && !pareceInvestimento && auction.is_test_auction !== true && u?.id && leilaoNaRegraDoExecutivo(auction)) {
+        try {
+          const buscar = async (id) => (await (await sb(
+            `app_users?select=id,full_name,referred_by_id,career_levels,active,licenciado_context&id=eq.${enc(id)}&limit=1`
+          )).json().catch(() => []))?.[0] || null;
+          const arrematante = await buscar(winnerId);
+          const exec = arrematante ? await executivoDoArremate(arrematante, buscar) : null;
+          if (exec) {
+            const valorExec = money(finalPrice * PCT_EXECUTIVO_LEILAO / 100);
+            const r = await sb('rpc/credit_commission', { method: 'POST', body: JSON.stringify({ _user: exec.id, _amount: valorExec }) });
+            if (r.ok) {
+              pctDistribuido = money(pctDistribuido + PCT_EXECUTIVO_LEILAO);
+              await gravarLinhaComissaoLeilao({
+                sale_id: auction.id,
+                user_id: exec.id,
+                user_name: exec.full_name || null,
+                role: 'leilao_executivo',
+                percent: PCT_EXECUTIVO_LEILAO,
+                amount: valorExec,
+                sale_amount: finalPrice,
+                product_title: auction.title || null,
+                anchor_user_id: winnerId,
+                anchor_user_name: u.full_name || winnerName || null,
+              });
+            } else {
+              console.error(`[FINALIZE] 10% do executivo NÃO creditado no leilão ${auctionId} — executivo ${exec.id}, R$ ${valorExec}. Fatia fica retida com a empresa.`);
+            }
+          }
+        } catch (e) { console.warn('[FINALIZE] comissão do executivo:', e?.message); }
       }
 
       // 🏦 PONTO 100: o que dos 30% da rede NÃO foi distribuído fica RETIDO na
