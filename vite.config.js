@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
-import { arquivosDaPrimeiraTela, filtrarPrecache } from './src/lib/precacheEssencial.js'
+import { arquivosDaPrimeiraTela, filtrarPrecache, storageSemVideo } from './src/lib/precacheEssencial.js'
 
 // 🪶 Pasta onde o build grava (dist por padrão, ou o --outDir). O filtro do
 // precache lê o index.html gerado ali para saber o que a primeira tela usa.
@@ -142,7 +142,8 @@ export default defineConfig(({ command }) => ({
             options: { cacheName: 'assets-imutaveis', expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 30 } },
           },
           {
-            urlPattern: /^https:\/\/gezvviyegtxytnwjkrjv\.supabase\.co\/storage\/.*/i,
+            // 🎬 vídeo e áudio NÃO passam pelo service worker (Safari não toca) — ver storageSemVideo
+            urlPattern: storageSemVideo,
             handler: 'StaleWhileRevalidate',
             // statuses [200]: só guarda resposta legível. <img> comum gera resposta
             // "opaca", que o Chrome conta como ~7 MB cada no espaço do aparelho —
