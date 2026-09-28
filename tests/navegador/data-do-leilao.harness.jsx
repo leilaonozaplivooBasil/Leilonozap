@@ -33,12 +33,18 @@
  * `?fotos=N`   N fotos → aparecem as bolinhas do carrossel
  * `?legenda=1` a foto tem legenda (faixa escura no pé)
  * `?admin=1`   mostra o lápis de editar, no canto inferior direito
+ *
+ * ⏳ 28/09/2026 — "cards de leilões seguem sem vídeo":
+ * `?video=prova`     vídeo que TOCA de verdade (webm pequeno da banca)
+ * `?videoDepois=MS`  o vídeo chega MS depois do card — como na Home, onde os
+ *                    destaques aparecem primeiro e os vídeos vêm numa 2ª consulta
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '@/index.css';
 import AuctionCard from '@/components/auction/AuctionCard';
+import videoDeProva from './falso/video-de-prova.webm';
 
 window.__bancoFalso = { tabelas: {}, escritas: [] };
 window.__entidadesFalsas = { Auction: [], AppUser: [] };
@@ -73,20 +79,35 @@ const leilao = {
 const video = params.get('youtube') === '1'
   ? { tipo: 'youtube', embed: 'https://www.youtube.com/embed/abc123' }
   : params.get('video')
-    ? { tipo: 'arquivo', embed: params.get('video') === 'quebrado' ? '/nao-existe.mp4' : '/ps5-de-mentira.mp4' }
+    ? { tipo: 'arquivo', embed: params.get('video') === 'quebrado' ? '/nao-existe.mp4' : params.get('video') === 'prova' ? videoDeProva : '/ps5-de-mentira.mp4' }
     : null;
 
-createRoot(document.getElementById('raiz')).render(
-  <MemoryRouter>
+const DEPOIS = Number(params.get('videoDepois')) || 0;
+
+function Banca() {
+  // como a Home: o card nasce sem vídeo e o vídeo chega depois
+  const [videoAgora, setVideoAgora] = useState(DEPOIS ? null : video);
+  useEffect(() => {
+    if (!DEPOIS) return undefined;
+    const t = setTimeout(() => setVideoAgora(video), DEPOIS);
+    return () => clearTimeout(t);
+  }, []);
+  return (
     <div style={{ padding: 24, maxWidth: Number(params.get('largura')) || 420 }}>
       <AuctionCard
         auction={leilao}
-        video={video}
+        video={videoAgora}
         videoAtivo={params.get('inativo') !== '1'}
         isAdmin={params.get('admin') === '1'}
         showFavoriteButton={params.get('favorito') === '1'}
         userId={params.get('favorito') === '1' ? 'banca-usuario' : null}
       />
     </div>
+  );
+}
+
+createRoot(document.getElementById('raiz')).render(
+  <MemoryRouter>
+    <Banca />
   </MemoryRouter>
 );
