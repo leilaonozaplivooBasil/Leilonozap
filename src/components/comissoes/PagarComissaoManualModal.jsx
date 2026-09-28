@@ -19,7 +19,11 @@ import { podeConfirmarPagamento, mensagemDoMotivo, lerRespostaDoPagamento } from
  * que isto não paga em dobro é o servidor (payCommissionManually.js): o
  * desconto do saldo e o registro do pagamento acontecem juntos, atômicos.
  */
-export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, saldoDisponivel, admin, onSuccess }) {
+export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, saldoDisponivel, admin, onSuccess, linhas = null }) {
+  // ✅ 28/09/2026 — com `linhas`, é o "OK" das linhas marcadas na tabela: o valor
+  // é a soma delas, travado, e o servidor marca AQUELAS linhas como pagas.
+  const porLinha = Array.isArray(linhas) && linhas.length > 0;
+  const totalDasLinhas = porLinha ? Math.round(linhas.reduce((s, c) => s + (Number(c.amount) || 0), 0) * 100) / 100 : 0;
   const [valor, setValor] = useState('');
   const [pixKeyUsada, setPixKeyUsada] = useState('');
   const [nota, setNota] = useState('');
@@ -33,7 +37,7 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const regra = podeConfirmarPagamento({ valor, saldo: saldoDisponivel, pixKeyUsada });
+    const regra = podeConfirmarPagamento({ valor: porLinha ? totalDasLinhas : valor, saldo: saldoDisponivel, pixKeyUsada });
     if (!regra.ok) { toast.error(mensagemDoMotivo(regra.motivo, saldoDisponivel)); return; }
     if (!admin?.id) { toast.error('Sessão inválida. Entre de novo.'); return; }
 
@@ -42,6 +46,7 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
       const r = await plataforma.functions.invoke('payCommissionManually', {
         actor_id: admin.id, user_id: pessoa.user_id, valor: regra.valor,
         pix_key_usada: pixKeyUsada.trim(), nota: nota.trim() || null,
+        ...(porLinha ? { commission_ids: linhas.map((c) => c.id) } : {}),
       });
       const lido = lerRespostaDoPagamento(r);
       if (lido.ok) {
@@ -64,7 +69,7 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
     <Dialog open={isOpen} onOpenChange={fechar}>
       <DialogContent className="bg-gray-800 border-gray-700 max-w-md" data-teste="modal-pagar-comissao-manual">
         <DialogHeader>
-          <DialogTitle className="text-white">Pagar comissão manualmente</DialogTitle>
+          <DialogTitle className="text-white">{porLinha ? `Marcar ${linhas.length} comiss${linhas.length === 1 ? 'ão' : 'ões'} como paga${linhas.length === 1 ? '' : 's'}` : 'Pagar comissão manualmente'}</DialogTitle>
           <DialogDescription className="text-gray-400">
             {pessoa?.user_name} · saldo: R$ {fmtBR(saldoDisponivel)}
           </DialogDescription>
@@ -81,6 +86,20 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4" data-teste="form-pagar-comissao-manual">
+          {porLinha ? (
+            <div className="rounded-lg border border-green-500/40 bg-green-500/10 p-3" data-teste="total-das-linhas">
+              <div className="text-xs text-green-200">Total das comissões marcadas</div>
+              <div className="text-2xl font-black text-green-400">R$ {fmtBR(totalDasLinhas)}</div>
+              <ul className="mt-2 max-h-28 overflow-y-auto space-y-0.5 text-xs text-gray-300">
+                {linhas.map((c) => (
+                  <li key={c.id} className="flex justify-between gap-2">
+                    <span className="truncate">{c.product_title || c.sale_id?.slice(0, 8) || '—'}</span>
+                    <span className="shrink-0 font-bold">R$ {fmtBR(c.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
           <div>
             <Label className="text-gray-300">Valor pago (R$)</Label>
             <Input
@@ -90,6 +109,7 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
               data-teste="valor-pagamento-manual"
             />
           </div>
+          )}
           <div>
             <Label className="text-gray-300">Chave PIX usada (ou outro dado do pagamento)</Label>
             <Input
@@ -113,7 +133,7 @@ export default function PagarComissaoManualModal({ isOpen, onClose, pessoa, sald
           </p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={fechar} disabled={enviando} className="flex-1 bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white">Cancelar</Button>
-            <Button type="submit" disabled={enviando || !valor || !pixKeyUsada.trim()} className="flex-1 bg-green-600 hover:bg-green-700" data-teste="confirmar-pagamento-manual">
+            <Button type="submit" disabled={enviando || (!porLinha && !valor) || !pixKeyUsada.trim()} className="flex-1 bg-green-600 hover:bg-green-700" data-teste="confirmar-pagamento-manual">
               {enviando ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Registrando…</> : 'Confirmar pagamento'}
             </Button>
           </div>

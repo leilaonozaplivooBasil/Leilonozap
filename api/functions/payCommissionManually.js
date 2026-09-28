@@ -25,17 +25,72 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Método não permitido' });
   try {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
-    const { actor_id, user_id, valor, pix_key_usada, nota } = body || {};
+    const { actor_id, user_id, valor, pix_key_usada, nota, commission_ids } = body || {};
     // 🔐 CRACHÁ DE SESSÃO — ETAPA 1 (só anota no log). Ver api/_lib/sessao.js.
     const _ses = exigirSessao(req, actor_id, 'payCommissionManually');
     if (!_ses.liberado) return res.status(_ses.http).json({ success: false, error: 'nao_autenticado' });
-    const v = round2(Number(valor) || 0);
-    if (!user_id || v <= 0) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
+    let v = round2(Number(valor) || 0);
+    // ✅ 28/09/2026 — pagar POR LINHA (pedido da Beatriz): com `commission_ids`,
+    // o valor é a soma DAQUELAS linhas, calculada aqui — nunca o número que veio
+    // do navegador. Ver src/lib/pagamentoManualDeComissao.js.
+    const porLinha = Array.isArray(commission_ids) && commission_ids.length > 0;
+    const ids = porLinha ? [...new Set(commission_ids.map(String).filter((i) => /^[A-Za-z0-9_-]{1,64}$/.test(i)))] : [];
+    if (porLinha && (ids.length !== commission_ids.length || ids.length > 500)) {
+      return res.status(400).json({ success: false, error: 'Lista de comissões inválida' });
+    }
+    if (!user_id || (!porLinha && v <= 0)) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
     if (!String(pix_key_usada || '').trim()) return res.status(400).json({ success: false, error: 'Informe a chave PIX (ou outro dado) usada no pagamento' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
     const admin = await lerAdmin(actor_id);
     if (!admin) return res.status(403).json({ success: false, error: 'Apenas admin pode pagar comissão manualmente' });
+
+    // ─── POR LINHA: reserva as linhas ANTES de mexer no saldo ────────────────
+    // As linhas viram 'paid' só se AINDA estão pagáveis (filtro de status no
+    // próprio PATCH). Se alguma já tinha sido paga por outra pessoa no meio do
+    // caminho, as reservadas voltam ao status de antes e nada é descontado.
+    const lista = ids.map((i) => `"${i}"`).join(',');
+    let estadoAntes = [];
+    const devolverLinhas = async () => {
+      for (const st of ['pending', 'confirmed']) {
+        const volta = estadoAntes.filter((l) => l.status === st).map((l) => `"${l.id}"`).join(',');
+        if (!volta) continue;
+        await sb(`commission_records?id=in.(${encodeURIComponent(volta)})&status=eq.paid`, {
+          method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: st }),
+        }).catch(() => {});
+      }
+    };
+    if (porLinha) {
+      estadoAntes = await (await sb(`commission_records?select=id,user_id,amount,status&id=in.(${encodeURIComponent(lista)})`)).json().catch(() => []);
+      if (!Array.isArray(estadoAntes) || estadoAntes.length !== ids.length) {
+        return res.status(200).json({ success: false, error: 'Alguma comissão selecionada não foi encontrada. Recarregue a tela.' });
+      }
+      if (estadoAntes.some((l) => String(l.user_id) !== String(user_id))) {
+        return res.status(400).json({ success: false, error: 'Comissão de outra pessoa na seleção' });
+      }
+      if (estadoAntes.some((l) => !['pending', 'confirmed'].includes(l.status))) {
+        return res.status(200).json({ success: false, error: 'Alguma comissão selecionada já foi paga ou estornada. Recarregue a tela.' });
+      }
+      const soma = round2(estadoAntes.reduce((s, l) => s + (Number(l.amount) || 0), 0));
+      // a tela mostrou um total; se o banco diz outro, a tela está velha
+      if (Number(valor) > 0 && Math.abs(round2(Number(valor)) - soma) >= 0.01) {
+        return res.status(200).json({ success: false, error: `O total mudou (agora R$ ${soma.toFixed(2)}). Recarregue a tela.` });
+      }
+      if (soma <= 0) return res.status(400).json({ success: false, error: 'Parâmetros inválidos' });
+      v = soma;
+      const reserva = await sb(`commission_records?id=in.(${encodeURIComponent(lista)})&user_id=eq.${encodeURIComponent(user_id)}&status=in.(pending,confirmed)`, {
+        method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify({ status: 'paid' }),
+      });
+      const reservadas = await reserva.json().catch(() => []);
+      if (!Array.isArray(reservadas) || reservadas.length !== ids.length) {
+        // devolve só as que ESTA chamada reservou (o PATCH é um comando só: ou
+        // voltou a lista do que mudou, ou deu erro e nada mudou)
+        const minhas = new Set(Array.isArray(reservadas) ? reservadas.map((r) => String(r.id)) : []);
+        estadoAntes = estadoAntes.filter((l) => minhas.has(String(l.id)));
+        await devolverLinhas();
+        return res.status(200).json({ success: false, error: 'Alguma comissão foi paga por outra pessoa agora mesmo. Recarregue a tela.', raced: true });
+      }
+    }
 
     // ─── DÉBITO ATÔMICO ─────────────────────────────────────────────────────
     // Mesmo padrão CAS do saque (requestWithdrawal.js): lê, confere, grava só
@@ -48,10 +103,11 @@ export default async function handler(req, res) {
     let userName = '';
     for (let tentativa = 0; tentativa < 3 && !debitou; tentativa += 1) {
       const fresh = (await (await sb(`app_users?select=full_name,commission_balance&id=eq.${encodeURIComponent(user_id)}&limit=1`)).json())[0];
-      if (!fresh) return res.status(200).json({ success: false, error: 'Pessoa não encontrada' });
+      if (!fresh) { await devolverLinhas(); return res.status(200).json({ success: false, error: 'Pessoa não encontrada' }); }
       userName = fresh.full_name || '';
       saldoAntes = round2(Number(fresh.commission_balance) || 0);
       if (saldoAntes < v) {
+        await devolverLinhas();
         return res.status(200).json({ success: false, error: `Saldo insuficiente. Disponível: R$ ${saldoAntes.toFixed(2)}` });
       }
       saldoDepois = round2(saldoAntes - v);
@@ -64,6 +120,7 @@ export default async function handler(req, res) {
       debitou = Array.isArray(linhas) && linhas.length > 0;
     }
     if (!debitou) {
+      await devolverLinhas();
       return res.status(200).json({ success: false, error: 'O saldo mudou durante o pagamento. Confira o valor atual e tente de novo.', raced: true });
     }
 
@@ -78,6 +135,7 @@ export default async function handler(req, res) {
         id, user_id, user_name: userName, valor: v, saldo_antes: saldoAntes, saldo_depois: saldoDepois,
         pix_key_usada: String(pix_key_usada).trim(), nota: nota ? String(nota).trim() : null,
         pago_por_id: admin.id, pago_por_nome: admin.full_name || '',
+        ...(porLinha ? { commission_ids: ids } : {}),
       }),
     });
     if (!ins.ok) {
@@ -86,6 +144,10 @@ export default async function handler(req, res) {
     }
 
     await enviarAviso({ tipo: 'comissao_paga_manual', userId: user_id, chave: id, dados: { valor: v, pixKeyUsada: String(pix_key_usada).trim() } });
-    return res.status(200).json({ success: true, message: 'Pagamento registrado e descontado do saldo.', saldo_depois: saldoDepois, id });
+    return res.status(200).json({
+      success: true,
+      message: porLinha ? `${ids.length} comiss${ids.length === 1 ? 'ão marcada' : 'ões marcadas'} como paga${ids.length === 1 ? '' : 's'} e descontada${ids.length === 1 ? '' : 's'} do saldo.` : 'Pagamento registrado e descontado do saldo.',
+      saldo_depois: saldoDepois, id, valor: v, ...(porLinha ? { commission_ids: ids } : {}),
+    });
   } catch (e) { return res.status(200).json({ success: false, error: String(e?.message || e) }); }
 }

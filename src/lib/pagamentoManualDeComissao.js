@@ -70,3 +70,51 @@ export function lerRespostaDoPagamento(r) {
 export function historicoOrdenado(pagamentos = []) {
   return [...pagamentos].sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ✅ PAGAR POR LINHA — 28/09/2026, áudio da Beatriz:
+//   "a caixinha que está como 'gerada' não teria a possibilidade de a gente
+//    marcar pago em cada valor, pra ir diminuindo o valor da comissão?"
+//
+// Ela toca em cada linha "Gerada" ("pago, pago, pago"), o total selecionado
+// soma, e no OK o servidor (payCommissionManually com `commission_ids`) marca
+// AQUELAS linhas como pagas e desconta a soma do saldo no MESMO ato — se um
+// dos dois falha, os dois voltam.
+//
+// ⚠️ O SALDO CONTINUA SENDO A VERDADE. Em 28/09, 21 de 26 pessoas tinham a soma
+// das linhas "Gerada" igual ao saldo, centavo a centavo; em 5 a soma passa do
+// saldo (ex.: saque em andamento — o dinheiro já saiu do saldo, a linha segue
+// "Gerada"). Por isso marcar linhas nunca desconta mais que o saldo.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Linha que ainda pode ser marcada como paga. */
+export const linhaPagavel = (c) => c && (c.status === 'pending' || c.status === 'confirmed');
+
+/** Soma, em centavos exatos, das linhas selecionadas (só as pagáveis contam). */
+export function somaDasSelecionadas(comissoes = [], ids = []) {
+  const quero = new Set(ids.map(String));
+  return cent(comissoes.filter((c) => linhaPagavel(c) && quero.has(String(c.id)))
+    .reduce((s, c) => s + num(c.amount), 0));
+}
+
+export const MOTIVOS_LINHAS = Object.freeze({ NENHUMA: 'nenhuma', SALDO: 'saldo' });
+
+/** Dá pra marcar estas linhas como pagas? (o servidor confere de novo) */
+export function podeMarcarPagas({ comissoes = [], ids = [], saldo } = {}) {
+  const total = somaDasSelecionadas(comissoes, ids);
+  if (!ids.length || total <= 0) return { ok: false, motivo: MOTIVOS_LINHAS.NENHUMA, total };
+  if (total > cent(num(saldo))) return { ok: false, motivo: MOTIVOS_LINHAS.SALDO, total };
+  return { ok: true, motivo: null, total };
+}
+
+/**
+ * "Já pago" de uma pessoa: pagamentos manuais + linhas pagas que NÃO vieram de
+ * um pagamento manual (senão a mesma linha contaria duas vezes — ela é paga por
+ * um registro manual que já está na soma).
+ */
+export function jaPagoDaPessoa(comissoes = [], manuais = []) {
+  const ligadas = new Set(manuais.flatMap((p) => (Array.isArray(p.commission_ids) ? p.commission_ids.map(String) : [])));
+  const soltas = comissoes.filter((c) => c.status === 'paid' && !ligadas.has(String(c.id)))
+    .reduce((s, c) => s + num(c.amount), 0);
+  return cent(manuais.reduce((s, p) => s + num(p.valor), 0) + soltas);
+}
