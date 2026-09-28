@@ -35,3 +35,29 @@ export function filtrarPrecache(entradas, primeiraTela) {
     return primeiraTela.has(url);
   });
 }
+
+/**
+ * 🎬 28/09/2026 — Quais pedidos ao Storage o service worker pode intermediar.
+ *
+ * Até o #522 nenhuma regra de cache sob demanda funcionava (a rota de
+ * navegação quebrava o registro de todas). Quando voltaram a funcionar, a do
+ * Storage passou a pegar TAMBÉM os vídeos dos destaques (iPhone 17, Harley) —
+ * e vídeo que passa por service worker não toca no Safari do iPhone: ele pede
+ * o arquivo em pedaços (Range) e exige resposta 206. Sintoma no print do dono:
+ * card sem vídeo.
+ *
+ * Vídeo e áudio vão direto para a rede, como sempre foram. Só imagem passa.
+ *
+ * ⚠️ O Workbox COPIA esta função como texto para dentro do sw.js: ela não
+ * pode usar nada de fora dela (nem constante, nem import).
+ */
+export function storageSemVideo({ url, request }) {
+  if (url.hostname !== 'gezvviyegtxytnwjkrjv.supabase.co') return false;
+  if (!url.pathname.startsWith('/storage/')) return false;
+  const destino = request && request.destination;
+  if (destino === 'video' || destino === 'audio') return false;
+  if (request && request.headers && request.headers.has('range')) return false;
+  if (url.pathname.includes('/videos-produtos/')) return false;
+  if (/\.(?:mp4|webm|mov|m4v|mp3|m4a|ogg|wav)$/i.test(url.pathname)) return false;
+  return true;
+}
