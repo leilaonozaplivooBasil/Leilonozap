@@ -211,6 +211,14 @@ estável pela venda. Pool sem nenhum dono ativo: o percentual volta para a empre
 
 ## 6-A. COMISSÃO DE LEILÃO — REGRA OFICIAL (confirmada pelo dono em 04/08/2026)
 
+> 🎯 **ATUALIZAÇÃO 28/09/2026 — o EXECUTIVO passa a ganhar 10% no arremate** (dono:
+> "ganha 10% no final do leilão"). Sai da parte que a empresa retinha: **5% indicador
+> + 10% executivo + 15% retido = os mesmos 30%**. Base sem frete; só daqui pra frente;
+> linha sem executivo → empresa; executivo que também indicou recebe os dois; **a conta
+> do dono está fora da regra** (a parte dele fica com a empresa); quem arremata não
+> ganha 10% do próprio arremate. Código: `api/_lib/executivoDoLeilao.js`. As linhas
+> "Cadeia" e "Restante" da tabela abaixo valiam até 28/09/2026.
+
 ⚠️ **O LEILÃO NÃO SEGUE A REGRA DA LOJA VIRTUAL.** São modelos diferentes.
 Não aplicar aqui os 30% / cadeia telescópica / pools do topo.
 
