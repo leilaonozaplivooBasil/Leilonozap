@@ -27,6 +27,9 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   // 💸 24/09/2026 — comissão paga na mão pela Beatriz (fora do saque da
   // plataforma), com débito atômico do saldo. Ver payCommissionManually.js.
   comissao_paga_manual: 'conta',
+  // ⏳ 28/09/2026 — PIX gerado e não pago, ~1h depois (avisoPixPendente.js).
+  // Só e-mail: o dono não quer esse aviso na tela ("não tem cabimento").
+  pix_pendente: 'conta',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -130,6 +133,23 @@ export function montarAviso(tipo, d = {}) {
       assunto = `Comissão de ${reais(d.valor)} paga`;
       linhas = [`Sua comissão de ${reais(d.valor)} foi paga${d.pixKeyUsada ? ` no PIX informado (${d.pixKeyUsada})` : ' no PIX combinado com você'}. Se não aparecer na sua conta em algumas horas, responda este e-mail.`];
       botao = { rotulo: 'Ver a Carteira', url: `${SITE}/Carteira` };
+      break;
+    case 'pix_pendente':
+      // O PIX do Mercado Pago vale 24h (o banco mostra: os não pagos caem entre
+      // 24h e 24h45 depois de gerados). Nada de pressa falsa — só o lembrete.
+      if (d.deposito) {
+        assunto = `Seu PIX de ${reais(d.valor)} ainda não foi pago`;
+        linhas = [`${oi} Você gerou um PIX de ${reais(d.valor)} pra colocar saldo na Carteira, e o pagamento ainda não chegou.`,
+          'O código vale por 24 horas depois de gerado. É só abrir o app do banco e pagar com o copia e cola.',
+          'Se você já pagou, pode ignorar este e-mail: o saldo entra sozinho assim que o banco confirmar.'];
+        botao = d.link ? { rotulo: 'Abrir o PIX', url: d.link } : { rotulo: 'Ir pra Carteira', url: `${SITE}/Carteira` };
+      } else {
+        assunto = `Pedido #${d.pedido} esperando o PIX`;
+        linhas = [`${oi} Seu pedido #${d.pedido} (${reais(d.valor)}) está esperando o pagamento do PIX.`,
+          'O código vale por 24 horas depois de gerado. É só abrir o app do banco e pagar com o copia e cola.',
+          'Se você já pagou, pode ignorar este e-mail: a confirmação chega sozinha.'];
+        botao = d.link ? { rotulo: 'Abrir o PIX', url: d.link } : { rotulo: 'Ver meus pedidos', url: `${SITE}/MyCatalogOrders` };
+      }
       break;
     default:
       return null;

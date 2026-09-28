@@ -71,3 +71,26 @@ export function numeroDoPedido({ id, kind, tracking_code: tc } = {}) {
   const base = String(id || '').slice(0, 8).toUpperCase();
   return base ? `${kind === 'arremate' ? 'AR' : 'LZ'}${base}` : '';
 }
+
+/**
+ * PIX pendente (28/09/2026): PIX gerado entre 60 e 75 min atrás e ainda não
+ * pago. O cron roda a cada 15 min — a janela de 15 min põe cada PIX em UMA
+ * rodada só, e o registro 1x (chave = id da venda) segura a repetição.
+ */
+export function janelaPixPendente(agora = Date.now()) {
+  return { de: new Date(agora - 75 * 60000).toISOString(), ate: new Date(agora - 60 * 60000).toISOString() };
+}
+
+/**
+ * Este PIX ainda merece lembrete? Não, se a pessoa gerou OUTRO depois (do
+ * mesmo tipo — refez o PIX, o lembrete seria do código velho) ou se já pagou
+ * outro depois. Os dados reais: 9 dos 40 PIX de depósito abandonados em
+ * setembro tinham outro pago logo em seguida.
+ * @param {{id:string, created_date:string}} venda
+ * @param {Array<{id:string, created_date:string}>} outrasDaPessoa  mesmas pessoa e kind
+ */
+export function pixMereceLembrete(venda, outrasDaPessoa = []) {
+  const t = new Date(venda?.created_date).getTime();
+  if (!venda?.id || !Number.isFinite(t)) return false;
+  return !outrasDaPessoa.some((o) => o && o.id !== venda.id && new Date(o.created_date).getTime() > t);
+}
