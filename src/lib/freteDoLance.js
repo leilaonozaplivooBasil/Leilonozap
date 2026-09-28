@@ -60,3 +60,18 @@ export function bloqueioDoFrete({ status, valor = 0, selo = null, cep = '' } = {
   if (status === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
   return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
 }
+
+// 📮 28/09/2026 — pedido do dono (vídeo do celular): o "Informe seu CEP para
+// calcular o frete antes de dar o lance" saía num alert() do navegador —
+// "leilaonozap.net diz", botão OK, e a pessoa tinha de achar a caixinha de CEP
+// sozinha. Nestes status o CEP (ou o endereço) é o que falta, então a sala abre
+// o modal de CEP — a pessoa digita ali mesmo e segue para o lance. Os outros
+// (sessão vencida, produto grande, selo ausente) continuam com a frase própria.
+export const STATUS_DO_MODAL_DE_CEP = ['idle', 'needs_cep', 'error', 'loading', 'needs_address'];
+export const abreModalDeCep = (status) => STATUS_DO_MODAL_DE_CEP.includes(status);
+
+/** "12345678" → "12345-678", aceitando qualquer coisa colada (pontos, espaços). */
+export function formatarCep(valor) {
+  const d = String(valor || '').replace(/\D/g, '').slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
