@@ -113,7 +113,8 @@ export function montarAviso(tipo, d = {}) {
     case 'compra_enviada':
       assunto = `Pedido #${d.pedido} a caminho${d.rastreio ? ` (rastreio ${d.rastreio})` : ''}`;
       linhas = [`Seu pedido #${d.pedido} saiu pra entrega.${d.rastreio ? ` Código de rastreio: ${d.rastreio}.` : ''}`];
-      botao = { rotulo: 'Acompanhar o pedido', url: `${SITE}/MyCatalogOrders` };
+      // arremate aparece em "Meus Arremates", não em "Meus Pedidos" (28/09/2026)
+      botao = { rotulo: 'Acompanhar o pedido', url: `${SITE}/${d.arremate ? 'MyWinnings' : 'MyCatalogOrders'}` };
       break;
     case 'kyc_aprovado':
       assunto = 'Identidade validada — você já pode sacar';

@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { emitirSessao } from '../_lib/sessao.js';
 import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
 import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -149,6 +150,9 @@ export default async function handler(req, res) {
 
     const u = { ...rows[0] };
     delete u.password;
+    // ✉️ boas-vindas (28/09/2026) — só o registerNetworkUser mandava; o cadastro
+    // pelo site (a porta da maioria) ficava sem. Best-effort, nunca segura o cadastro.
+    await enviarAviso({ tipo: 'cadastro', userId: id, chave: 'conta', dados: { nome: full_name } });
     // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
     // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.
     // O navegador guarda e manda em toda chamada seguinte, no cabeçalho x-sessao.

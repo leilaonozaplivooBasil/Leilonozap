@@ -4,6 +4,7 @@
 import crypto from 'crypto';
 import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
 import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 
 import { emitirSessao } from '../_lib/sessao.js';
 import { contaNaLixeira, AVISO_CONTA_NA_LIXEIRA } from '../_lib/contaAtiva.js';
@@ -179,6 +180,8 @@ export default async function handler(req, res) {
       user = Array.isArray(created) ? created[0] : created;
       // 🌳 25/09 — o indicado vira contato na lista de quem indicou (best-effort)
       if (user?.id) criarContatoDaIndicacao(user).catch(() => {});
+      // ✉️ boas-vindas (28/09/2026) — só na conta NOVA; quem já existe só entrou.
+      if (user?.id) await enviarAviso({ tipo: 'cadastro', userId: user.id, chave: 'conta', dados: { nome: nomeNovo } });
       // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
       // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio.
       if (fallback_motivo && user?.id) {
