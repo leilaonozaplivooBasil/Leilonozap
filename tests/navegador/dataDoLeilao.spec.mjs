@@ -192,10 +192,12 @@ test('🔇 o vídeo toca mudo, sozinho, sem loop, e com a foto de cartaz', { ski
 test('⏸️ o rodízio SEGURA enquanto o vídeo toca, e SOLTA quando acaba', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrir('?video=1');
   try {
-    // o evento é disparado no elemento real; quem reage é o React real
+    // o evento é disparado no elemento real; quem reage é o React real.
+    // 28/09/2026: `playing`, não `play` — `play` dispara antes de haver imagem, e
+    // um vídeo que nunca carrega prenderia o card para sempre (ver "nunca começa").
     await pagina.evaluate(() => {
       document.querySelector('[data-teste="video-do-destaque"]')
-        .dispatchEvent(new Event('play'));
+        .dispatchEvent(new Event('playing'));
     });
     // o carrossel troca a cada 2,5s — três segundos parado prova que segurou
     await pagina.waitForTimeout(3200);
@@ -361,5 +363,71 @@ test('🔇 mas SEM som: nem botão, nem áudio no primeiro clique', { skip: semN
     await pagina.waitForTimeout(800);
     assert.equal(await estaMudo(pagina), true,
       '🔴 o clique ligou o som num card que não é o primeiro — dois áudios ao mesmo tempo');
+  } finally { await ctx.close(); }
+});
+
+// ─────────────── ⏳ "CARDS DE LEILÕES SEGUEM SEM VÍDEO" (28/09/2026) ───────────────
+//
+// Print do dono: iPhone 17 e Harley nos Destaques, só com as fotos. Duas causas:
+//   1. o `memo` do card nunca olhou `video` — e na Home o vídeo chega DEPOIS do
+//      card (2ª consulta). O card não redesenhava: ficava sem vídeo para sempre.
+//   2. o rodízio só segurava o vídeo depois que ele TOCAVA. Vídeo lento (os dois
+//      tinham o índice no fim do arquivo) perdia o slide em 2,5s e depois tocava
+//      escondido atrás da foto.
+
+test('🔴 vídeo que chega DEPOIS do card (como na Home) aparece e abre o card', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=prova&videoDepois=400&fotos=3');
+  try {
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 5000 });
+    // o rodízio pode estar em qualquer foto quando o vídeo chega; numa volta completa ele passa pelo vídeo
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && getComputedStyle(v).opacity === '1';
+    }, null, { timeout: 12000 });
+  } finally { await ctx.close(); }
+});
+
+test('🔴 vídeo LENTO para começar: o slide espera, não vai para as fotos em 2,5s', { skip: semNavegador }, async () => {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1200, height: 900 } });
+  // o vídeo demora 5s para responder — o índice no fim do arquivo faz isso na vida real
+  await ctx.route('**/*.webm', async (r) => { await new Promise((ok) => setTimeout(ok, 5000)); await r.continue(); });
+  const pagina = await ctx.newPage();
+  try {
+    await pagina.goto(`${BASE}?video=prova&fotos=3`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 20000 });
+    await pagina.waitForTimeout(4000);
+    assert.equal(await slideVisivelAgora(pagina), 'video', 'aos 4s o card já tinha trocado o vídeo pelas fotos');
+    // e quando o vídeo chega, toca NA TELA
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && !v.paused && v.currentTime > 0 && getComputedStyle(v).opacity === '1';
+    }, null, { timeout: 15000 });
+  } finally { await ctx.close(); }
+});
+
+test('vídeo que nunca começa não prende o card: segue para as fotos', { skip: semNavegador }, async () => {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1200, height: 900 } });
+  await ctx.route('**/*.webm', () => { /* nunca responde */ });
+  const pagina = await ctx.newPage();
+  try {
+    await pagina.goto(`${BASE}?video=prova&fotos=3`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 20000 });
+    await pagina.waitForFunction(() => {
+      const fotos = [...document.querySelectorAll('img[alt*="imagem"]')];
+      return fotos.some((f) => getComputedStyle(f).opacity === '1');
+    }, null, { timeout: 16000 });
+  } finally { await ctx.close(); }
+});
+
+test('vídeo QUEBRADO não faz o card parar 10s na capa a cada volta', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=quebrado&fotos=2');
+  try {
+    // 3 slides (vídeo + 2 fotos) a 2,5s: em 12s o rodízio dá a volta e passa pelas fotos de novo
+    const vistos = new Set();
+    for (let i = 0; i < 24; i += 1) { vistos.add(await slideVisivelAgora(pagina)); await pagina.waitForTimeout(500); }
+    const fotosVistas = [...vistos].filter((x) => typeof x === 'number' && x >= 0);
+    assert.ok(fotosVistas.length >= 2, `o rodízio travou: viu ${[...vistos].join(',')}`);
   } finally { await ctx.close(); }
 });

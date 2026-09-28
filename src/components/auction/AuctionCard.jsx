@@ -45,6 +45,9 @@ import { toast } from 'sonner';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
 
+/** Quanto o slide do vídeo espera ele começar antes de seguir para as fotos. */
+export const ESPERA_DO_VIDEO_MS = 10000;
+
 function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null, videoAtivo = false }) {
   // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
   // toque/hover e podem ser arrastadas pros lados (hook único reutilizável).
@@ -158,9 +161,20 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     if (!querMudo) { calarARadio(); v?.play?.().catch(() => {}); }
   };
 
+  // ⏳ 28/09/2026 — "cards de leilões seguem sem vídeo" (dono, print do iPhone
+  // 17 e da Harley). O rodízio só segurava o vídeo DEPOIS que ele começava a
+  // tocar. Vídeo que demora a começar — os dois têm o índice (moov) no FIM do
+  // arquivo, e o do iPhone tinha 41 MB — perdia o slide em 2,5s, ia para as
+  // fotos e, quando enfim tocava, tocava ESCONDIDO atrás da foto, ainda
+  // travando o rodízio. Agora o slide do vídeo ESPERA ele começar (até
+  // ESPERA_DO_VIDEO_MS); não começou, segue para as fotos e tenta de novo na
+  // próxima volta. Saiu do slide, o vídeo pausa; voltou, toca do começo.
+  const [esperandoVideo, setEsperandoVideo] = useState(temVideo);
+  // vídeo que já deu erro não é esperado de novo a cada volta do rodízio
+  const videoFalhouRef = useRef(false);
   const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
     totalSlides,
-    { segurar: videoTocando },
+    { segurar: videoTocando || esperandoVideo },
   );
 
   // O vídeo, quando existe, é o slide 0. `currentImageIndex` continua sendo o
@@ -168,6 +182,27 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // fica opaca e nenhuma legenda aparece — sem precisar tocar no resto do JSX.
   const mostrandoVideo = temVideo && slideAtual === 0;
   const currentImageIndex = temVideo ? slideAtual - 1 : slideAtual;
+
+  useEffect(() => {
+    if (!temVideo || video?.tipo !== 'arquivo') { setEsperandoVideo(false); return undefined; }
+    const v = videoRef.current;
+    if (!mostrandoVideo) {
+      // saiu do slide (rodízio ou dedo): vídeo escondido não toca nem segura nada
+      setEsperandoVideo(false);
+      setVideoTocando(false);
+      try { v?.pause?.(); } catch { /* sem vídeo na tela */ }
+      return undefined;
+    }
+    if (videoFalhouRef.current) { setEsperandoVideo(false); return undefined; }
+    setEsperandoVideo(true);
+    if (v) {
+      try { if (v.ended || v.currentTime > 0) v.currentTime = 0; } catch { /* ainda sem metadados */ }
+      v.play?.().catch(() => {});
+    }
+    const desiste = setTimeout(() => setEsperandoVideo(false), ESPERA_DO_VIDEO_MS);
+    return () => clearTimeout(desiste);
+  }, [mostrandoVideo, temVideo, video?.tipo]);
+  useEffect(() => { videoFalhouRef.current = false; }, [video?.embed]);
   // ↙️ o selo de fábrica mora no canto inferior esquerdo: estas duas dizem
   // se o botão de som ou a legenda estão ali agora, para ele desviar
   const somNaFoto = temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
@@ -543,12 +578,13 @@ ${linhaDoLance}
                   // a primeira foto como cartaz: o card nunca nasce preto, e
                   // quem está com dados curtos vê a foto de sempre
                   poster={images[0] || undefined}
-                  onPlay={() => setVideoTocando(true)}
-                  onEnded={() => setVideoTocando(false)}
+                  // `playing` (não `play`): só conta quando a imagem ANDA de fato
+                  onPlaying={() => { setVideoTocando(true); setEsperandoVideo(false); }}
+                  onEnded={() => { setVideoTocando(false); setEsperandoVideo(false); }}
                   onPause={() => setVideoTocando(false)}
                   // vídeo que não carrega não pode deixar buraco: solta a rédea
                   // e o rodízio segue pras fotos
-                  onError={() => setVideoTocando(false)}
+                  onError={() => { videoFalhouRef.current = true; setVideoTocando(false); setEsperandoVideo(false); }}
                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
                 />
               ) : (
@@ -1002,6 +1038,12 @@ export default memo(AuctionCard, (prevProps, nextProps) => {
     prevProps.bidStats?.users === nextProps.bidStats?.users &&
     prevProps.isAdmin === nextProps.isAdmin &&
     prevProps.showFavoriteButton === nextProps.showFavoriteButton &&
-    prevProps.userId === nextProps.userId
+    prevProps.userId === nextProps.userId &&
+    // 🎬 28/09/2026 — "cards de leilões seguem sem vídeo". Nos Destaques o vídeo
+    // chega DEPOIS do card (2ª consulta, ver DestaquesLeiloes). Sem estas duas
+    // linhas a memo recusava o novo `video` e o card ficava só com as fotos.
+    prevProps.video?.embed === nextProps.video?.embed &&
+    prevProps.video?.tipo === nextProps.video?.tipo &&
+    prevProps.videoAtivo === nextProps.videoAtivo
   );
 });
