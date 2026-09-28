@@ -17,6 +17,8 @@ import { registrarReceita } from '../_lib/financialIncome.js';
 import { compromissoEmLeiloes } from '../_lib/compromissoLeilao.js';
 
 import { exigirSessao } from '../_lib/sessao.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
+import { numeroDoPedido } from '../_lib/regrasDosAvisos.js';
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 // Coluna nunca inicializada fica NULL, e `eq.0` nunca casa com NULL no Postgres —
@@ -204,6 +206,10 @@ export default async function handler(req, res) {
     if (commission > 0) {
       await registrarReceita({ description: `Comissão — venda #${data.sale_id}`, category: 'comissao_loja', costCenter: 'Loja Virtual', amount: commission, source: 'venda', saleId: data.sale_id });
     }
+
+    // ✉️ "pedido confirmado" (28/09/2026) — só o PIX/cartão (mpWebhook) mandava;
+    // quem pagava com saldo ficava sem. Mesma chave (id da venda): nunca duplica.
+    await enviarAviso({ tipo: 'compra_confirmada', userId: buyerId, chave: data.sale_id, dados: { pedido: numeroDoPedido({ id: data.sale_id, kind: 'loja', tracking_code: data.tracking }), valor: round2(Number(data.total || 0) + frete.valor) } });
 
     // novo_saldo já vem descontado do frete (a reserva aconteceu ANTES do RPC)
     return res.status(200).json({

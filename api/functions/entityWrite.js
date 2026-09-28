@@ -3,6 +3,7 @@
 // de conteúdo (tabelas sensíveis — app_users, wallets, saques, pagamentos — NÃO entram aqui; têm rota própria).
 import crypto from 'crypto';
 import { enviarAviso } from '../_lib/avisosPorEmail.js';
+import { codigoDeRastreio, numeroDoPedido } from '../_lib/regrasDosAvisos.js';
 import { oid } from '../_lib/oid.js';
 import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -443,7 +444,7 @@ export default async function handler(req, res) {
     // ✉️ "pedido a caminho" (23/09/2026) — o painel marca status 'shipped' (+ rastreio)
     if (table === 'catalog_sales' && body?.payload?.status === 'shipped') {
       const venda = ur.rows?.[0] || {};
-      await enviarAviso({ tipo: 'compra_enviada', userId: venda.buyer_id, chave: id, dados: { pedido: String(venda.id || id).slice(0, 10), rastreio: body.payload.tracking_code || venda.tracking_code || '' } });
+      await enviarAviso({ tipo: 'compra_enviada', userId: venda.buyer_id, chave: id, dados: { pedido: numeroDoPedido({ ...venda, id: venda.id || id }), rastreio: codigoDeRastreio(body.payload.tracking_code || venda.tracking_code), arremate: venda.kind === 'arremate' } });
     }
 
     // 🔴 CANCELAR leilão devolve o dinheiro igual a APAGAR (18/08/2026).
