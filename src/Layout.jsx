@@ -41,6 +41,7 @@ import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
 import BlocoDeDemandas from "@/components/nav/BlocoDeDemandas";
+import SinoDoCliente from "@/components/nav/SinoDoCliente";
 import BarraDoApp from "@/components/nav/BarraDoApp";
 import { mostraBarraDoApp } from "@/lib/barraDoApp";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
@@ -1073,6 +1074,8 @@ export default function Layout({ children, currentPageName }) {
                       <span className="text-[10px] font-bold uppercase tracking-wide text-white">Carteira</span>
                     </button>
                   )}
+                  {/* 🔔 28/09/2026 — o sino do cliente, ao lado do menu (só logado) */}
+                  {isLoggedIn && <SinoDoCliente currentUser={currentUser} temaClaro={isPainelClaro} />}
                   {/* ⭐ A Top College saiu daqui (24/09): mora colada na logo, à esquerda. */}
                   <button
                     type="button"
