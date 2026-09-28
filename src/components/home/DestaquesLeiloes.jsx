@@ -4,7 +4,8 @@ import { ANCORA_DESTAQUES, querDestaques, rolarAte } from '@/lib/rolarParaDestaq
 import { supabase } from '@/api/supabaseClient';
 import { Sparkles } from 'lucide-react';
 import AuctionCard from '@/components/auction/AuctionCard';
-import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
+// a régua do cartaz (estaEmCartaz) mora dentro de destaquesEmCartaz
+import { destaquesEmCartaz } from '@/lib/posicoesDoDestaque';
 import { videoDoProduto } from '@/lib/videoDoProduto';
 
 // 🌟 Seção "Destaques" — até 6 leilões marcados manualmente em Editar Leilão,
@@ -29,11 +30,12 @@ export default function DestaquesLeiloes({ currentUser }) {
         .from('featured_products')
         .select('sort_order,is_active,raw_base44')
         .limit(50);
-      const ids = (featured || [])
+      // 🌟 28/09/2026 — o corte dos 6 vem DEPOIS de tirar os encerrados (ver
+      // src/lib/posicoesDoDestaque.js): antes, destaque de leilão encerrado
+      // comia vaga e a Home mostrava só 3 dos marcados.
+      const ids = [...new Set((featured || [])
         .filter((r) => r.raw_base44?.auction_id && r.is_active !== false)
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-        .slice(0, 6)
-        .map((r) => r.raw_base44.auction_id);
+        .map((r) => r.raw_base44.auction_id))];
       if (!alive || ids.length === 0) { if (alive) setDestaques([]); return; }
 
       const { data: auctionsData } = await supabase
@@ -45,7 +47,7 @@ export default function DestaquesLeiloes({ currentUser }) {
       // foi assim que um Air Fryer arrematado em 26/08 seguiu em cartaz. O
       // destaque encerrado simplesmente não entra; os outros sobem de posição.
       const byId = Object.fromEntries((auctionsData || []).map((a) => [a.id, a]));
-      const emCartaz = ids.map((id) => byId[id]).filter((a) => a && estaEmCartaz(a));
+      const emCartaz = destaquesEmCartaz(featured, byId);
       setDestaques(emCartaz);
 
       // 🎬 UMA consulta para TODOS os destaques, nunca uma por card.
