@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { ShoppingCart as CartIcon } from "lucide-react";
 import UserAvatarMenu from "@/components/nav/UserAvatarMenu";
+import SinoDoCliente from "@/components/nav/SinoDoCliente";
 
 import { SECTORS } from "@/lib/sectors";
 import SectorLink from "@/components/nav/SectorLink";
@@ -301,6 +302,9 @@ export default function NavDesktop({
             }
           `}</style>
         </Link>
+
+        {/* 🔔 28/09/2026 — o sino do cliente (lance coberto, arremate, pedido…), só logado */}
+        {isLoggedIn && <SinoDoCliente currentUser={currentUser} temaClaro={temaClaro} className="ml-1" />}
 
         {/* === Separador visual: LOJA (rank+carrinho) ↔ PERFIL ===
             No tema claro a separação é só espaçamento (nada de barrinha). */}
