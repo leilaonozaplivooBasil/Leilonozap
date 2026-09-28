@@ -71,11 +71,22 @@ async function medir(busca, largura = 1280) {
   const caixas = await pagina.evaluate(() => {
     const cx = (el) => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, direita: r.right, esquerda: r.left }; };
     const selo = document.querySelector('[data-teste="selo-de-garantia"]');
-    const botoes = [...document.querySelectorAll('button')]
-      .filter((b) => b.getBoundingClientRect().top < selo.getBoundingClientRect().bottom + 40)
-      .map(cx);
-    // a moldura da foto é o pai posicionado do selo
-    return { selo: cx(selo), botoes, moldura: cx(selo.offsetParent) };
+    const moldura = selo.offsetParent;
+    // todo botão que está DENTRO da foto: compartilhar, coração, som, lápis
+    const dentroDaFoto = (el) => moldura.contains(el) || (() => {
+      const r = el.getBoundingClientRect(); const m = moldura.getBoundingClientRect();
+      return r.top >= m.top && r.bottom <= m.bottom && r.left >= m.left && r.right <= m.right;
+    })();
+    const botoes = [...document.querySelectorAll('button')].filter(dentroDaFoto).map(cx);
+    const bolinhas = document.querySelector('[data-teste="bolinhas-do-carrossel"]');
+    const legenda = moldura.querySelector('p.truncate');
+    return {
+      selo: cx(selo),
+      botoes,
+      moldura: cx(moldura),
+      bolinhas: bolinhas ? cx(bolinhas) : null,
+      legenda: legenda ? cx(legenda) : null,
+    };
   });
   await pagina.close();
   return caixas;
@@ -103,18 +114,53 @@ test('🔴 no card largo, o selo NÃO encosta nos botões de ação', { skip: se
   }
 });
 
-// 🔝 25/09/2026 — dono: "reposicionar a tag NOVO em cima dos cards". O selo
-// sai do meio da foto (cobria o produto) e vai pro canto superior DIREITO, na
-// mesma linha dos botões da esquerda.
-test('🎯 o selo está no CANTO SUPERIOR DIREITO da foto, na linha dos botões', { skip: semNavegador }, async () => {
-  const { selo, moldura, botoes } = await medir('?garantia=1&favorito=1');
-  const folgaDireita = moldura.direita - selo.direita;
-  assert.ok(folgaDireita >= 4 && folgaDireita <= 20, `o selo está a ${folgaDireita.toFixed(1)}px da borda direita — tinha que estar colado no canto`);
-  const folgaTopo = selo.y - moldura.y;
-  assert.ok(folgaTopo >= 4 && folgaTopo <= 20, `o selo está a ${folgaTopo.toFixed(1)}px do topo — tinha que estar em cima`);
-  const topoDosBotoes = Math.min(...botoes.map((b) => b.y));
-  assert.ok(Math.abs(selo.y - topoDosBotoes) <= 12, `o selo (y ${Math.round(selo.y)}) não está na linha dos botões (y ${Math.round(topoDosBotoes)})`);
-  assert.ok(selo.esquerda > Math.max(...botoes.map((b) => b.direita)), 'o selo tem que ficar à DIREITA dos botões');
+// ↙️ 28/09/2026 — dono, print da Canon com seta vermelha: "a tag NOVO -
+// Garantia deve ser fixa no canto inferior esquerdo do card". (Antes, de
+// 25/09: canto superior direito, na linha dos botões — no celular descia para
+// o meio da foto, que é o que o print mostrou.)
+const noCantoInferiorEsquerdo = ({ selo, moldura }, onde = '') => {
+  const folgaEsquerda = selo.esquerda - moldura.esquerda;
+  assert.ok(folgaEsquerda >= 4 && folgaEsquerda <= 20, `${onde}o selo está a ${folgaEsquerda.toFixed(1)}px da borda esquerda — tinha que estar colado no canto`);
+  const folgaBaixo = (moldura.y + moldura.h) - (selo.y + selo.h);
+  assert.ok(folgaBaixo >= 4 && folgaBaixo <= 20, `${onde}o selo está a ${folgaBaixo.toFixed(1)}px do pé da foto — tinha que estar embaixo`);
+};
+
+test('🎯 o selo está no CANTO INFERIOR ESQUERDO da foto (card largo)', { skip: semNavegador }, async () => {
+  noCantoInferiorEsquerdo(await medir('?garantia=1&favorito=1'));
+});
+
+test('🎯 no celular (2 cards por linha, ~170px) o selo também fica no canto inferior esquerdo', { skip: semNavegador }, async () => {
+  noCantoInferiorEsquerdo(await medir('?garantia=1&favorito=1&largura=218', 390), 'no celular ');
+});
+
+test('🔴 com várias fotos, as bolinhas do carrossel NÃO ficam por cima do selo', { skip: semNavegador }, async () => {
+  for (const [largura, tela] of [[218, 390], [420, 1280]]) {
+    const m = await medir(`?garantia=1&favorito=1&fotos=6&largura=${largura}`, tela);
+    assert.ok(m.bolinhas, 'com 6 fotos as bolinhas tinham que aparecer');
+    assert.ok(!seCruzam(m.selo, m.bolinhas), `card ${largura}px: bolinhas x:${Math.round(m.bolinhas.esquerda)}–${Math.round(m.bolinhas.direita)} y:${Math.round(m.bolinhas.y)} cruzam o selo x:${Math.round(m.selo.esquerda)}–${Math.round(m.selo.direita)} y:${Math.round(m.selo.y)}`);
+    noCantoInferiorEsquerdo(m, `card ${largura}px com fotos: `);
+  }
+});
+
+test('🔴 no card do admin, o selo NÃO encosta no lápis de editar', { skip: semNavegador }, async () => {
+  // 206px de banca = foto de ~158px: o card de um celular de 360px, o mais estreito comum
+  const m = await medir('?garantia=1&favorito=1&admin=1&largura=206', 360);
+  assert.equal(m.botoes.length, 3, `esperava compartilhar + coração + lápis, achei ${m.botoes.length}`);
+  for (const b of m.botoes) assert.ok(!seCruzam(m.selo, b), `o selo x:${Math.round(m.selo.esquerda)}–${Math.round(m.selo.direita)} y:${Math.round(m.selo.y)}–${Math.round(m.selo.y + m.selo.h)} cruza x:${Math.round(b.esquerda)}–${Math.round(b.direita)} y:${Math.round(b.y)}–${Math.round(b.y + b.h)} (foto ${Math.round(m.moldura.w)}px)`);
+});
+
+test('🔴 foto com legenda: o selo sobe e NÃO cobre o texto', { skip: semNavegador }, async () => {
+  const m = await medir('?garantia=1&legenda=1&largura=218', 390);
+  assert.ok(m.legenda, 'a legenda tinha que aparecer');
+  assert.ok(!seCruzam(m.selo, m.legenda), 'o selo está em cima do texto da legenda');
+});
+
+test('🔴 no slide do vídeo, o selo NÃO fica embaixo do botão de som', { skip: semNavegador }, async () => {
+  const m = await medir('?garantia=1&video=1&largura=218', 390);
+  assert.ok(m.botoes.length >= 2, 'o botão de som tinha que aparecer');
+  for (const b of m.botoes) assert.ok(!seCruzam(m.selo, b), 'o selo cruza o botão de som');
+  const folgaBaixo = (m.moldura.y + m.moldura.h) - (m.selo.y + m.selo.h);
+  assert.ok(folgaBaixo <= 20, 'no vídeo o selo continua no pé da foto');
 });
 
 test('🔴 no card ESTREITO (celular) o selo continua sem encostar nos botões', { skip: semNavegador }, async () => {
