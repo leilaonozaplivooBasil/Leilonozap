@@ -41,3 +41,28 @@ test('o vite.config.js liga o filtro e o cache sob demanda do JS/CSS', () => {
   assert.match(semComentario, /navigateFallback: null,/, 'sem fallback de navegação: o index.html não está no precache');
   assert.match(C, /cacheName: 'supabase-imagens', cacheableResponse: \{ statuses: \[200\] \}/, 'imagem opaca não entra no cache');
 });
+
+// 🎬 28/09/2026 — dono: "no preview não continha vídeo nos cards de leilões com
+// vídeo, como o iPhone". Vídeo que passa pelo service worker não toca no Safari.
+test('vídeo e áudio do Storage NÃO passam pelo service worker; imagem passa', async () => {
+  const { storageSemVideo } = await import('../src/lib/precacheEssencial.js');
+  const pedido = (href, destination = '', range = false) => ({
+    url: new URL(href),
+    request: { destination, headers: new Headers(range ? { range: 'bytes=0-' } : {}) },
+  });
+  const S = 'https://gezvviyegtxytnwjkrjv.supabase.co/storage/v1/object/public';
+  assert.equal(storageSemVideo(pedido(`${S}/videos-produtos/uploads/1790444659781_IHPONE_7.mp4`, 'video', true)), false, 'o vídeo do iPhone');
+  assert.equal(storageSemVideo(pedido(`${S}/videos-produtos/uploads/harley.mp4`)), false, 'pelo balde, mesmo sem destination');
+  assert.equal(storageSemVideo(pedido(`${S}/outro/qualquer.webm`)), false, 'pela extensão');
+  assert.equal(storageSemVideo(pedido(`${S}/public-assets/foto.png`, 'image', true)), false, 'pedido em pedaços nunca');
+  assert.equal(storageSemVideo(pedido(`${S}/public-assets/foto.png`, 'audio')), false);
+  assert.equal(storageSemVideo(pedido(`${S}/public-assets/foto.png`, 'image')), true, 'foto continua no cache');
+  assert.equal(storageSemVideo(pedido('https://outro.supabase.co/storage/v1/x.png', 'image')), false);
+  assert.equal(storageSemVideo(pedido('https://gezvviyegtxytnwjkrjv.supabase.co/rest/v1/auctions')), false, 'API não é cache de imagem');
+});
+
+test('o vite.config.js usa a régua que deixa o vídeo de fora', () => {
+  const C = readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8');
+  assert.match(C, /urlPattern: storageSemVideo,/);
+  assert.doesNotMatch(C, /urlPattern: \/\^https:\\\/\\\/gezvviyegtxytnwjkrjv/, 'a regex antiga pegava vídeo também');
+});
