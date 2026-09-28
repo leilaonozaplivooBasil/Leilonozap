@@ -162,3 +162,13 @@ test('a migração guarda quais linhas cada pagamento pagou', () => {
   const M = readFileSync(new URL('../supabase/migrations/20260928060000_comissao_paga_por_linha.sql', import.meta.url), 'utf8');
   assert.match(M, /add column if not exists commission_ids text\[\]/);
 });
+
+// 👀 28/09/2026 — vídeo da Beatriz: "marcar aqui já como pago e já ir
+// descontando da parte de cima". O valor de cima e a barra do OK mostram, ao
+// vivo, como fica o "A receber"; o desconto de verdade segue no OK.
+test('marcar já mostra o "A receber" descontado, em cima e na barra do OK', () => {
+  const C = readFileSync(new URL('../src/components/comissoes/ComissaoUsuarioCard.jsx', import.meta.url), 'utf8');
+  assert.match(C, /data-teste="a-receber-depois">R\$ \{fmtBR\(Math\.max\(0, grupo\.totalPendente - regraLinhas\.total\)\)\}/);
+  assert.match(C, /data-teste="saldo-antes-depois"/);
+  assert.match(C, /OK · descontar R\$ \{fmtBR\(regraLinhas\.total\)\}/);
+});
