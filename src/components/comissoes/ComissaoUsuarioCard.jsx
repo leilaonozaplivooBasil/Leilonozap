@@ -44,9 +44,21 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
           </div>
         </div>
 
-        <div className="text-right">
+        {/* 👀 28/09/2026 — vídeo da Beatriz: "a gente tinha que marcar aqui já como
+            pago e já ir descontando da parte de cima". Enquanto ela marca, o
+            valor de cima já mostra como fica; o desconto de verdade acontece no
+            OK (com a chave PIX usada, que é o comprovante). */}
+        <div className="text-right" data-teste="a-receber">
           <div className="text-xs text-gray-500">A receber (no saldo)</div>
-          <div className="text-lg font-black text-amber-400">R$ {fmtBR(grupo.totalPendente)}</div>
+          {marcadas.size > 0 && regraLinhas.ok ? (
+            <>
+              <div className="text-xs text-gray-500 line-through" data-teste="a-receber-antes">R$ {fmtBR(grupo.totalPendente)}</div>
+              <div className="text-lg font-black text-amber-400" data-teste="a-receber-depois">R$ {fmtBR(Math.max(0, grupo.totalPendente - regraLinhas.total))}</div>
+              <div className="text-[11px] font-bold text-green-400">− R$ {fmtBR(regraLinhas.total)} marcados · confirme no OK</div>
+            </>
+          ) : (
+            <div className="text-lg font-black text-amber-400">R$ {fmtBR(grupo.totalPendente)}</div>
+          )}
         </div>
         <div className="text-right">
           <div className="text-xs text-gray-500">Já pago</div>
@@ -135,6 +147,12 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
               <div className="flex-1 min-w-[160px]">
                 <div className="text-xs text-gray-400">{marcadas.size} marcada{marcadas.size === 1 ? '' : 's'} como pago</div>
                 <div className="text-lg font-black text-green-400" data-teste="total-marcado">R$ {fmtBR(regraLinhas.total)}</div>
+                {regraLinhas.ok && (
+                  <div className="text-xs text-gray-300" data-teste="saldo-antes-depois">
+                    A receber: <span className="line-through text-gray-500">R$ {fmtBR(grupo.totalPendente)}</span>{' → '}
+                    <span className="font-bold text-amber-400">R$ {fmtBR(Math.max(0, grupo.totalPendente - regraLinhas.total))}</span>
+                  </div>
+                )}
                 {regraLinhas.motivo === MOTIVOS_LINHAS.SALDO && (
                   <div className="text-xs text-amber-300" data-teste="aviso-passa-do-saldo">
                     Passa do saldo (R$ {fmtBR(grupo.totalPendente)}). Parte destas comissões já saiu do saldo (saque ou ajuste) — desmarque alguma.
@@ -145,7 +163,7 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
               <button type="button" disabled={!regraLinhas.ok} onClick={() => setModalLinhasAberto(true)}
                 className="rounded-lg bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-black px-4 py-2"
                 data-teste="ok-marcadas">
-                OK
+                OK · descontar R$ {fmtBR(regraLinhas.total)}
               </button>
             </div>
           )}
