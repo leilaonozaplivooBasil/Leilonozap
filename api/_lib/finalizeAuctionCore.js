@@ -11,7 +11,7 @@ import { cancelarCuponsBloqueados, liberarCupomPassaporte } from './passaporteCo
 import { enviarAviso } from './avisosPorEmail.js';
 import { recolherBonusPorArremate } from './passaporteBonus.js';
 import { oid } from './oid.js';
-import { executivoDoArremate, PCT_EXECUTIVO_LEILAO } from './executivoDoLeilao.js';
+import { executivoDoArremate, PCT_EXECUTIVO_LEILAO, leilaoNaRegraDoExecutivo } from './executivoDoLeilao.js';
 // 📒 Livro-caixa da reserva. Import de MESMO diretório (./) — a forma segura já
 // usada nas linhas acima. Nunca de api/functions/ pra fora (ver submitAtomicBid.js).
 import { registrarMovimentoReserva, TIPOS } from './reservaLedger.js';
@@ -588,7 +588,7 @@ export async function finalizeOneAuction(auction) {
       // resto retido = os mesmos 30%. Só leilão real (nem teste, nem plano de
       // investimento). Quem é o executivo, e quem fica fora: executivoDoLeilao.js.
       // Mesmo cuidado dos 5%: só conta como distribuído se o crédito ENTROU.
-      if (!auction.is_investment_plan && !pareceInvestimento && auction.is_test_auction !== true && u?.id) {
+      if (!auction.is_investment_plan && !pareceInvestimento && auction.is_test_auction !== true && u?.id && leilaoNaRegraDoExecutivo(auction)) {
         try {
           const buscar = async (id) => (await (await sb(
             `app_users?select=id,full_name,referred_by_id,career_levels,active,licenciado_context&id=eq.${enc(id)}&limit=1`

@@ -24,6 +24,19 @@ import { isExecutivo, readExecutiveOwner } from './resolveExecutivo.js';
 
 export const PCT_EXECUTIVO_LEILAO = 10.0;
 
+/**
+ * 🔴 NADA RETROATIVO (dono, 28/09/2026: "não deve valer para retroativo. só daqui
+ * pra frente. Não cause problemas"). Vale para leilão que TERMINA a partir daqui
+ * (28/09/2026 14h00 de Brasília), mesmo que a liquidação rode depois.
+ */
+export const INICIO_REGRA_EXECUTIVO = '2026-09-28T17:00:00.000Z';
+
+/** Este leilão entra na regra? (pelo fim do leilão, não pela hora da liquidação) */
+export function leilaoNaRegraDoExecutivo(auction) {
+  const fim = Date.parse(auction?.end_time || '');
+  return Number.isFinite(fim) && fim >= Date.parse(INICIO_REGRA_EXECUTIVO);
+}
+
 /** Contas fora da regra dos 10% (dono: "tiro a sua conta da regra"). */
 export const FORA_DA_REGRA_DO_EXECUTIVO = new Set(['68db0ff2c19838a827fb6e5f']); // LUIZ SANTANNA
 

@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { executivoDoArremate, PCT_EXECUTIVO_LEILAO, FORA_DA_REGRA_DO_EXECUTIVO } from '../api/_lib/executivoDoLeilao.js';
+import { executivoDoArremate, PCT_EXECUTIVO_LEILAO, FORA_DA_REGRA_DO_EXECUTIVO, leilaoNaRegraDoExecutivo } from '../api/_lib/executivoDoLeilao.js';
 
 const LUIZ = '68db0ff2c19838a827fb6e5f';
 const base = {
@@ -54,4 +54,14 @@ test('o martelo credita pelo banco, grava a linha e só então conta como distri
   assert.match(bloco, /if \(r\.ok\) \{\s*pctDistribuido = money\(pctDistribuido \+ PCT_EXECUTIVO_LEILAO\);/);
   assert.match(bloco, /role: 'leilao_executivo'/);
   assert.ok(F.indexOf('EXECUTIVO GANHA 10%') > F.indexOf('pctDistribuido = PCT_INDICADOR_LEILAO'), 'depois dos 5% (que atribuem, não somam)');
+});
+
+test('🔴 nada retroativo: só leilão que TERMINA a partir de 28/09 14h (Brasília)', () => {
+  assert.equal(leilaoNaRegraDoExecutivo({ end_time: '2026-09-28T16:59:59Z' }), false, 'terminou antes');
+  assert.equal(leilaoNaRegraDoExecutivo({ end_time: '2026-09-26T21:00:00Z' }), false);
+  assert.equal(leilaoNaRegraDoExecutivo({ end_time: '2026-09-28T17:00:00Z' }), true);
+  assert.equal(leilaoNaRegraDoExecutivo({ end_time: '2026-10-02T21:00:00Z' }), true);
+  assert.equal(leilaoNaRegraDoExecutivo({}), false, 'sem data de fim, não arrisca');
+  const F = readFileSync(new URL('../api/_lib/finalizeAuctionCore.js', import.meta.url), 'utf8');
+  assert.match(F, /u\?\.id && leilaoNaRegraDoExecutivo\(auction\)\) \{/);
 });
