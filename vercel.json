@@ -37,6 +37,8 @@
     { "path": "/api/functions/gerarJornadaDoDia", "schedule": "0 7 * * *" },
     { "path": "/api/functions/purgarAudiosAntigos", "schedule": "20 3 * * *" },
     { "path": "/api/functions/alertaCreditoGateway", "schedule": "0 */4 * * *" },
-    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" }
+    { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" },
+    { "path": "/api/functions/avisoPixPendente", "schedule": "*/15 * * * *" },
+    { "path": "/api/functions/nutricaoCadastro", "schedule": "47 13 * * *" }
   ]
 }
