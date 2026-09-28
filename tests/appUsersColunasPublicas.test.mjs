@@ -25,9 +25,10 @@ test('o adapter tem a lista de colunas públicas e nenhuma coluna secreta entra 
 });
 
 test('list/filter/get nunca usam select(*) em app_users', () => {
-  assert.match(adapter, /const colunasDe = \(table\) => \(table === 'app_users' \? COLUNAS_PUBLICAS_APP_USERS : '\*'\);/);
+  // 28/09/2026 — as outras tabelas com campo guardado (LGPD etapa 1) usam a lista delas
+  assert.match(adapter, /const colunasDe = \(table\) => \(table === 'app_users' \? COLUNAS_PUBLICAS_APP_USERS : colunasPublicasDe\(table\)\);/);
   assert.match(adapter, /async list\(orderBy, limit\) \{\s*\n\s*let q = supabase\.from\(table\)\.select\(colunasDe\(table\)\);/);
-  assert.match(adapter, /async filter\(filters, orderBy, limit, offset\) \{\s*\n\s*let q = supabase\.from\(table\)\.select\(colunasDe\(table\)\);/);
+  assert.match(adapter, /async filter\(filters, orderBy, limit, offset\) \{[\s\S]{0,700}?\n\s*let q = supabase\.from\(table\)\.select\(colunasDe\(table\)\);/);
   assert.match(adapter, /supabase\.from\(table\)\.select\(colunasDe\(table\)\)\.eq\('id', id\)\.maybeSingle\(\)/);
 });
 

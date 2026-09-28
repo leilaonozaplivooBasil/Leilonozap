@@ -6,6 +6,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import MenuPainelLateral from '@/components/painel/MenuPainelLateral';
 import { linkWhatsAppNumero } from '@/lib/whatsappOficial';
+import { colunasPublicasDe } from '@/lib/camposSensiveis';
 import { Truck, Package, Loader2, MapPin, Plus, Trash2, Check, Clock,
   PackageCheck, Send, Box, RefreshCw, ShoppingBag, X
 } from 'lucide-react';
@@ -49,7 +50,8 @@ export default function PedidosDistribuidor() {
       // Cada um vê SÓ os seus pedidos (seller_id = você); admin/super_admin vê todos.
       const isAdmin = ['admin', 'super_admin'].includes(u?.role);
       // inclui vendas com kind NULL (catálogo normal) — neq sozinho exclui null no SQL
-      let qy = supabase.from('catalog_sales').select('*').or('kind.is.null,kind.neq.adesao');
+      // 🔐 LGPD etapa 1: colunas públicas (sem CPF do comprador) — `*` seria "permission denied"
+      let qy = supabase.from('catalog_sales').select(colunasPublicasDe('catalog_sales')).or('kind.is.null,kind.neq.adesao');
       if (!isAdmin) qy = qy.eq('seller_id', u?.id);
       const { data } = await qy.order('created_at', { ascending: false }).limit(500);
       setOrders((data || []).filter((o) => ['paid', 'preparando', 'saiu_entrega', 'entregue', 'cancelado'].includes(o.status)));

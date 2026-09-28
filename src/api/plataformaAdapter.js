@@ -38,6 +38,7 @@ import { supabase } from './supabaseClient';
 import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
 import { lerCracha, guardarCracha, cabecalhosSessao } from '@/lib/sessaoCliente';
+import { colunasPublicasDe, ehTabelaProtegida, podeVerSensiveis, filtroUsaCampoSensivel, juntarCampos } from '@/lib/camposSensiveis';
 // Mapa Entidade → tabela (snake_case plural)
 const TABLE_MAP = {
   AppUser: 'app_users',
@@ -312,7 +313,39 @@ async function _avisaRajada(actorId) {
 // publicável. O próprio usuário continua vendo os seus: vêm do login (servidor) e
 // são preservados a cada atualização do cadastro (src/lib/dadosSensiveisDoUsuario.js).
 const COLUNAS_PUBLICAS_APP_USERS = 'id,base44_id,active_partner_plan,address_city,address_complement,address_neighborhood,address_number,address_state,address_street,address_zip_code,arrematante_commission_percentage,arrematante_context,arrematante_responsavel_id,avatar_color,avatar_url,career_levels,catalog_commission_balance,catalog_total_commissions_generated,commission_balance,created_by,created_by_id,created_date,display_first_name,display_last_name,email,enabled_panels,full_name,indicated_clients_count,is_sample,is_seller,licenciado_context,network_bids_count,nickname,partner_plan_activated_at,partner_plan_amount,phone,points,primary_career_level,profile_photo_url,recruited_by_id,referral_code,referred_by_id,role,saldo_alocado,saldo_disponivel,store_name,terms_accepted,total_bids,total_commissions_generated,total_operation_fee_percentage,updated_date,won_auctions,created_at,updated_at,needs_password_reset,kyc_status,is_pdv_operator,employer_id,active,store_slug,livoo_kyc_status,livoo_provisioned_at,saldo_reservado,terms_accepted_at,terms_version,passaporte_terms_accepted_at,passaporte_terms_version,seller_credit_balance,test_wallet_balance,credito_estoque,saldo_operacao,divida_consignado,last_login';
-const colunasDe = (table) => (table === 'app_users' ? COLUNAS_PUBLICAS_APP_USERS : '*');
+// 🔐 28/09/2026 — LGPD etapa 1: lojas, códigos da Collection, saques, despesas e
+// vendas também passaram a ter colunas guardadas (src/lib/camposSensiveis.js).
+const colunasDe = (table) => (table === 'app_users' ? COLUNAS_PUBLICAS_APP_USERS : colunasPublicasDe(table));
+
+// Quem está no navegador (só para decidir se VALE pedir; quem decide é o servidor).
+function _usuarioAtual() {
+  try { return typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; }
+}
+
+async function _pedirCamposSensiveis(corpo) {
+  const resp = await fetch('/api/functions/lerCamposSensiveis', {
+    method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }), body: JSON.stringify(corpo),
+  });
+  const j = await resp.json().catch(() => null);
+  if (!resp.ok || !j?.success) throw new Error(j?.error || `http_${resp.status}`);
+  return j.rows || [];
+}
+
+// Admin: completa as linhas já lidas com os campos guardados (chave PIX do saque,
+// código da Collection…). Falhou? A tela segue com o que já tinha — nunca quebra.
+async function _comCamposSensiveis(table, rows) {
+  if (!ehTabelaProtegida(table) || !Array.isArray(rows) || rows.length === 0) return rows;
+  if (!podeVerSensiveis(_usuarioAtual())) return rows;
+  try {
+    const ids = rows.map((r) => r?.id).filter(Boolean);
+    const extras = [];
+    for (let i = 0; i < ids.length; i += 500) extras.push(...await _pedirCamposSensiveis({ table, ids: ids.slice(i, i + 500) }));
+    return juntarCampos(rows, extras);
+  } catch (e) {
+    console.warn(`[camposSensiveis] ${table}: sem os campos guardados (${e?.message || e}) — se for admin, entre de novo.`);
+    return rows;
+  }
+}
 
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
@@ -479,10 +512,17 @@ function entityProxy(entity) {
       if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
-      return data.map((r) => mapFromDB(entity, r));
+      return (await _comCamposSensiveis(table, data)).map((r) => mapFromDB(entity, r));
     },
 
     async filter(filters, orderBy, limit, offset) {
+      // 🔐 Filtrar por coluna guardada ("esse código já existe?") só pelo servidor:
+      // o banco não deixa nem comparar o que não deixa ler.
+      if (filtroUsaCampoSensivel(table, mapToDB(entity, filters))) {
+        if (!podeVerSensiveis(_usuarioAtual())) return [];
+        const rows = await _pedirCamposSensiveis({ table, filtro: mapToDB(entity, filters) });
+        return rows.map((r) => mapFromDB(entity, r));
+      }
       let q = supabase.from(table).select(colunasDe(table));
       q = applyFilters(q, entity, filters);
       q = applyOrderBy(q, orderBy, entity);
@@ -490,13 +530,15 @@ function entityProxy(entity) {
       else if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
-      return data.map((r) => mapFromDB(entity, r));
+      return (await _comCamposSensiveis(table, data)).map((r) => mapFromDB(entity, r));
     },
 
     async get(id) {
       const { data, error } = await supabase.from(table).select(colunasDe(table)).eq('id', id).maybeSingle();
       if (error) throw error;
-      return data ? mapFromDB(entity, data) : null;
+      if (!data) return null;
+      const [linha] = await _comCamposSensiveis(table, [data]);
+      return mapFromDB(entity, linha);
     },
 
     async create(data) {
@@ -509,7 +551,7 @@ function entityProxy(entity) {
       const { data: row, error } = await supabase
         .from(table)
         .insert(payload)
-        .select()
+        .select(colunasDe(table))
         .single();
       if (error) throw error;
       return mapFromDB(entity, row);
@@ -529,7 +571,7 @@ function entityProxy(entity) {
         .from(table)
         .update(payload)
         .eq('id', id)
-        .select()
+        .select(colunasDe(table))
         .single();
       if (error) throw error;
       return mapFromDB(entity, row);
@@ -550,7 +592,7 @@ function entityProxy(entity) {
       const payload = (rows || []).map((r) => mapToDB(entity, r));
       const w = await _routeWrite(table, 'bulkCreate', null, payload);
       if (!w._skip && w.success && Array.isArray(w.rows)) return w.rows.map((r) => mapFromDB(entity, r));
-      const { data, error } = await supabase.from(table).insert(payload).select();
+      const { data, error } = await supabase.from(table).insert(payload).select(colunasDe(table));
       if (error) throw error;
       return data.map((r) => mapFromDB(entity, r));
     },
