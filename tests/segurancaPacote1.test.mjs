@@ -45,3 +45,14 @@ test('🔑 toda rota de cron do vercel.json exige CRON_SECRET quando configurado
     assert.match(S, /process\.env\.CRON_SECRET/, `${nome} sem guarda de CRON_SECRET`);
   }
 });
+
+// 🚨 28/09/2026 — "Erro ao criar conta: permission denied for table app_users".
+// Telas de cadastro conferiam CPF duplicado com AppUser.filter({ cpf }); desde
+// o pacote 1 o banco recusa até COMPARAR cpf — e o cadastro inteiro caía. O
+// adaptador responde "não achei" e o servidor (publicRegister) garante o único.
+test('filtro de usuário por cpf/pix nunca vai ao banco (responde vazio)', () => {
+  const A = readFileSync(new URL('../src/api/plataformaAdapter.js', import.meta.url), 'utf8');
+  assert.match(A, /table === 'app_users'[\s\S]{0,200}CAMPOS_SENSIVEIS_USUARIO\.includes\(k\)\)\) \{\s*return \[\];/);
+  const R = readFileSync(new URL('../api/functions/publicRegister.js', import.meta.url), 'utf8');
+  assert.match(R, /cpf\.eq\./, 'o servidor continua conferindo CPF duplicado');
+});

@@ -39,6 +39,7 @@ import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
 import { lerCracha, guardarCracha, cabecalhosSessao } from '@/lib/sessaoCliente';
 import { colunasPublicasDe, ehTabelaProtegida, podeVerSensiveis, filtroUsaCampoSensivel, juntarCampos } from '@/lib/camposSensiveis';
+import { CAMPOS_SENSIVEIS as CAMPOS_SENSIVEIS_USUARIO } from '@/lib/dadosSensiveisDoUsuario';
 // Mapa Entidade → tabela (snake_case plural)
 const TABLE_MAP = {
   AppUser: 'app_users',
@@ -516,6 +517,17 @@ function entityProxy(entity) {
     },
 
     async filter(filters, orderBy, limit, offset) {
+      // 🚨 28/09/2026 — "Erro ao criar conta: permission denied for table app_users"
+      // (print do dono, cliente tentando se cadastrar). Desde o pacote 1 (27/09)
+      // o navegador não lê — nem COMPARA — cpf/pix_key de app_users. Várias telas
+      // de cadastro ainda conferiam "esse CPF já existe?" com AppUser.filter({cpf}),
+      // e a recusa do banco derrubava o cadastro inteiro. Quem garante CPF único é
+      // o servidor (publicRegister confere e-mail, telefone e CPF). Aqui a
+      // resposta do navegador é "não achei" — nunca erro.
+      if (table === 'app_users' && filters && typeof filters === 'object'
+        && Object.keys(mapToDB(entity, filters)).some((k) => CAMPOS_SENSIVEIS_USUARIO.includes(k))) {
+        return [];
+      }
       // 🔐 Filtrar por coluna guardada ("esse código já existe?") só pelo servidor:
       // o banco não deixa nem comparar o que não deixa ler.
       if (filtroUsaCampoSensivel(table, mapToDB(entity, filters))) {
