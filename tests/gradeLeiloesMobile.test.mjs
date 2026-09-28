@@ -18,8 +18,13 @@ test('a grade de leilões é 2 colunas no celular, 3 no desktop — como a loja'
   assert.match(C, /grid grid-cols-2 /, 'a loja é a referência: 2 por linha no celular');
 });
 
-test('com 2 por linha o card é estreito no celular: o selo NOVO desce uma linha abaixo de sm', () => {
+// ↙️ 28/09/2026 — dono: o selo NOVO fica FIXO no canto inferior esquerdo, em
+// qualquer largura (a régua "desce uma linha no celular" morreu com ele no topo).
+// A colisão com bolinhas, legenda, som e lápis é medida no navegador:
+// tests/navegador/seloDeGarantia.spec.mjs.
+test('com 2 por linha o card é estreito no celular: o selo NOVO fica no canto inferior esquerdo', () => {
   const A = ler('../src/components/auction/AuctionCard.jsx');
-  assert.match(A, /className="absolute top-14 sm:top-3 right-2 sm:right-3 z-10/);
+  assert.match(A, /'bottom-2 sm:bottom-3'\} \$\{somNaFoto \? 'left-12 sm:left-14' : 'left-2 sm:left-3'\} z-20/);
+  assert.doesNotMatch(A, /absolute top-14 sm:top-3 right-2/, 'o selo não mora mais no topo');
   assert.doesNotMatch(A, /min-\[400px\]:top-2/, 'a régua por largura de tela não vale mais: a coluna é sempre estreita no celular');
 });

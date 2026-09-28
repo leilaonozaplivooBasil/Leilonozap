@@ -168,6 +168,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // fica opaca e nenhuma legenda aparece — sem precisar tocar no resto do JSX.
   const mostrandoVideo = temVideo && slideAtual === 0;
   const currentImageIndex = temVideo ? slideAtual - 1 : slideAtual;
+  // ↙️ o selo de fábrica mora no canto inferior esquerdo: estas duas dizem
+  // se o botão de som ou a legenda estão ali agora, para ele desviar
+  const somNaFoto = temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
+  const legendaNaFoto = Boolean(capOf(images[currentImageIndex]));
 
   // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
   const handleCardClick = (e) => {
@@ -617,7 +621,10 @@ ${linhaDoLance}
           )}
 
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
+            <div
+              data-teste="bolinhas-do-carrossel"
+              className={`absolute ${auction.product_source === 'factory_new' ? 'bottom-10 sm:bottom-12' : 'bottom-3'} left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none`}
+            >
               {images.map((_, index) => (
                 <div
                   key={index}
@@ -649,12 +656,23 @@ ${linhaDoLance}
               (25/09, como a loja virtual), então o card é estreito e a primeira
               linha não cabe ao lado do coração: abaixo de sm ele desce uma
               linha, ainda no canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
+          {/* ↙️ 28/09/2026 (dono, print da Canon com seta vermelha: "a tag NOVO -
+              Garantia deve ser fixa no canto inferior esquerdo do card"): no
+              canto de cima ela disputava espaço com compartilhar/coração e, no
+              celular, descia para o meio da foto. Agora fica FIXA embaixo à
+              esquerda. O que já morava ali abre espaço para ela:
+              · botão de som do vídeo (bottom-2 left-2) → o selo anda para a
+                direita dele, só no slide do vídeo;
+              · legenda da foto (faixa escura no pé) → o selo sobe acima dela;
+              · bolinhas do carrossel → sobem uma linha nos cards de fábrica;
+              · lápis do admin → foi para o canto SUPERIOR direito.
+              Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
           {auction.product_source === 'factory_new' && (
             <div
-              className="absolute top-14 sm:top-3 right-2 sm:right-3 z-10 max-w-[75%] sm:max-w-[62%] pointer-events-none"
+              className={`absolute ${legendaNaFoto ? 'bottom-10 sm:bottom-11' : 'bottom-2 sm:bottom-3'} ${somNaFoto ? 'left-12 sm:left-14' : 'left-2 sm:left-3'} z-20 max-w-[75%] sm:max-w-[62%] pointer-events-none`}
               data-teste="selo-de-garantia"
             >
-              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[10px] sm:text-sm px-1.5 sm:px-2.5">
+              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[10px] sm:text-sm px-1.5 sm:px-2.5 shadow-lg">
                 {/* no card de ~170px (2 por linha) o texto inteiro não cabe: encurta */}
                 <span className="sm:hidden">✨ NOVO · Garantia</span>
                 <span className="hidden sm:inline">✨ NOVO - Com Garantia</span>
@@ -690,9 +708,13 @@ ${linhaDoLance}
             )}
           </div>
 
-          {/* 🆕 BOTÃO EDITAR (BOTTOM RIGHT NA IMAGEM) - SÓ ADMIN */}
+          {/* 🆕 BOTÃO EDITAR - SÓ ADMIN
+              28/09/2026: saiu do canto inferior direito para o SUPERIOR direito.
+              Com o selo de fábrica fixo no canto inferior esquerdo, no celular
+              (foto de ~160px) os dois se encostavam — medido: selo até 155px,
+              lápis a partir de 145px. Em cima à direita não mora mais nada. */}
           {isAdmin && (
-            <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 z-20">
+            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20" data-teste="lapis-do-admin">
               <Link
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`}
                 onClick={(e) => e.stopPropagation()}

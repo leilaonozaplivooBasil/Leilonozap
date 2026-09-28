@@ -27,6 +27,12 @@
  *                 e SEM ele a banca media a colisão do selo contra um botão só,
  *                 quando na tela real são dois (foi assim que a primeira versão
  *                 desta medição quase aprovou uma sobreposição)
+ *
+ * ↙️ 28/09/2026 — o selo foi para o CANTO INFERIOR ESQUERDO, onde já moram
+ * outras coisas. Para medir cada vizinho:
+ * `?fotos=N`   N fotos → aparecem as bolinhas do carrossel
+ * `?legenda=1` a foto tem legenda (faixa escura no pé)
+ * `?admin=1`   mostra o lápis de editar, no canto inferior direito
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -43,11 +49,15 @@ const params = new URLSearchParams(window.location.search);
 const DOZE_DIAS = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString();
 const ONTEM = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
 const leilao = {
   id: 'banca-1',
   title: 'Playstation 5',
   description: 'Console de teste da banca',
-  image_urls: ['data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'],
+  image_urls: Array.from({ length: Number(params.get('fotos')) || 1 }, () => (
+    PIXEL + (params.get('legenda') === '1' ? '#txt=Caixa%20lacrada%20de%20f%C3%A1brica' : '')
+  )),
   starting_price: 497,
   current_price: 597,
   increment: 100,
@@ -73,6 +83,7 @@ createRoot(document.getElementById('raiz')).render(
         auction={leilao}
         video={video}
         videoAtivo={params.get('inativo') !== '1'}
+        isAdmin={params.get('admin') === '1'}
         showFavoriteButton={params.get('favorito') === '1'}
         userId={params.get('favorito') === '1' ? 'banca-usuario' : null}
       />
