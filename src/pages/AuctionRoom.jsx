@@ -21,7 +21,7 @@ import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
 import { deveCelebrar, fraseDoVendido } from '@/lib/festaDoFim';
-import { statusDaCotacao, bloqueioDoFrete } from '@/lib/freteDoLance';
+import { statusDaCotacao, bloqueioDoFrete, abreModalDeCep } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
@@ -49,6 +49,7 @@ import SeloChamada from "@/components/auction/SeloChamada";
 import useChamada from "@/hooks/useChamada";
 // 🚚 Frete calculado uma única vez na sala, junto com o lance
 import FreteLanceBanner from "@/components/auction/FreteLanceBanner";
+import CepDoLanceModal from "@/components/auction/CepDoLanceModal";
 
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
@@ -104,6 +105,11 @@ export default function AuctionRoom() {
   // 📜 PONTO 67 — Termo de Adesão obrigatório antes do PRIMEIRO lance
   const [showTermoModal, setShowTermoModal] = useState(false);
   const [pendingBidAmount, setPendingBidAmount] = useState(null);
+  // 📮 28/09/2026 — o CEP que falta é pedido num modal, não num alert() (ver CepDoLanceModal).
+  // modalCep = o que a pessoa tentou fazer ({tipo: 'lance'|'arremate', valor});
+  // acaoLiberada = o mesmo, depois do "Continuar" — sai assim que o frete liberar.
+  const [modalCep, setModalCep] = useState(null);
+  const [acaoLiberada, setAcaoLiberada] = useState(null);
 
   // 🚚 Frete: calculado UMA VEZ por sessão na sala (nunca por clique de lance) —
   // depende só do CEP + dimensões do produto, nunca do valor do lance.
@@ -687,8 +693,8 @@ export default function AuctionRoom() {
 
   // 📮 Salva rua/número (e o resto que o CEP já trouxe) e libera o lance na
   // hora — sem recotar frete de novo, o valor já é o mesmo.
-  const handleConfirmarEndereco = useCallback(async (dados) => {
-    if (!currentUser?.id) return;
+  const handleConfirmarEndereco = useCallback(async (dados, { silencioso = false } = {}) => {
+    if (!currentUser?.id) return false;
     setSalvandoEndereco(true);
     try {
       const AppUser = plataforma.entities.AppUser;
@@ -705,9 +711,11 @@ export default function AuctionRoom() {
       setCurrentUser((prev) => (prev ? { ...prev, ...dados } : prev));
       setEnderecoAtual(dados);
       setFreteStatus('ok');
+      return true;
     } catch (e) {
       console.error('[ENDERECO] falhou salvar:', e?.message);
-      alert('Não foi possível salvar seu endereço. Tente de novo.');
+      if (!silencioso) alert('Não foi possível salvar seu endereço. Tente de novo.');
+      return false;
     } finally {
       setSalvandoEndereco(false);
     }
@@ -719,8 +727,13 @@ export default function AuctionRoom() {
       alert("Este leilão ainda não abriu para lances.");
       return;
     }
-    const semFrete = freteBloqueia();
-    if (semFrete) { alert(semFrete); return; }
+    // Visitante sem conta passa direto: o submitBid pede login antes de tudo —
+    // pedir CEP a quem nem entrou seria um passo a mais para nada.
+    const semFrete = currentUser ? freteBloqueia() : null;
+    if (semFrete) {
+      if (abreModalDeCep(freteStatus)) { setModalCep({ tipo: 'lance', valor: amount }); return; }
+      alert(semFrete); return;
+    }
     if (currentUser && !jaAceitouTermo(currentUser)) {
       setPendingBidAmount(amount);
       setShowTermoModal(true);
@@ -728,7 +741,7 @@ export default function AuctionRoom() {
     }
     trackCtaClick('participar_leilao', 'leilao');
     submitBid(amount);
-  }, [currentUser, submitBid, freteBloqueia]);
+  }, [currentUser, submitBid, freteBloqueia, freteStatus]);
 
   const aceitarTermoEContinuar = useCallback(async () => {
     setShowTermoModal(false);
@@ -876,7 +889,10 @@ export default function AuctionRoom() {
 
     // 🚚 mesma trava do lance: arremate sem frete cotado não sai
     const semFreteArremate = freteBloqueia();
-    if (semFreteArremate) { alert(semFreteArremate); return; }
+    if (semFreteArremate) {
+      if (abreModalDeCep(freteStatus)) { setModalCep({ tipo: 'arremate', valor: precoArremateAgora(auction) }); return; }
+      alert(semFreteArremate); return;
+    }
 
     // 🛡️ PONTO 70 — sem preço REAL de arremate imediato, a ação nem começa
     const buyNowAmount = precoArremateAgora(auction);
@@ -904,7 +920,18 @@ export default function AuctionRoom() {
     }
 
     setShowBuyNowModal(true);
-  }, [auction, currentUser, freteBloqueia]);
+  }, [auction, currentUser, freteBloqueia, freteStatus]);
+
+  // 📮 "Continuar" no modal de CEP: a ação que a pessoa tentou sai assim que o
+  // frete liberar — pelo MESMO caminho de antes (termo, saldo, confirmação),
+  // com a régua do bloqueioDoFrete já lendo o estado novo.
+  useEffect(() => {
+    if (!acaoLiberada || freteBloqueia()) return;
+    const acao = acaoLiberada;
+    setAcaoLiberada(null);
+    if (acao.tipo === 'arremate') handleBuyNow();
+    else handleSubmitBidComTermo(acao.valor);
+  }, [acaoLiberada, freteBloqueia, handleBuyNow, handleSubmitBidComTermo]);
 
   const confirmBuyNow = useCallback(async () => {
     if (!auction || !currentUser) return;
@@ -1530,6 +1557,22 @@ ${linhaDoLance}
             </Button>
           </div>
         </div>
+      )}
+
+      {modalCep && (
+        <CepDoLanceModal
+          acao={modalCep}
+          status={freteStatus}
+          freteValor={freteValor}
+          liberado={!freteBloqueia()}
+          cepInicial={freteCep}
+          enderecoAtual={enderecoAtual}
+          salvandoEndereco={salvandoEndereco}
+          onCalcular={(cep) => { setFreteCep(cep); return calcularFreteLance(cep); }}
+          onConfirmarEndereco={(dados) => handleConfirmarEndereco(dados, { silencioso: true })}
+          onContinuar={() => { setAcaoLiberada(modalCep); setModalCep(null); }}
+          onFechar={() => setModalCep(null)}
+        />
       )}
 
       {/* 📜 PONTO 67 — Termo obrigatório antes do primeiro lance (cancelar = nenhum lance, nenhum saldo tocado) */}
