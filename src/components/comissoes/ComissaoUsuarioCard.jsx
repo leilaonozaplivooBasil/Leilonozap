@@ -10,6 +10,13 @@ import PagarComissaoManualModal from './PagarComissaoManualModal';
 // Beatriz — ver src/lib/comissaoSoConsulta.js pro histórico da decisão). O
 // desconto do saldo é atômico no servidor (payCommissionManually.js): não tem
 // como este botão registrar um pagamento sem o saldo realmente sair.
+/** "2026-10-03T15:51:32Z" → "03/10" */
+const dataCurta = (iso) => {
+  const d = iso ? new Date(iso) : null;
+  return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'America/Sao_Paulo' }) : '—';
+};
+const proximaLiberacao = (lista = []) => lista.map((l) => l.release_at).filter(Boolean).sort()[0];
+
 export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
   const [aberto, setAberto] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
@@ -58,6 +65,11 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
             </>
           ) : (
             <div className="text-lg font-black text-amber-400">R$ {fmtBR(grupo.totalPendente)}</div>
+          )}
+          {grupo.totalEmEspera > 0 && (
+            <div className="text-[11px] text-gray-400" data-teste="em-espera">
+              + R$ {fmtBR(grupo.totalEmEspera)} em espera · libera {dataCurta(proximaLiberacao(grupo.emEspera))}
+            </div>
           )}
         </div>
         <div className="text-right">
@@ -141,6 +153,35 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
               </tbody>
             </table>
           </div>
+
+          {grupo.emEspera?.length > 0 && (
+            <div data-teste="lista-em-espera">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1.5">Em espera · indicação de depósito (10%)</div>
+              <p className="text-xs text-gray-500 mb-2">Cada comissão fica 7 dias em espera depois do depósito e entra sozinha no “A receber” na data abaixo — aí vira uma linha “Gerada”, que pode ser paga.</p>
+              <div className="overflow-x-auto rounded-lg border border-gray-800">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-800/60 text-gray-400">
+                    <tr>
+                      <th className="text-left px-3 py-2">Cliente</th>
+                      <th className="text-right px-3 py-2">Depósito</th>
+                      <th className="text-right px-3 py-2">Comissão</th>
+                      <th className="text-left px-3 py-2">Libera em</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {grupo.emEspera.map((l) => (
+                      <tr key={l.id} className="border-t border-gray-800">
+                        <td className="px-3 py-2 text-gray-300">{l.cliente} <span className="text-gray-500">· {dataCurta(l.depositado_em)}</span></td>
+                        <td className="px-3 py-2 text-right text-gray-400">R$ {fmtBR(l.deposito)}</td>
+                        <td className="px-3 py-2 text-right font-bold text-white">R$ {fmtBR(l.amount)}</td>
+                        <td className="px-3 py-2 text-amber-300 text-xs font-bold">{dataCurta(l.release_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {marcadas.size > 0 && (
             <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-xl border border-green-500/50 bg-gray-900/95 p-3 shadow-lg backdrop-blur" data-teste="barra-das-marcadas">
