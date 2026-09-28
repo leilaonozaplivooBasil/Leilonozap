@@ -170,6 +170,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // ESPERA_DO_VIDEO_MS); não começou, segue para as fotos e tenta de novo na
   // próxima volta. Saiu do slide, o vídeo pausa; voltou, toca do começo.
   const [esperandoVideo, setEsperandoVideo] = useState(temVideo);
+  // vídeo que já deu erro não é esperado de novo a cada volta do rodízio
+  const videoFalhouRef = useRef(false);
   const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
     totalSlides,
     { segurar: videoTocando || esperandoVideo },
@@ -191,6 +193,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       try { v?.pause?.(); } catch { /* sem vídeo na tela */ }
       return undefined;
     }
+    if (videoFalhouRef.current) { setEsperandoVideo(false); return undefined; }
     setEsperandoVideo(true);
     if (v) {
       try { if (v.ended || v.currentTime > 0) v.currentTime = 0; } catch { /* ainda sem metadados */ }
@@ -199,6 +202,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const desiste = setTimeout(() => setEsperandoVideo(false), ESPERA_DO_VIDEO_MS);
     return () => clearTimeout(desiste);
   }, [mostrandoVideo, temVideo, video?.tipo]);
+  useEffect(() => { videoFalhouRef.current = false; }, [video?.embed]);
   // ↙️ o selo de fábrica mora no canto inferior esquerdo: estas duas dizem
   // se o botão de som ou a legenda estão ali agora, para ele desviar
   const somNaFoto = temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
@@ -580,7 +584,7 @@ ${linhaDoLance}
                   onPause={() => setVideoTocando(false)}
                   // vídeo que não carrega não pode deixar buraco: solta a rédea
                   // e o rodízio segue pras fotos
-                  onError={() => { setVideoTocando(false); setEsperandoVideo(false); }}
+                  onError={() => { videoFalhouRef.current = true; setVideoTocando(false); setEsperandoVideo(false); }}
                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
                 />
               ) : (

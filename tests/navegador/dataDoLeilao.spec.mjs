@@ -420,3 +420,14 @@ test('vídeo que nunca começa não prende o card: segue para as fotos', { skip:
     }, null, { timeout: 16000 });
   } finally { await ctx.close(); }
 });
+
+test('vídeo QUEBRADO não faz o card parar 10s na capa a cada volta', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=quebrado&fotos=2');
+  try {
+    // 3 slides (vídeo + 2 fotos) a 2,5s: em 12s o rodízio dá a volta e passa pelas fotos de novo
+    const vistos = new Set();
+    for (let i = 0; i < 24; i += 1) { vistos.add(await slideVisivelAgora(pagina)); await pagina.waitForTimeout(500); }
+    const fotosVistas = [...vistos].filter((x) => typeof x === 'number' && x >= 0);
+    assert.ok(fotosVistas.length >= 2, `o rodízio travou: viu ${[...vistos].join(',')}`);
+  } finally { await ctx.close(); }
+});
