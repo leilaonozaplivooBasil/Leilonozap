@@ -126,9 +126,9 @@ export default async function handler(req, res) {
           falhas += lote.length;
           console.error(`[NUTRIÇÃO ${etapa}] Brevo recusou ${lote.length}: HTTP ${r.status} ${JSON.stringify(r.corpo || '').slice(0, 200)}`);
         }
-        for (const u of lote) {
-          registrarEmail({ para: normalizarEmail(u.email), assunto: r.assunto, tipo: 'campanha', ok: r.ok, messageId: r.ok ? idDaBrevo(r.corpo) : null, erro: r.ok ? null : `HTTP ${r.status}`, provedor: 'brevo', atorId: u.id }).catch(() => {});
-        }
+        // 29/09/2026 — com await: solto, a Vercel encerrava a função antes de
+        // gravar e o registro perdia envios (36 enviados, 19 registrados no 1º dia).
+        await Promise.all(lote.map((u) => registrarEmail({ para: normalizarEmail(u.email), assunto: r.assunto, tipo: 'campanha', ok: r.ok, messageId: r.ok ? idDaBrevo(r.corpo) : null, erro: r.ok ? null : `HTTP ${r.status}`, provedor: 'brevo', atorId: u.id }).catch(() => {})));
         if (!r.ok) break;
       }
       resultado[etapa] = { fila: fila.length, enviados, falhas };
