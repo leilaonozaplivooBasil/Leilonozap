@@ -12,6 +12,7 @@ import { montarAviso, TIPOS_DE_AVISO, CATEGORIA_POR_TIPO } from './textosDosAvis
 import { pessoaAceita, podeRepetir } from './regrasDosAvisos.js';
 import { registrarEmail, idDaBrevo } from './registroDeEmail.js';
 import { gravarNotificacao } from './notificacoesNaTela.js';
+import { enviarMensagemDoAviso } from './avisosPorMensagem.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -65,10 +66,12 @@ async function remarcar(userId, tipo, chaveDoAviso, agoraISO) {
  */
 export async function enviarAviso(p) {
   // 🔔 28/09/2026 — o MESMO gatilho alimenta o sino do site (notificacoesNaTela.js).
-  // Os dois correm juntos: o sino não espera a Brevo, e o e-mail não espera o banco.
+  // Correm juntos: o sino não espera a Brevo, e o e-mail não espera o banco.
   // A notificação não depende de e-mail cadastrado nem da preferência de e-mail.
-  const [email, tela] = await Promise.all([enviarEmailDoAviso(p || {}), gravarNotificacao(p || {})]);
-  return { ...email, naTela: tela.gravada };
+  // 📱 29/09/2026 — e, pros 5 avisos urgentes, WhatsApp/SMS (avisosPorMensagem.js;
+  // desligado até a Brevo estar configurada).
+  const [email, tela, msg] = await Promise.all([enviarEmailDoAviso(p || {}), gravarNotificacao(p || {}), enviarMensagemDoAviso(p || {})]);
+  return { ...email, naTela: tela.gravada, mensagem: msg.canal && msg.enviado ? msg.canal : null };
 }
 
 async function enviarEmailDoAviso({ tipo, userId, chave: chaveDoAviso, dados = {} }) {
