@@ -1,3 +1,17 @@
+## 👥 DIR-191 — Painel do Investidor: mapa maior no desktop, homens e mulheres, por onde chegaram, idade em aberto (30/09/2026)
+
+**Dono, com a foto do desktop:** "ficou foda no celular, mas no desktop o mapa está muito pequeno. Quero quantidade de homens e mulheres, faixa etária, pizza de fatia; quantos vieram pelo WhatsApp, quantos pelo Facebook e Instagram. Tudo em tempo real sem cair."
+
+**O que muda:**
+
+- **Mapa no desktop:** a seção ocupava 1/5 da largura (faltava o `lg:col-span-3`). Agora ocupa 3/5, e o mapa 2/3 da seção.
+- **Homens e mulheres** (`painel_genero`, migração `20260930170000`): estimado pelo primeiro nome (terminação + listas de exceção), marcado na tela como estimativa. Hoje: 676 homens, 328 mulheres, 40 sem estimativa.
+- **Por onde chegaram** (`painel_canal`): Instagram, Facebook, WhatsApp, Google, TikTok, YouTube, outros sites, direto, indicação de membro, sem registro, a partir da origem gravada no cadastro (desde 25/09) e do link de indicação. Hoje: 1.000 por indicação de membro (antes de 25/09 só havia isso), 41 Instagram, 2 Facebook.
+- **Faixa etária:** o banco não tem data de nascimento em nenhum cadastro. A tela diz isso e o caminho: campo opcional no cadastro e no perfil, e leitura pelo KYC. Não se inventa idade.
+- A function junta os dois cálculos em paralelo; se o perfil falhar, o resto do painel continua.
+
+**Prova:** `tests/painelInvestidor.test.mjs` (+2), suíte completa, lint 0 erros, build; funções executadas em produção.
+
 ## 📈 DIR-190 — Painel do Investidor: dinheiro real por área, funil, leilão ao vivo e mapa do Brasil; lucro do dia vai para o Financeiro (30/09/2026)
 
 **Dono, com quatro prints da Visão Geral:** "essa visão geral tem que ser foda e muito mais intuitiva, contemplar tudo, inclusive vendas dos parceiros, loja virtual; quanto do depósito vai pra compra, pra arremate, pra leilão esperando; volume financeiro por área em tempo real; quantas pessoas entrando; mapa do Brasil com calor por estado, clicável. Estou apresentando para muito investidor." Depois: "é mais de 40 mil em depósito, precisamos ser diligentes, números reais". E: "tira a parte do lucro dali e põe no setor financeiro numa aba".

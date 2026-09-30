@@ -67,3 +67,27 @@ test('o lucro do dia saiu da Visão Geral e vive na aba "Lucro do dia" do Setor 
   const L = ler('../src/components/financial/LucroDoDiaTab.jsx');
   assert.ok(L.includes('<PainelLucroDiario') && L.includes("isPaga(s) && isDinheiroReal(s) && isPosMarco(s)"), 'mesma regra de dinheiro real');
 });
+
+// 👥 DIR-191 — perfil: homens e mulheres (estimado pelo nome), por onde chegaram, idade em aberto; mapa maior no desktop
+test('perfil: sexo estimado pelo nome e canal de origem calculados no banco, só para service_role', () => {
+  const P = readFileSync(new URL('../supabase/migrations/20260930170000_painel_investidor_perfil.sql', import.meta.url), 'utf8');
+  assert.ok(P.includes('create or replace function public.painel_genero(_nome text)'));
+  assert.ok(P.includes("if n like '%a' then return 'feminino'; end if;"));
+  assert.ok(P.includes("'metodo', 'estimado pelo primeiro nome'"), 'a tela precisa dizer que é estimativa');
+  assert.ok(P.includes("create or replace function public.painel_canal(_origem jsonb, _referred_by_id text)"));
+  assert.ok(P.includes("when _origem->>'referrer' ilike '%instagram%'") && P.includes("ilike '%whatsapp%'") && P.includes("ilike '%facebook%'"));
+  assert.ok(P.includes("return jsonb_build_object('genero', genero, 'canais', canais, 'idade', null);"), 'idade não é inventada');
+  assert.ok(P.includes('grant execute on function public.painel_investidor_perfil(integer) to service_role;'));
+  const F = ler('../api/functions/painelInvestidor.js');
+  assert.ok(F.includes("sb('rpc/painel_investidor_perfil', { method: 'POST', body: JSON.stringify({ _dias: dias }) })"));
+  assert.ok(F.includes('painel.perfil = rp.ok ? await rp.json().catch(() => null) : null;'), 'perfil é best-effort');
+});
+
+test('a página mostra as pizzas de sexo e de canal, explica a idade em aberto e dá ao mapa 3/5 da largura no desktop', () => {
+  const Pg = ler('../src/pages/PainelInvestidor.jsx');
+  for (const m of ['investidor-perfil', 'investidor-genero', 'investidor-canais', 'investidor-idade']) assert.ok(Pg.includes(`teste="${m}"`), `falta ${m}`);
+  assert.ok(Pg.includes('<PieChart>') && Pg.includes('<Pie data={fatiasGenero}') && Pg.includes('<Pie data={canais}'));
+  assert.ok(Pg.includes('Ainda não coletamos data de nascimento.'));
+  assert.ok(Pg.includes('<div className="lg:col-span-3">\n              <Secao icon={MapPin}'), 'o mapa ocupava 1/5 da largura no desktop');
+  assert.ok(Pg.includes('<div className="grid sm:grid-cols-3 gap-4">\n                  <div className="sm:col-span-2">'), 'o mapa ocupa 2/3 da seção');
+});
