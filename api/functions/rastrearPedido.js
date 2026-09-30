@@ -30,7 +30,18 @@ import {
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CACHE_SEG = 5 * 60;
-const CAMPOS = 'id,status,fulfillment_status,shipped_at,delivered_at,tracking_code,carrier,product_title,created_at,created_date,raw_base44';
+const CAMPOS = 'id,status,fulfillment_status,shipped_at,delivered_at,tracking_code,carrier,product_title,created_at,created_date,buyer_address,raw_base44';
+
+/** O endereço que foi para a etiqueta, em uma linha — o cliente precisa conferir com os próprios olhos. */
+function enderecoDeEnvio(sale, raw) {
+  if (sale?.buyer_address) return String(sale.buyer_address);
+  const a = raw?.address && typeof raw.address === 'object' ? raw.address : null;
+  if (!a) return '';
+  const rua = [a.street, a.number].filter(Boolean).join(', ');
+  const compl = a.complement ? ` — ${a.complement}` : '';
+  const cidade = [a.neighborhood, [a.city, a.state].filter(Boolean).join('/')].filter(Boolean).join(', ');
+  return [rua + compl, cidade, a.zip ? `CEP ${a.zip}` : ''].filter(Boolean).join(' · ');
+}
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -131,6 +142,7 @@ function eventosDoMelhorEnvio(me) {
 
 function montarResposta(sale, r) {
   const numeroInterno = numeroInternoDoPedido(sale.id);
+  const raw = (sale.raw_base44 && typeof sale.raw_base44 === 'object') ? sale.raw_base44 : {};
   const links = linksDeRastreio({ codigo: r.codigo, transportadora: r.transportadora, melhorEnvioTrackingUrl: r.melhor_envio?.tracking_url || null });
   return {
     success: true,
@@ -146,6 +158,7 @@ function montarResposta(sale, r) {
     consultado_em: r.consultado_em,
     fonte: r.fonte || [],
     avisos: r.avisos || [],
+    endereco_envio: enderecoDeEnvio(sale, raw),
     entrega: { fulfillment_status: sale.fulfillment_status, shipped_at: sale.shipped_at, delivered_at: sale.delivered_at, carrier: sale.carrier, tracking_code: sale.tracking_code },
   };
 }

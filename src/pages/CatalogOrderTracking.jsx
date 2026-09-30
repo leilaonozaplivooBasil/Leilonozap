@@ -256,6 +256,7 @@ export default function CatalogOrderTracking() {
     ...hero,
   };
   const atualizadoEm = fmtDateTime(rastreio?.consultado_em);
+  const enderecoEntrega = order.buyer_address || rastreio?.endereco_envio || '';
   const NOME_FONTE = { correios: 'Correios', melhor_rastreio: 'Melhor Rastreio', melhor_envio: 'Melhor Envio' };
   const fonteTexto = (rastreio?.fonte || []).map((f) => NOME_FONTE[f] || f).join(' · ');
 
@@ -464,12 +465,13 @@ export default function CatalogOrderTracking() {
                 <p className="text-sm text-gray-200 font-medium">{paymentLabel}</p>
               </div>
             </div>
-            {order.buyer_address && (
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            {enderecoEntrega && (
+              <div className="flex items-start gap-2.5" data-teste="endereco-entrega">
+                <MapPin className={`w-4 h-4 mt-0.5 shrink-0 ${situacao.etapa === 'problema' ? 'text-orange-300' : 'text-emerald-400'}`} />
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Entrega para {order.buyer_name || 'você'}</p>
-                  <p className="text-sm text-gray-200 leading-snug">{order.buyer_address}</p>
+                  <p className="text-sm text-gray-200 leading-snug">{enderecoEntrega}</p>
+                  {situacao.etapa === 'problema' && <p className="text-[11px] text-orange-200/90 mt-0.5">Este é o endereço que foi para a etiqueta. Confira se está completo.</p>}
                 </div>
               </div>
             )}
