@@ -11,7 +11,7 @@
 // ⚠️ Nada de permissão é criado aqui: os painéis vêm de resolveUserPanels,
 // que continua sendo a única autoridade sobre o que cada cargo libera.
 
-import { ShoppingCart, Gavel, Heart, User as UserIcon } from "lucide-react";
+import { ShoppingCart, Gavel, Heart, User as UserIcon, Network } from "lucide-react";
 import { SECTORS } from "@/lib/sectors";
 import { resolveUserPanels } from "@/lib/panelResolver";
 
@@ -64,6 +64,13 @@ export function getAtalhos({ user, cartCount = 0, hideRank = false } = {}) {
       atalhos.push({ key: chave, rotulo: meta.rotulo, icon: meta.icon, target: { to: painel.route } });
     }
   });
+
+  // 🏢 ORGANOGRAMA (30/09/2026) — a árvore da PRÓPRIA pessoa (ela no topo, a
+  // operação dela abaixo), que já existia dentro do Painel do Distribuidor mas
+  // sem porta de entrada. Nome escolhido pelo dono: nada que soe a multinível.
+  // Entra para todo mundo logado: quem ainda não tem ninguém abaixo vê a si
+  // mesmo e o convite pra cadastrar.
+  atalhos.push({ key: "organograma", rotulo: "Organograma", icon: Network, target: { to: "/painel?tab=rede" } });
 
   // 4) Favoritos — sai da lista de texto "Minha Conta" e vira azulejo, no mesmo
   // padrão dos outros. Mesmo destino de sempre (Leilões filtrando favoritos).
