@@ -95,18 +95,19 @@ test('dataDeCriacao: created_date quando existe, senão created_at; nunca 1970',
   assert.equal(criadoNosUltimosDias({ created_date: null }, 30, agora), false, 'sem data não conta como novo');
 });
 
-test('a árvore: "Novos (30 dias)" usa a data real, o lápis vale o papel do BANCO, e existe "Mover para outra pessoa" sem arrastar', () => {
+test('a árvore: "Novos (30 dias)" usa a data real, o lápis vale o papel do BANCO, e os moldes da árvore ficam como eram', () => {
   const N = ler('../src/pages/NetworkOverview.jsx');
   assert.ok(N.includes('const recentJoinersCount = allUsers.filter(u => criadoNosUltimosDias(u, CONVERSAO_JANELA_DIAS)).length;'));
   assert.ok(N.includes("const [papelNoBanco, setPapelNoBanco] = useState(null);"));
   assert.ok(N.includes("if (eu?.role) setPapelNoBanco(eu.role);"));
   assert.ok(N.includes("papelNoBanco === 'super_admin'"));
+  // 🔒 dono (30/09): "não mexe nos moldes, está perfeito — só o lápis precisa reaparecer".
+  // O lápis já era renderizado sempre que canEdit; o que faltava era canEdit vir verdadeiro.
   const T = ler('../src/components/network/TreeHierarchy.jsx');
-  assert.ok(T.includes('data-teste="arvore-mover-para"'));
-  assert.ok(T.includes('data-teste="painel-mover-para"'));
-  assert.ok(T.includes('data-teste="mover-para-escolha"'));
-  assert.ok(T.includes('if (isDescendant(moverDe.id, u.id)) continue;'), 'nunca oferece um descendente (viraria laço)');
-  assert.ok(T.includes('setPendingMove({ moved: moverDe, parent });'), 'cai na MESMA confirmação do arraste');
+  assert.ok(T.includes('{canEdit && !n.data.isGroup && ('), 'lápis do modo lista depende só de canEdit');
+  assert.ok(!T.includes('mover-para-escolha'), 'nenhum molde novo na árvore');
+  const N2 = ler('../src/pages/NetworkOverview.jsx');
+  assert.ok(N2.includes('canEdit={isSuperAdmin}'));
   const U = ler('../api/functions/adminUpdateUser.js');
   assert.ok(U.includes('campos_recebidos: recebidos'), 'a recusa 400 diz quais campos chegaram');
 });
