@@ -1,3 +1,13 @@
+## ⏱️ DIR-192 — Painel do Investidor ao vivo de verdade: 20 s, contagem visível, botão que responde (30/09/2026)
+
+**Dono:** "os números precisam atualizar em tempo real e o botão de atualizar precisa funcionar."
+
+**O que estava acontecendo:** o botão funcionava, mas em silêncio: chamava o cálculo, nada girava, nada avisava, e se nada tinha mudado no banco o número era o mesmo. Parecia morto. O recálculo automático era a cada 60 s.
+
+**O que muda (`PainelInvestidor.jsx`):** recálculo a cada 20 s com contagem regressiva ao lado do ponto verde ("próxima em 14 s"); botão "Atualizar agora" gira, desabilita enquanto calcula e confirma com aviso "Atualizado às HH:MM"; recálculo ao voltar para a aba; se o servidor não responder, a tela mantém os últimos números e o ponto fica âmbar com "sem resposta há X s", em vez de cair.
+
+**Prova:** `tests/painelInvestidor.test.mjs` (asserções novas), suíte completa, lint 0 erros, build.
+
 ## 👥 DIR-191 — Painel do Investidor: mapa maior no desktop, homens e mulheres, por onde chegaram, idade em aberto (30/09/2026)
 
 **Dono, com a foto do desktop:** "ficou foda no celular, mas no desktop o mapa está muito pequeno. Quero quantidade de homens e mulheres, faixa etária, pizza de fatia; quantos vieram pelo WhatsApp, quantos pelo Facebook e Instagram. Tudo em tempo real sem cair."

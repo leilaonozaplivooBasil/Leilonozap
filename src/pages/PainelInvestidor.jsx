@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
+import { toast } from 'sonner';
 import { useSecureRole } from '@/components/hooks/useSecureRole';
 import { ADMIN_ROLES } from '@/lib/roles';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
@@ -54,6 +55,12 @@ const CANAIS = {
   Instagram: '#E1306C', Facebook: '#1877F2', WhatsApp: '#25D366', Google: '#FBBC05', TikTok: '#69C9D0', YouTube: '#FF0000',
   'Indicação de membro': '#34D399', Direto: '#F5C451', 'Outros sites': '#A78BFA', 'Sem registro': '#4B5563',
 };
+// ⏱️ DIR-192 (30/09/2026) — dono: "os números precisam atualizar em tempo real e o
+// botão de atualizar precisa funcionar". O botão funcionava, mas em silêncio: nada
+// girava, nada avisava. Agora: recálculo a cada 20 s, contagem regressiva visível,
+// botão gira e confirma com aviso, recálculo ao voltar para a aba, e em caso de
+// falha a tela mantém os últimos números e avisa em vez de cair.
+const INTERVALO_SEG = 20;
 const moeda = (v) => `R$ ${fmtBR(Number(v) || 0)}`;
 const pct = (parte, todo) => (Number(todo) > 0 ? Math.round((Number(parte) / Number(todo)) * 1000) / 10 : 0);
 const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '');
@@ -118,33 +125,54 @@ export default function PainelInvestidor() {
   const [dias, setDias] = useState(30);
   const [painel, setPainel] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [atualizando, setAtualizando] = useState(false);
+  const [ultimaEm, setUltimaEm] = useState(null);
+  const [agora, setAgora] = useState(() => Date.now());
+  const [falhas, setFalhas] = useState(0);
   const [erro, setErro] = useState('');
   const [ufSelecionada, setUfSelecionada] = useState(null);
   const [campoMapa, setCampoMapa] = useState('n');
   const timer = useRef(null);
 
-  const carregar = useCallback(async (silencioso = false) => {
+  const carregar = useCallback(async (silencioso = false, manual = false) => {
     let user = null;
     try { user = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { user = null; }
     if (!user?.id) { setErro('Entre com uma conta de administrador.'); setCarregando(false); return; }
     if (!silencioso) setCarregando(true);
+    setAtualizando(true);
     try {
       const r = await plataforma.functions.invoke('painelInvestidor', { user_id: user.id, dias });
       const data = r?.data || r;
-      if (data?.success && data.painel) { setPainel(data.painel); setErro(''); } else setErro(data?.error || 'Não foi possível calcular agora.');
+      if (data?.success && data.painel) {
+        setPainel(data.painel); setErro(''); setFalhas(0); setUltimaEm(Date.now());
+        if (manual) toast.success(`Atualizado às ${hora(data.painel.gerado_em || new Date().toISOString())}`, { duration: 2500 });
+      } else {
+        setFalhas((f) => f + 1);
+        if (!painel) setErro(data?.error || 'Não foi possível calcular agora.');
+        if (manual) toast.error(data?.error || 'Não foi possível calcular agora.');
+      }
     } catch (e) {
-      setErro('Não foi possível calcular agora.');
+      setFalhas((f) => f + 1);
+      if (!painel) setErro('Não foi possível calcular agora.');
+      if (manual) toast.error('Sem resposta do servidor. Os últimos números continuam na tela.');
     } finally {
       setCarregando(false);
+      setAtualizando(false);
     }
-  }, [dias]);
+  }, [dias, painel]);
 
-  useEffect(() => { carregar(); }, [carregar]);
-  // ⏱️ ao vivo: recalcula a cada minuto
+  useEffect(() => { carregar(); }, [dias]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ⏱️ ao vivo: recalcula a cada INTERVALO_SEG e ao voltar para a aba
   useEffect(() => {
-    timer.current = setInterval(() => carregar(true), 60000);
-    return () => clearInterval(timer.current);
+    timer.current = setInterval(() => carregar(true), INTERVALO_SEG * 1000);
+    const aoVoltar = () => { if (document.visibilityState === 'visible') carregar(true); };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => { clearInterval(timer.current); document.removeEventListener('visibilitychange', aoVoltar); };
   }, [carregar]);
+  // relógio da contagem regressiva
+  useEffect(() => { const t = setInterval(() => setAgora(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const segundosDesde = ultimaEm ? Math.max(0, Math.round((agora - ultimaEm) / 1000)) : null;
+  const proximaEm = segundosDesde === null ? null : Math.max(0, INTERVALO_SEG - (segundosDesde % INTERVALO_SEG));
 
   const p = painel;
   const rotuloPeriodo = PERIODOS.find((x) => x.dias === dias)?.rotulo || `${dias} dias`;
@@ -224,11 +252,21 @@ export default function PainelInvestidor() {
               {x.rotulo}
             </button>
           ))}
-          <div className="ml-auto flex items-center gap-2 text-xs text-gray-400" data-teste="investidor-atualizado">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            {p?.gerado_em ? `Ao vivo · calculado às ${hora(p.gerado_em)}` : 'Calculando…'}
-            <button type="button" onClick={() => carregar(true)} className="inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-1 text-[11px] font-semibold text-gray-200 hover:bg-white/10" disabled={carregando}>
-              <RefreshCw className={`w-3 h-3 ${carregando ? 'animate-spin' : ''}`} /> Atualizar
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs text-gray-400" data-teste="investidor-atualizado">
+            <span className={`inline-block w-2 h-2 rounded-full ${falhas > 0 ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`} />
+            <span className="tabular-nums">
+              {p?.gerado_em
+                ? (falhas > 0 ? `Sem resposta há ${segundosDesde ?? 0} s · mostrando os últimos números` : `Ao vivo · calculado às ${hora(p.gerado_em)} · próxima em ${proximaEm ?? INTERVALO_SEG} s`)
+                : 'Calculando…'}
+            </span>
+            <button
+              type="button"
+              onClick={() => carregar(true, true)}
+              data-teste="investidor-botao-atualizar"
+              className="inline-flex min-h-[32px] items-center gap-1.5 rounded-md border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-[11px] font-bold text-amber-200 hover:bg-amber-400/20 disabled:opacity-60"
+              disabled={atualizando}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${atualizando ? 'animate-spin' : ''}`} /> {atualizando ? 'Atualizando…' : 'Atualizar agora'}
             </button>
           </div>
         </div>
