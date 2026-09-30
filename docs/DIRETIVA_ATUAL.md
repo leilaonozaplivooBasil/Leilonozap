@@ -10,7 +10,9 @@
 - **Faixa do entalhe opaca** na própria barra: um `linear-gradient` na cor da barra cobre exatamente `var(--nz-entalhe)`; abaixo dele, a barra continua translúcida como sempre. Nada atravessa o desfoque na área da barra de status.
 - `Layout.jsx` marca o body num efeito colocado antes de qualquer retorno antecipado (regra dos hooks).
 
-**Prova:** `tests/topoSemClarao.test.mjs` (3 testes), suíte 3970/3970, lint 0 erros, build; iPhone emulado com entalhe de 59 px: Home com body escuro e faixa opaca, Recepção com body branco. A confirmação final do degradê é no aparelho do dono, porque o vazamento é do WebKit.
+**Segundo print do dono (organograma em tela cheia):** o mesmo degradê claro aparecia sobre um painel opaco (`fixed inset-0 bg-gray-950`), onde nenhum desfoque nosso existe. Logo o degradê é o **material da barra de status do próprio Safari**, que segue o esquema de cores da página: sem declaração, com o aparelho em modo claro, vem branco. Por isso entram `<meta name="color-scheme" content="dark">` e `color-scheme` no `<html>` (o Layout troca para `light` nas telas claras), e o `theme-color` passa a ser a cor da barra (`#21222B`, também no manifesto do app). E, em tela cheia, o painel do organograma recua pela área segura (`--nz-entalhe` e `safe-area-inset-*`): o botão "Sair da tela cheia" ficava debaixo da barra de status e o dono não conseguia mais fechar.
+
+**Prova:** `tests/topoSemClarao.test.mjs` (5 testes), suíte completa, lint 0 erros, build; iPhone emulado com entalhe de 59 px: Home com body escuro e faixa opaca, Meus Pedidos com body branco. A confirmação final do degradê é no aparelho do dono, porque o material é do Safari.
 
 ## 📱 DIR-188 — Organograma no celular: a pílula de expandir/recolher cabe num dedo (30/09/2026)
 

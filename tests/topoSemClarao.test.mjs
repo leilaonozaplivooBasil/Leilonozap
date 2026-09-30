@@ -33,3 +33,18 @@ test('a faixa do entalhe na barra do topo é opaca, na cor da barra (nada atrave
   const i2 = LAYOUT.indexOf('backgroundImage: `linear-gradient(to bottom, ${corDaBarra}');
   assert.ok(i1 > -1 && i2 > i1, 'ordem: background antes de backgroundImage');
 });
+
+const INDEX = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const NETWORK = semComentarios(readFileSync(new URL('../src/pages/NetworkOverview.jsx', import.meta.url), 'utf8'));
+
+test('o Safari recebe o esquema escuro da página (material da barra de status) e o theme-color da barra', () => {
+  assert.ok(INDEX.includes('<meta name="theme-color" content="#21222B" />'));
+  assert.ok(INDEX.includes('<meta name="color-scheme" content="dark" />'));
+  assert.ok(LAYOUT.includes("const esquema = temaClaroDaBarra ? 'light' : 'dark';"));
+  assert.ok(LAYOUT.includes('document.documentElement.style.colorScheme = esquema;'));
+  assert.ok(LAYOUT.includes("if (cor) cor.setAttribute('content', temaClaroDaBarra ? '#FFFFFF' : '#21222B');"));
+});
+
+test('a árvore em tela cheia recua pela área segura do iPhone (o botão "Sair da tela cheia" fica alcançável)', () => {
+  assert.ok(NETWORK.includes(`style={treeFullscreen ? { paddingTop: 'var(--nz-entalhe)', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' } : undefined}`));
+});

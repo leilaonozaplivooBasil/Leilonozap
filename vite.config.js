@@ -77,8 +77,8 @@ export default defineConfig(({ command }) => ({
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#111827',
-        theme_color: '#111827',
+        background_color: '#21222B',
+        theme_color: '#21222B',
         icons: [
           { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
           { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },

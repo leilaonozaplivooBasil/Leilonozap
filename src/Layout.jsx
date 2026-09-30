@@ -133,6 +133,13 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     if (temaClaroDaBarra) document.body.dataset.temaClaro = '1';
     else delete document.body.dataset.temaClaro;
+    // o esquema de cores da página guia o material da barra de status no Safari
+    const esquema = temaClaroDaBarra ? 'light' : 'dark';
+    document.documentElement.style.colorScheme = esquema;
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute('content', esquema);
+    const cor = document.querySelector('meta[name="theme-color"]');
+    if (cor) cor.setAttribute('content', temaClaroDaBarra ? '#FFFFFF' : '#21222B');
   }, [temaClaroDaBarra]);
 
   useEffect(() => {
