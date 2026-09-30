@@ -99,7 +99,7 @@ export default function MinhaArvoreRede({ user }) {
   if (todos === null) {
     return (
       <div className="flex items-center gap-2 text-gray-400 py-10">
-        <Loader2 className="w-5 h-5 animate-spin" /> Montando sua árvore…
+        <Loader2 className="w-5 h-5 animate-spin" /> Montando seu organograma…
       </div>
     );
   }
@@ -121,11 +121,11 @@ export default function MinhaArvoreRede({ user }) {
       : 'nz-escuro rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden'}>
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
         <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
-        <span className="text-[13px] font-semibold text-green-400">Minha Árvore Genealógica</span>
+        <span className="text-[13px] font-semibold text-green-400">Organograma</span>
         <span className="text-[11px] text-gray-500 hidden sm:inline">
           {podeEditar
             ? 'arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)'
-            : 'toda a sua rede, nível por nível — só leitura'}
+            : 'sua operação, nível por nível — só leitura'}
         </span>
         <div className="flex-1" />
         <Button
