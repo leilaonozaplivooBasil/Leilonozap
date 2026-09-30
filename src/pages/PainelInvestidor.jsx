@@ -29,11 +29,14 @@ import {
 //   • arremates "aguardando pagamento" aparecem como quantidade, fora do caixa.
 
 const GLASS = 'rounded-2xl border border-white/10 bg-gradient-to-br from-gray-800/60 to-gray-900/70 backdrop-blur-xl shadow-lg shadow-black/30';
+// 📅 DIR-193: períodos por dia do calendário (Brasília). "Hoje" = desde a meia-noite,
+// não "últimas 24 h" — antes o número de hoje caía ao longo do dia conforme os
+// pagamentos de ontem saíam da janela móvel (R$ 600 → 550 → 50).
 const PERIODOS = [
-  { dias: 1, rotulo: 'Hoje' },
-  { dias: 7, rotulo: '7 dias' },
-  { dias: 30, rotulo: '30 dias' },
-  { dias: 0, rotulo: 'Tudo' },
+  { dias: 1, rotulo: 'Hoje', sub: 'desde a meia-noite' },
+  { dias: 7, rotulo: '7 dias', sub: 'hoje e os 6 anteriores' },
+  { dias: 30, rotulo: '30 dias', sub: 'hoje e os 29 anteriores' },
+  { dias: 0, rotulo: 'Tudo', sub: 'desde sempre' },
 ];
 const AREAS = {
   carteira: { rotulo: 'Depósitos na carteira', cor: '#F5C451' },
@@ -175,7 +178,8 @@ export default function PainelInvestidor() {
   const proximaEm = segundosDesde === null ? null : Math.max(0, INTERVALO_SEG - (segundosDesde % INTERVALO_SEG));
 
   const p = painel;
-  const rotuloPeriodo = PERIODOS.find((x) => x.dias === dias)?.rotulo || `${dias} dias`;
+  const periodoAtual = PERIODOS.find((x) => x.dias === dias);
+  const rotuloPeriodo = periodoAtual?.rotulo || `${dias} dias`;
   const entradaAreas = useMemo(() => {
     const src = p?.entrada?.por_area || {};
     return Object.entries(src).map(([k, v]) => ({ chave: k, rotulo: AREAS[k]?.rotulo || k, cor: AREAS[k]?.cor || '#9CA3AF', n: v.n, valor: Number(v.valor) || 0 })).sort((a, b) => b.valor - a.valor);
@@ -254,6 +258,7 @@ export default function PainelInvestidor() {
           ))}
           <div className="ml-auto flex flex-wrap items-center gap-2 text-xs text-gray-400" data-teste="investidor-atualizado">
             <span className={`inline-block w-2 h-2 rounded-full ${falhas > 0 ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`} />
+            {periodoAtual?.sub && <span className="rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[11px] text-gray-300" data-teste="investidor-periodo-sub">{rotuloPeriodo} · {periodoAtual.sub}</span>}
             <span className="tabular-nums">
               {p?.gerado_em
                 ? (falhas > 0 ? `Sem resposta há ${segundosDesde ?? 0} s · mostrando os últimos números` : `Ao vivo · calculado às ${hora(p.gerado_em)} · próxima em ${proximaEm ?? INTERVALO_SEG} s`)

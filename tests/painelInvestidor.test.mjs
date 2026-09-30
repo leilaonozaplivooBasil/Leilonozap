@@ -95,3 +95,14 @@ test('a página mostra as pizzas de sexo e de canal, explica a idade em aberto e
   assert.ok(Pg.includes('<div className="lg:col-span-3">\n              <Secao icon={MapPin}'), 'o mapa ocupava 1/5 da largura no desktop');
   assert.ok(Pg.includes('<div className="grid sm:grid-cols-3 gap-4">\n                  <div className="sm:col-span-2">'), 'o mapa ocupa 2/3 da seção');
 });
+
+// 📅 DIR-193 — "Hoje" é desde a meia-noite de Brasília, não janela móvel de 24 h
+test('os períodos são dias de calendário em Brasília: Hoje desde a meia-noite (o número não cai ao longo do dia)', () => {
+  const M = readFileSync(new URL('../supabase/migrations/20260930190000_painel_investidor_hoje_calendario.sql', import.meta.url), 'utf8');
+  const linha = "else (((now() at time zone 'America/Sao_Paulo')::date - (_dias - 1))::timestamp) at time zone 'America/Sao_Paulo' end;";
+  assert.equal(M.split(linha).length - 1, 2, 'as duas funções (painel e perfil) usam a mesma regra');
+  assert.ok(!M.includes("now() - make_interval(days => _dias)"), 'a janela móvel voltou');
+  const P = ler('../src/pages/PainelInvestidor.jsx');
+  assert.ok(P.includes("{ dias: 1, rotulo: 'Hoje', sub: 'desde a meia-noite' }"));
+  assert.ok(P.includes('data-teste="investidor-periodo-sub"'));
+});

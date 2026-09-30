@@ -1,3 +1,13 @@
+## 📅 DIR-193 — Painel do Investidor: "Hoje" é desde a meia-noite, não janela móvel (30/09/2026)
+
+**Dono, com o print às 18:37:** "o Hoje estava em 600, depois 550, agora 50 — o que está acontecendo? Precisamos ver os depósitos e vendas."
+
+**Causa:** "Hoje" era "últimas 24 horas". Às 15h a janela ainda pegava os depósitos de ontem à tarde (Lilian R$ 50 às 15:03, Luciano R$ 500 às 17:57, Marcelo R$ 50 às 22:23); conforme a tarde avançava, cada um saía da janela e o número caía: R$ 600 → 550 → 50. Nenhum dado sumiu do banco: hoje (30/09) não houve pagamento aprovado até as 18:37, só um PIX pendente de R$ 27 às 17:49.
+
+**O que muda (migração `20260930190000`, aplicada em produção):** os períodos passam a ser dias de calendário no fuso de Brasília. "Hoje" = desde a meia-noite; "7 dias" = hoje e os 6 anteriores; "30 dias" = hoje e os 29 anteriores; "Tudo" segue tudo. Vale para as duas funções (painel e perfil). A tela mostra a definição ao lado do período ("Hoje · desde a meia-noite").
+
+**Prova:** `tests/painelInvestidor.test.mjs` (+1), suíte completa, lint 0 erros, build.
+
 ## ⏱️ DIR-192 — Painel do Investidor ao vivo de verdade: 20 s, contagem visível, botão que responde (30/09/2026)
 
 **Dono:** "os números precisam atualizar em tempo real e o botão de atualizar precisa funcionar."
