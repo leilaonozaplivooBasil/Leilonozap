@@ -12,6 +12,13 @@ button, a, select, input, textarea, label, [role="button"], .cursor-pointer {
 
 /* 🌿 Tokens institucionais da Recepção (verde clean, padrão vitrine) */
 @layer base {
+  /* 📱 DIR-189 — a tela do navegador (html/body) tem a cor da barra do topo.
+     Era branca por padrão: no iPhone, o desfoque da barra fixa (que fica sob a
+     barra de status desde o viewport-fit=cover) puxava esse branco para os
+     primeiros pixels e virava um clarão em degradê sobre a logo. Telas claras
+     (painel) marcam o body e voltam ao branco. */
+  html, body { background-color: #21222B; }
+  body[data-tema-claro], body[data-painel-nav] { background-color: #FFFFFF; }
   :root {
     /* 📱 O ENTALHE DO IPHONE — 24/09/2026
        Desde que o index.html ganhou `viewport-fit=cover` (DIR-179), o iOS

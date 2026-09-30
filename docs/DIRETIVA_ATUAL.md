@@ -1,3 +1,17 @@
+## 📱 DIR-189 — Topo sem clarão: a tela do navegador tem a cor da barra e o entalhe é opaco (30/09/2026)
+
+**Dono, com o print da home no iPhone:** "em cima da tela o degradê branco está atrapalhando a logo e a navegação."
+
+**Causa:** desde o `viewport-fit=cover` (DIR-179) a barra fixa do topo fica debaixo da barra de status do iPhone. Ela é translúcida com desfoque (`backdrop-filter`), e o corpo da página (`body`) era branco, a cor padrão do navegador. Na borda de cima o desfoque do WebKit puxa a cor da tela do navegador, o branco, e a espalha pelos primeiros pixels: um clarão em degradê exatamente na área da barra de status, sobre a logo. Em Chromium não aparece (o desfoque não vaza a borda), por isso nunca foi visto nos testes de tela.
+
+**O que muda:**
+
+- **`html`/`body` com a cor da barra** (`#21222B`) em `index.css`. Telas claras (Recepção, Live Shop, painel com tema claro e páginas com `data-painel-nav`) marcam o body com `data-tema-claro` e voltam ao branco, para a barra clara não ganhar um vazamento escuro.
+- **Faixa do entalhe opaca** na própria barra: um `linear-gradient` na cor da barra cobre exatamente `var(--nz-entalhe)`; abaixo dele, a barra continua translúcida como sempre. Nada atravessa o desfoque na área da barra de status.
+- `Layout.jsx` marca o body num efeito colocado antes de qualquer retorno antecipado (regra dos hooks).
+
+**Prova:** `tests/topoSemClarao.test.mjs` (3 testes), suíte 3970/3970, lint 0 erros, build; iPhone emulado com entalhe de 59 px: Home com body escuro e faixa opaca, Recepção com body branco. A confirmação final do degradê é no aparelho do dono, porque o vazamento é do WebKit.
+
 ## 📱 DIR-188 — Organograma no celular: a pílula de expandir/recolher cabe num dedo (30/09/2026)
 
 **Dono, com o organograma aberto no iPhone:** "ficou top, porém no celular quando expando não está recolhendo. Veja toda a experiência do cliente, teste todos os botões, volta e tals."
