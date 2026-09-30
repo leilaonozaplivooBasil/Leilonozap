@@ -40,7 +40,7 @@ function cpfValido(valor) {
   };
   return calc(9) === parseInt(cpf[9], 10) && calc(10) === parseInt(cpf[10], 10);
 }
-const UA = 'Leilao NoZap (contato@leilaonozap.net)';
+export const UA = 'Leilao NoZap (contato@leilaonozap.net)';
 
 function sb(path, opts = {}) {
   const root = String(SUPABASE_URL || '').replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
@@ -50,16 +50,16 @@ function sb(path, opts = {}) {
   });
 }
 
-function baseUrl(ambiente) {
+export function baseUrl(ambiente) {
   return ambiente === 'producao' ? 'https://melhorenvio.com.br' : 'https://sandbox.melhorenvio.com.br';
 }
 
-function ambienteAtual() {
+export function ambienteAtual() {
   return String(process.env.MELHOR_ENVIO_AMBIENTE || 'producao').toLowerCase() === 'sandbox' ? 'sandbox' : 'producao';
 }
 
 // Token vigente, renovando pelo refresh_token se estiver a menos de 1 dia de vencer.
-async function getAccessToken(ambiente) {
+export async function getAccessToken(ambiente) {
   const r = await sb(`melhor_envio_tokens?select=*&ambiente=eq.${ambiente}&ativo=is.true&order=obtido_em.desc&limit=1`);
   const rows = await r.json().catch(() => null);
   const t = Array.isArray(rows) && rows[0] ? rows[0] : null;

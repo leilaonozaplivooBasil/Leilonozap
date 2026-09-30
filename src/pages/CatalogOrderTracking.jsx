@@ -10,8 +10,12 @@ import { Stars } from '@/components/loja/StarRating';
 import {
   Package, Truck, CheckCircle, Clock, ArrowLeft, Copy, MessageCircle,
   ShoppingBag, CreditCard, MapPin, Star, Loader2, XCircle, ReceiptText,
+  AlertTriangle, ExternalLink, RefreshCw, Hash, Navigation, Home,
 } from 'lucide-react';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
+import {
+  situacaoDaEntrega, linhaDoTempo, codigoReal, linksDeRastreio, numeroInternoDoPedido, mensagemDoSuporte,
+} from '@/lib/rastreio';
 
 const SUPORTE_PHONE = WHATSAPP_OFICIAL;
 
@@ -30,12 +34,31 @@ const PAYMENT_LABELS = {
   boleto: '🧾 Boleto',
 };
 
+// 📦 DIR-187 (30/09/2026) — A ENTREGA NÃO SAI MAIS DO STATUS DE PAGAMENTO.
+// `status = 'entregue'` é "venda paga" (herança do Base44). Esta tela lia isso como
+// "pedido entregue" e mostrava o número interno LZ… como código de rastreio. O
+// cliente Herbert viu "Entregue! 🎉" com o objeto parado nos Correios ("endereço
+// inexistente") e mandou o print no grupo. Agora: a situação vem de
+// src/lib/rastreio.js (transportadora, Melhor Envio, logística, ou confirmação do
+// próprio cliente); o código real, o link dos Correios, a transportadora e as
+// movimentações vêm da function rastrearPedido; ocorrência vira aviso com o que fazer.
 const PAID_STATUSES = ['paid', 'processing', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue'];
-const SHIPPED_STATUSES = ['shipped', 'saiu_entrega', 'delivered', 'entregue'];
-const DELIVERED_STATUSES = ['delivered', 'entregue'];
 const CANCELED_STATUSES = ['canceled', 'cancelado'];
-const FINAL_STATUSES = [...DELIVERED_STATUSES, ...CANCELED_STATUSES];
 const CONFIRMABLE = ['paid', 'preparando', 'saiu_entrega', 'shipped', 'entregue', 'delivered'];
+const ETAPAS_FINAIS = ['entregue', 'cancelado'];
+const INTERVALO_MS = 60000;
+
+const HERO = {
+  cancelado: { color: 'from-red-500 to-red-600', Icon: XCircle },
+  entregue: { color: 'from-emerald-500 to-green-600', Icon: Package },
+  problema: { color: 'from-orange-500 to-amber-600', Icon: AlertTriangle },
+  saiu_entrega: { color: 'from-indigo-500 to-blue-600', Icon: Truck },
+  em_transito: { color: 'from-indigo-500 to-blue-600', Icon: Navigation },
+  postado: { color: 'from-sky-500 to-blue-600', Icon: Package },
+  preparando: { color: 'from-green-500 to-emerald-600', Icon: CheckCircle },
+  aguardando_pagamento: { color: 'from-yellow-500 to-amber-600', Icon: Clock },
+};
+const ICONE_ETAPA = { pedido: ReceiptText, pagamento: CheckCircle, postado: Package, em_transito: Navigation, saiu_entrega: Truck, entregue: Home };
 
 const fmtDateTime = (iso) => {
   if (!iso) return null;
@@ -55,6 +78,8 @@ export default function CatalogOrderTracking() {
   const [receiptConfirmed, setReceiptConfirmed] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [myRating, setMyRating] = useState(null);
+  const [rastreio, setRastreio] = useState(null);
+  const [consultando, setConsultando] = useState(false);
   const pollRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -84,12 +109,36 @@ export default function CatalogOrderTracking() {
 
   useEffect(() => { loadOrder(); }, [loadOrder]);
 
-  // 🔄 Status ao vivo: enquanto o pedido não chega num estado final, re-consulta a cada 15s
+  // 📦 A transportadora responde: código real, link, movimentações e a situação de verdade
+  const consultarRastreio = useCallback(async (forcar = false) => {
+    if (!saleId) return;
+    setConsultando(true);
+    try {
+      const r = await plataforma.functions.invoke('rastrearPedido', { sale_id: saleId, forcar });
+      const data = r?.data || r;
+      if (data?.success) {
+        setRastreio(data);
+        if (forcar) toast({ title: '✅ Consulta atualizada', description: data.situacao?.titulo || 'Situação verificada na transportadora.', duration: 2500 });
+      } else if (forcar) {
+        toast({ title: 'Não foi possível consultar agora', description: data?.error || 'Tente novamente em instantes.', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('❌ Erro ao rastrear pedido:', error);
+      if (forcar) toast({ title: 'Não foi possível consultar agora', description: 'Tente novamente em instantes.', variant: 'destructive' });
+    } finally {
+      setConsultando(false);
+    }
+  }, [saleId]);
+
+  useEffect(() => { if (order?.id) consultarRastreio(false); }, [order?.id, consultarRastreio]);
+
+  const etapaAtual = rastreio?.situacao?.etapa;
+  // 🔄 Ao vivo: enquanto a ENTREGA não termina, pedido + transportadora a cada minuto
   useEffect(() => {
-    if (!order || FINAL_STATUSES.includes(order.status)) return undefined;
-    pollRef.current = setInterval(() => loadOrder(true), 15000);
+    if (!order || ETAPAS_FINAIS.includes(etapaAtual)) return undefined;
+    pollRef.current = setInterval(() => { loadOrder(true); consultarRastreio(false); }, INTERVALO_MS);
     return () => clearInterval(pollRef.current);
-  }, [order?.status, loadOrder]);
+  }, [order?.id, etapaAtual, loadOrder, consultarRastreio]);
 
   // avaliação já feita neste pedido (pra mostrar "Você avaliou")
   useEffect(() => {
@@ -103,10 +152,10 @@ export default function CatalogOrderTracking() {
     })();
   }, [saleId, currentUser?.id]);
 
-  const copyTracking = async () => {
+  const copyTracking = async (texto) => {
     try {
-      await navigator.clipboard.writeText(order.tracking_code);
-      toast({ title: '✅ Código copiado!', description: order.tracking_code, duration: 2000 });
+      await navigator.clipboard.writeText(texto);
+      toast({ title: '✅ Código copiado!', description: texto, duration: 2000 });
     } catch (_) {
       toast({ title: 'Não foi possível copiar', description: 'Selecione e copie manualmente.', variant: 'destructive' });
     }
@@ -134,7 +183,11 @@ export default function CatalogOrderTracking() {
   };
 
   const openSupport = () => {
-    const msg = encodeURIComponent(`Olá! Preciso de ajuda com meu pedido ${order?.tracking_code || order?.id} — ${order?.product_title || ''}`);
+    const msg = encodeURIComponent(mensagemDoSuporte({
+      numeroPedido: rastreio?.codigo_interno || numeroInternoDoPedido(order?.id),
+      codigo: rastreio?.codigo || codigoReal({ tracking_code: order?.tracking_code }),
+      produto: order?.product_title || '',
+    }));
     window.open(`https://wa.me/${SUPORTE_PHONE}?text=${msg}`, '_blank');
   };
 
@@ -170,28 +223,40 @@ export default function CatalogOrderTracking() {
   }
 
   const status = order.status || 'pending_payment';
-  const isCanceled = CANCELED_STATUSES.includes(status);
   const isPaid = PAID_STATUSES.includes(status);
-  const isShipped = SHIPPED_STATUSES.includes(status);
-  const isDelivered = DELIVERED_STATUSES.includes(status);
+  const situacao = receiptConfirmed
+    ? situacaoDaEntrega({ ...order, recebimentoConfirmado: true })
+    : (rastreio?.situacao || situacaoDaEntrega(order));
+  const isCanceled = situacao.etapa === 'cancelado' || CANCELED_STATUSES.includes(status);
+  const isDelivered = situacao.etapa === 'entregue';
+  const emAndamento = !ETAPAS_FINAIS.includes(situacao.etapa);
 
-  const steps = [
-    { key: 'created', label: 'Pedido realizado', icon: ReceiptText, done: true, date: fmtDateTime(order.created_date || order.created_at) },
-    { key: 'paid', label: 'Pagamento confirmado', icon: CheckCircle, done: isPaid, date: null, hint: !isPaid ? 'Aguardando pagamento' : null },
-    { key: 'shipped', label: 'Saiu para entrega', icon: Truck, done: isShipped, date: fmtDateTime(order.shipped_at), hint: isPaid && !isShipped ? 'Em preparação pelo vendedor' : null },
-    { key: 'delivered', label: 'Entregue', icon: Package, done: isDelivered, date: fmtDateTime(order.delivered_at) },
-  ];
-  const currentStepIdx = isDelivered ? 3 : isShipped ? 2 : isPaid ? 1 : 0;
-
-  const headline = isCanceled
-    ? { title: 'Pedido cancelado', desc: 'Este pedido foi cancelado.', color: 'from-red-500 to-red-600', Icon: XCircle }
-    : isDelivered
-      ? { title: 'Entregue! 🎉', desc: 'Pedido entregue com sucesso.', color: 'from-emerald-500 to-green-600', Icon: Package }
-      : isShipped
-        ? { title: 'A caminho! 🚚', desc: `Seu pedido saiu para entrega${order.carrier ? ` via ${order.carrier}` : ''}.`, color: 'from-indigo-500 to-blue-600', Icon: Truck }
-        : isPaid
-          ? { title: 'Pagamento confirmado', desc: 'Seu pedido está sendo preparado para envio.', color: 'from-green-500 to-emerald-600', Icon: CheckCircle }
-          : { title: 'Aguardando pagamento', desc: 'Realize o pagamento para prosseguir com o envio.', color: 'from-yellow-500 to-amber-600', Icon: Clock };
+  const codigo = rastreio?.codigo || codigoReal({ tracking_code: order.tracking_code });
+  const numeroInterno = rastreio?.codigo_interno || numeroInternoDoPedido(order.id);
+  const transportadora = rastreio?.transportadora || order.carrier || '';
+  const servico = rastreio?.servico || '';
+  const links = rastreio?.links || linksDeRastreio({ codigo, transportadora });
+  const linkPrincipal = links.correios
+    ? { url: links.correios, rotulo: 'Rastrear no site dos Correios' }
+    : links.transportadora
+      ? { url: links.transportadora, rotulo: `Rastrear no site da ${transportadora || 'transportadora'}` }
+      : null;
+  const eventos = Array.isArray(rastreio?.eventos) ? rastreio.eventos : [];
+  const steps = linhaDoTempo(situacao, {
+    criadoEm: order.created_date || order.created_at,
+    pago: isPaid,
+    postadoEm: rastreio?.melhor_envio?.posted_at || order.shipped_at || null,
+    eventos,
+  });
+  const idxAtual = Math.max(0, steps.findIndex((e) => !e.feito));
+  const hero = HERO[situacao.etapa] || HERO.preparando;
+  const headline = {
+    title: situacao.etapa === 'entregue' ? 'Entregue! 🎉' : situacao.etapa === 'saiu_entrega' ? 'Saiu para entrega 🚚' : situacao.titulo,
+    desc: situacao.descricao,
+    ...hero,
+  };
+  const atualizadoEm = fmtDateTime(rastreio?.consultado_em);
+  const fonteTexto = (rastreio?.fonte || []).map((f) => (f === 'correios' ? 'Correios' : f === 'melhor_envio' ? 'Melhor Envio' : f)).join(' · ');
 
   const total = Number(order.total_amount || order.sale_price || 0);
   const discount = Number(order.discount_amount || 0);
@@ -228,39 +293,65 @@ export default function CatalogOrderTracking() {
               <div className="min-w-0">
                 <h2 className="text-lg sm:text-2xl font-black text-white">{headline.title}</h2>
                 <p className="text-gray-400 text-sm">{headline.desc}</p>
-                {!FINAL_STATUSES.includes(status) && (
-                  <p className="text-[11px] text-emerald-400/80 mt-0.5 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Atualiza sozinho a cada 15s
-                  </p>
-                )}
+                <p className="text-[11px] text-emerald-400/80 mt-0.5 flex items-center gap-1 flex-wrap" data-teste="rastreio-atualizado">
+                  {emAndamento && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                  {atualizadoEm
+                    ? <>Consultado na transportadora às {atualizadoEm.split(' às ')[1]}{fonteTexto ? ` · ${fonteTexto}` : ''}</>
+                    : consultando ? 'Consultando a transportadora…' : (emAndamento ? 'Consulta a transportadora a cada minuto' : '')}
+                  {!isCanceled && (
+                    <button
+                      type="button"
+                      onClick={() => consultarRastreio(true)}
+                      disabled={consultando}
+                      data-teste="rastreio-atualizar"
+                      className="ml-1 inline-flex items-center gap-1 rounded-md border border-white/15 bg-white/5 px-2 py-0.5 text-[11px] font-semibold text-gray-200 hover:bg-white/10 disabled:opacity-60"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${consultando ? 'animate-spin' : ''}`} /> Atualizar agora
+                    </button>
+                  )}
+                </p>
               </div>
             </div>
 
-            {/* Timeline vertical com datas */}
+            {/* ⚠️ Ocorrência na entrega — o que a transportadora disse e o que fazer */}
+            {situacao.etapa === 'problema' && situacao.problema && (
+              <div className="mb-6 rounded-xl border border-orange-400/40 bg-orange-500/10 p-4" data-teste="entrega-atencao">
+                <p className="text-sm font-black text-orange-200 flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> A transportadora registrou uma ocorrência</p>
+                <p className="mt-1.5 text-sm text-white font-semibold">“{situacao.problema.texto}”{situacao.problema.detalhe ? ` — ${situacao.problema.detalhe}` : ''}</p>
+                {(situacao.problema.data || situacao.problema.local) && (
+                  <p className="text-xs text-orange-100/80">{[fmtDateTime(situacao.problema.data), situacao.problema.local].filter(Boolean).join(' · ')}</p>
+                )}
+                {situacao.orientacao && <p className="mt-2 text-sm text-gray-200 leading-snug"><span className="font-bold text-orange-200">O que fazer:</span> {situacao.orientacao}</p>}
+              </div>
+            )}
+
+            {/* Timeline vertical com datas — etapas da ENTREGA, nunca do pagamento */}
             {!isCanceled && (
-              <div className="relative pl-1">
+              <div className="relative pl-1" data-teste="linha-do-tempo">
                 {steps.map((step, i) => {
-                  const active = i === currentStepIdx && !isDelivered;
+                  const active = i === idxAtual && !isDelivered;
+                  const Icone = ICONE_ETAPA[step.chave] || Package;
+                  const quando = fmtDateTime(step.quando);
                   return (
-                    <div key={step.key} className="relative flex gap-3 pb-5 last:pb-0">
+                    <div key={step.chave} className="relative flex gap-3 pb-5 last:pb-0" data-etapa={step.chave} data-feito={step.feito ? '1' : '0'}>
                       {i < steps.length - 1 && (
-                        <span className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${steps[i + 1].done ? 'bg-emerald-500' : 'bg-white/10'}`} />
+                        <span className={`absolute left-[15px] top-8 bottom-0 w-0.5 ${steps[i + 1].feito ? 'bg-emerald-500' : 'bg-white/10'}`} />
                       )}
                       <span className={`relative z-10 grid place-items-center w-8 h-8 rounded-full border shrink-0 ${
-                        step.done
+                        step.feito
                           ? 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300'
                           : active
-                            ? 'bg-yellow-500/15 border-yellow-400/40 text-yellow-300 animate-pulse'
+                            ? (situacao.etapa === 'problema' ? 'bg-orange-500/15 border-orange-400/50 text-orange-300' : 'bg-yellow-500/15 border-yellow-400/40 text-yellow-300 animate-pulse')
                             : 'bg-white/5 border-white/10 text-gray-600'
                       }`}>
-                        <step.icon className="w-4 h-4" />
+                        <Icone className="w-4 h-4" />
                       </span>
                       <div className="min-w-0 pt-1">
-                        <p className={`text-sm font-bold leading-tight ${step.done ? 'text-white' : active ? 'text-yellow-200' : 'text-gray-500'}`}>
-                          {step.label}
+                        <p className={`text-sm font-bold leading-tight ${step.feito ? 'text-white' : active ? (situacao.etapa === 'problema' ? 'text-orange-200' : 'text-yellow-200') : 'text-gray-500'}`}>
+                          {step.rotulo}
                         </p>
-                        {(step.date || step.hint) && (
-                          <p className="text-xs text-gray-500">{step.date || step.hint}</p>
+                        {(quando || step.dica) && (
+                          <p className="text-xs text-gray-500">{quando || step.dica}</p>
                         )}
                       </div>
                     </div>
@@ -269,16 +360,74 @@ export default function CatalogOrderTracking() {
               </div>
             )}
 
-            {/* Rastreio */}
-            {order.tracking_code && (
-              <div className="mt-5 pt-5 border-t border-white/10">
-                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Código de rastreio{order.carrier ? ` · ${order.carrier}` : ''}</p>
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
-                  <code className="font-mono text-base sm:text-lg font-bold text-emerald-300 truncate">{order.tracking_code}</code>
-                  <Button size="sm" onClick={copyTracking} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 font-bold shrink-0">
-                    <Copy className="w-4 h-4 mr-1.5" /> Copiar
-                  </Button>
-                </div>
+            {/* Rastreio — código REAL, link da transportadora, número do pedido à parte */}
+            {!isCanceled && (
+              <div className="mt-5 pt-5 border-t border-white/10" data-teste="bloco-rastreio">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+                  Código de rastreio{transportadora ? ` · ${transportadora}` : ''}{servico ? ` ${servico}` : ''}
+                </p>
+                {codigo ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+                      <code className="font-mono text-base sm:text-lg font-bold text-emerald-300 truncate" data-teste="rastreio-codigo">{codigo}</code>
+                      <Button size="sm" onClick={() => copyTracking(codigo)} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 font-bold shrink-0">
+                        <Copy className="w-4 h-4 mr-1.5" /> Copiar
+                      </Button>
+                    </div>
+                    <div className="mt-2.5 grid sm:grid-cols-2 gap-2">
+                      {linkPrincipal && (
+                        <a
+                          href={linkPrincipal.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-teste="rastreio-link-transportadora"
+                          className="flex items-center justify-center gap-2 rounded-xl border border-yellow-400/40 bg-yellow-400/10 hover:bg-yellow-400/20 px-3 py-2.5 text-sm font-bold text-yellow-200 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" /> {linkPrincipal.rotulo}
+                        </a>
+                      )}
+                      {links.melhorRastreio && (
+                        <a
+                          href={links.melhorRastreio}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-teste="rastreio-link-melhor-rastreio"
+                          className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-3 py-2.5 text-sm font-semibold text-gray-200 transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" /> Ver no Melhor Rastreio
+                        </a>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300" data-teste="rastreio-sem-codigo">
+                    {isPaid
+                      ? 'O código de rastreio aparece aqui assim que a transportadora registrar o objeto. Você não precisa fazer nada.'
+                      : 'O rastreio começa depois da confirmação do pagamento.'}
+                  </div>
+                )}
+                <p className="mt-2.5 text-xs text-gray-500 flex items-center gap-1.5" data-teste="rastreio-numero-pedido">
+                  <Hash className="w-3.5 h-3.5" /> Número do pedido: <code className="font-mono text-gray-300">{numeroInterno}</code>
+                  <span className="text-gray-600">(use este número ao falar com o suporte)</span>
+                </p>
+              </div>
+            )}
+
+            {/* Movimentações registradas pela transportadora */}
+            {eventos.length > 0 && (
+              <div className="mt-5 pt-5 border-t border-white/10" data-teste="rastreio-eventos">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Movimentações da transportadora{fonteTexto ? ` · fonte: ${fonteTexto}` : ''}</p>
+                <ol className="space-y-3">
+                  {eventos.map((ev, i) => (
+                    <li key={`${ev.data || ''}-${i}`} className="flex gap-3">
+                      <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${i === 0 ? (situacao.etapa === 'problema' ? 'bg-orange-400' : 'bg-emerald-400') : 'bg-white/20'}`} />
+                      <div className="min-w-0">
+                        <p className={`text-sm leading-snug ${i === 0 ? 'text-white font-semibold' : 'text-gray-300'}`}>{ev.descricao}{ev.detalhe ? <span className="text-gray-400 font-normal"> — {ev.detalhe}</span> : null}</p>
+                        <p className="text-[11px] text-gray-500">{[fmtDateTime(ev.data), ev.local].filter(Boolean).join(' · ')}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
           </div>
