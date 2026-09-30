@@ -28,6 +28,7 @@ const SUPORTE_PHONE = WHATSAPP_OFICIAL;
 const PAYMENT_LABELS = {
   saldo: '💰 Saldo da Carteira',
   pix: '⚡ PIX',
+  pix_mp: '⚡ PIX',
   card: '💳 Cartão',
   credit_card: '💳 Cartão de Crédito',
   dinheiro: '💵 Dinheiro',
@@ -408,9 +409,9 @@ export default function CatalogOrderTracking() {
                       : 'O rastreio começa depois da confirmação do pagamento.'}
                   </div>
                 )}
-                <p className="mt-2.5 text-xs text-gray-500 flex items-center gap-1.5" data-teste="rastreio-numero-pedido">
-                  <Hash className="w-3.5 h-3.5" /> Número do pedido: <code className="font-mono text-gray-300">{numeroInterno}</code>
-                  <span className="text-gray-600">(use este número ao falar com o suporte)</span>
+                <p className="mt-2.5 text-xs text-gray-500 flex flex-wrap items-center gap-x-1.5 gap-y-0.5" data-teste="rastreio-numero-pedido">
+                  <Hash className="w-3.5 h-3.5 shrink-0" /> <span className="whitespace-nowrap">Número do pedido:</span> <code className="font-mono text-gray-300">{numeroInterno}</code>
+                  <span className="text-gray-600 basis-full sm:basis-auto">(use este número ao falar com o suporte)</span>
                 </p>
               </div>
             )}
