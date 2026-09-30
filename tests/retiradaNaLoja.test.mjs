@@ -81,9 +81,16 @@ test('pedido de entrega, ou sem pagamento, não é retirado', async () => {
 test('cliente vê o PRÓPRIO código; balcão acha o pedido pelo código', async () => {
   banco();
   const meus = await chamar({ acao: 'meus' }, 'cliente1');
-  assert.deepEqual(meus.json.pedidos, [{ saleId: VENDA.id, retirado: false, codigo: codigoDeRetirada(VENDA.id) }]);
+  assert.deepEqual(meus.json.pedidos, [{ saleId: VENDA.id, auctionId: null, retirado: false, codigo: codigoDeRetirada(VENDA.id) }]);
   assert.ok(estado.chamadas.some((c) => c.u.includes('buyer_id=eq.cliente1')), 'só os pedidos dele');
   const achou = await chamar({ acao: 'porCodigo', codigo: codigoDeRetirada(VENDA.id) }, 'balcao');
   assert.equal(achou.json.pedido.numero, 'LZ42C79347');
   assert.equal((await chamar({ acao: 'porCodigo', codigo: codigoDeRetirada(VENDA.id) }, 'cliente1')).status, 403);
+});
+
+test('arremate: "meus" devolve o leilão junto, pra Meus Arremates achar o código', async () => {
+  banco({ venda: { ...VENDA, kind: 'arremate', tracking_code: 'AR42C79347', raw_base44: { delivery_type: 'pickup', auction_id: 'leilao-99' } } });
+  const meus = await chamar({ acao: 'meus' }, 'cliente1');
+  assert.equal(meus.json.pedidos[0].auctionId, 'leilao-99');
+  assert.equal(meus.json.pedidos[0].codigo, codigoDeRetirada(VENDA.id));
 });

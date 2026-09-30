@@ -50,9 +50,12 @@ export default async function handler(req, res) {
         success: true,
         pedidos: minhas.map((v) => {
           const f = porVenda[v.id];
+          // arremate: o leilão mora em raw_base44.auction_id — é por ele que "Meus Arremates" acha o código
+          let raw = v.raw_base44; if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = {}; } }
+          const auctionId = v.kind === 'arremate' ? (raw?.auction_id || null) : null;
           return f
-            ? { saleId: v.id, retirado: true, local: rotuloDoLocal(f.local, f.local_outro), retiradoEm: f.retirado_em }
-            : { saleId: v.id, retirado: false, codigo: codigoDeRetirada(v.id) };
+            ? { saleId: v.id, auctionId, retirado: true, local: rotuloDoLocal(f.local, f.local_outro), retiradoEm: f.retirado_em }
+            : { saleId: v.id, auctionId, retirado: false, codigo: codigoDeRetirada(v.id) };
         }),
       });
     }

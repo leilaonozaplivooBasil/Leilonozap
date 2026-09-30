@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CodigoDeRetirada from '@/components/retirada/CodigoDeRetirada';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
 import { useLocation } from 'react-router-dom';
@@ -96,6 +97,9 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo, onEscolherEntrega
                         </Button>
                     </div>
                 )}
+
+                {/* 📦 30/09/2026 — arremate com retirada: o código pra falar no balcão, ou o comprovante */}
+                <CodigoDeRetirada auctionId={auction.id} />
 
                 {/* Botão de Ação - Apenas Acompanhar */}
                 <Button 

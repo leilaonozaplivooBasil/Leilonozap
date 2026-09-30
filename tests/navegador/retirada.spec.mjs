@@ -114,3 +114,13 @@ test('cliente: vê o código enquanto não retira; depois, onde e quando retirou
     assert.match(await pagina.innerText('[data-teste="retirada-feita"]'), /Retirado em .* · Ponto de Retirada Bangu/);
   } finally { await ctx.close(); }
 });
+
+test('Meus Arremates: o arremate de retirada mostra o código; o de entrega, não', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir(390, '?tela=arremates');
+  try {
+    await pagina.waitForSelector('[data-teste="codigo-de-retirada"]', { timeout: 20000 });
+    const codigos = await pagina.$$('[data-teste="codigo-de-retirada"]');
+    assert.equal(codigos.length, 1, 'só o iPhone (retirada) — o PS5 não tem pedido de retirada');
+    assert.match(await codigos[0].innerText(), /731 204/);
+  } finally { await ctx.close(); }
+});
