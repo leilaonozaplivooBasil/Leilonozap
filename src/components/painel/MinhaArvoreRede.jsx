@@ -31,7 +31,7 @@ export default function MinhaArvoreRede({ user }) {
 
   const carregar = useCallback(async () => {
     try {
-      const lista = await AppUser.list('-created_date', 1000);
+      const lista = await AppUser.listAll('-created_date');
       setTodos(Array.isArray(lista) ? lista : []);
     } catch {
       setTodos([]);

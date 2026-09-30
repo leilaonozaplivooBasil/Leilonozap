@@ -567,7 +567,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       await delay(1000); // Delay maior para admin
 
       const users = await fetchWithRetry(
-        () => AppUser.list("-updated_date", 1000)
+        () => AppUser.listAll("-updated_date")
       );
 
       setAllUsers(Array.isArray(users) ? users : []);
@@ -910,7 +910,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     setIsCleaningDuplicates(true);
     toast.info("Buscando duplicatas...");
     try {
-      const allUsersToProcess = await AppUser.list("-created_date", 1000);
+      const allUsersToProcess = await AppUser.listAll("-created_date");
       if (!Array.isArray(allUsersToProcess)) throw new Error("Falha ao buscar usuários.");
 
       const emailMap = {};

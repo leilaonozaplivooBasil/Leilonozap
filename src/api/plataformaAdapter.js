@@ -34,6 +34,7 @@
  *
  * Functions: redirecionadas para /api/functions/<name> (Vercel) ou Edge Functions.
  */
+import { tudoEmPaginas, precisaPaginar } from '@/lib/paginacao';
 import { supabase } from './supabaseClient';
 import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
@@ -506,14 +507,52 @@ function entityProxy(entity) {
     return null;
   }
 
+  // 📚 SEM TETO DE MIL (30/09/2026, src/lib/paginacao.js) — o Supabase corta em
+  // 1.000 linhas por chamada. Uma página de [offset, offset+tamanho).
+  const _pagina = async (filters, orderBy, offset, tamanho) => {
+    let q = supabase.from(table).select(colunasDe(table));
+    if (filters) q = applyFilters(q, entity, filters);
+    q = applyOrderBy(q, orderBy, entity);
+    q = q.range(offset, offset + tamanho - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  };
+  // A lista inteira (ou até `limite`), página a página, na mesma ordem estável
+  // (applyOrderBy desempata por id — nenhuma linha some entre páginas).
+  const _tudo = async (filters, orderBy, limite) => {
+    const rows = await tudoEmPaginas((offset, tamanho) => _pagina(filters, orderBy, offset, tamanho), { limite });
+    return (await _comCamposSensiveis(table, rows)).map((r) => mapFromDB(entity, r));
+  };
+
   return {
     async list(orderBy, limit) {
       let q = supabase.from(table).select(colunasDe(table));
+      // Limite acima de 1.000: pagina — antes a chamada pedia 5.000 e recebia
+      // 1.000 sem aviso (comissões: 1.573 linhas). Sem limite segue uma chamada.
+      if (precisaPaginar(limit)) return _tudo(null, orderBy, limit);
       q = applyOrderBy(q, orderBy, entity);
       if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
       return (await _comCamposSensiveis(table, data)).map((r) => mapFromDB(entity, r));
+    },
+
+    /** TODAS as linhas, em páginas de 1.000. Use quando a tela precisa da base inteira. */
+    async listAll(orderBy) {
+      return _tudo(null, orderBy, undefined);
+    },
+
+    /** TODAS as linhas que passam no filtro, em páginas de 1.000. */
+    async filterAll(filters, orderBy) {
+      if (table === 'app_users' && filters && typeof filters === 'object'
+        && Object.keys(mapToDB(entity, filters)).some((k) => CAMPOS_SENSIVEIS_USUARIO.includes(k))) {
+        return [];
+      }
+      if (filtroUsaCampoSensivel(table, mapToDB(entity, filters))) {
+        return this.filter(filters, orderBy);
+      }
+      return _tudo(filters, orderBy, undefined);
     },
 
     async filter(filters, orderBy, limit, offset) {
@@ -536,6 +575,8 @@ function entityProxy(entity) {
         return rows.map((r) => mapFromDB(entity, r));
       }
       let q = supabase.from(table).select(colunasDe(table));
+      // Sem offset e com limite acima de 1.000: pagina.
+      if (offset == null && precisaPaginar(limit)) return _tudo(filters, orderBy, limit);
       q = applyFilters(q, entity, filters);
       q = applyOrderBy(q, orderBy, entity);
       if (offset != null && limit) q = q.range(offset, offset + limit - 1);
