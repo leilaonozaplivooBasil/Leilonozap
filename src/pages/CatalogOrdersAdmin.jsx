@@ -8,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle, AlertTriangle, Printer } from 'lucide-react';
+import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle, AlertTriangle, Printer, Store, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 import OrderItemsChecklist from "@/components/catalog/OrderItemsChecklist";
 import OrderFulfillmentSteps from "@/components/catalog/OrderFulfillmentSteps";
+import RegistrarRetiradaModal from "@/components/retirada/RegistrarRetiradaModal";
+import ComprovanteRetiradaModal from "@/components/retirada/ComprovanteRetiradaModal";
+import { ehRetirada, vendaPodeSerRetirada, numeroDoPedidoTela, quandoRetirou } from "@/lib/retirada";
 
 // ✅ PONTO 112 (21/08/2026) — mesma conta do checkout (src/pages/Cart.jsx) e do
 // servidor (api/functions/atualizarCpfComprador.js). As três precisam concordar:
@@ -253,6 +256,10 @@ export default function CatalogOrdersAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('paid');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // 📦 30/09/2026 — retirada digital: quais pedidos já têm comprovante, e os dois modais
+  const [retiradas, setRetiradas] = useState({});
+  const [registrando, setRegistrando] = useState(null);
+  const [comprovanteDe, setComprovanteDe] = useState(null);
   // 📛 nome dos produtos que o pedido guardou só por id (loja da rede)
   const [nomesDosItens, setNomesDosItens] = useState({});
 
@@ -325,6 +332,13 @@ export default function CatalogOrdersAdmin() {
       });
 
       setOrders(comVendedor);
+      // 📦 quais pedidos de retirada já têm comprovante (uma chamada só)
+      const idsRetirada = comVendedor.filter(ehRetirada).map((o) => o.id);
+      if (idsRetirada.length) {
+        plataforma.functions.invoke('retiradaNaLoja', { acao: 'listar', saleIds: idsRetirada })
+          .then((r) => { if (r?.success) setRetiradas(r.retiradas || {}); })
+          .catch(() => {});
+      }
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');
@@ -735,6 +749,9 @@ export default function CatalogOrdersAdmin() {
                           {order.tracking_code && (
                             <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
+                          {ehRetirada(order) && (retiradas[order.id]
+                            ? <span data-teste="retirado-em" className="text-green-300 text-xs inline-flex items-center gap-1"><FileCheck className="w-3 h-3" />Retirado {quandoRetirou(retiradas[order.id].retiradoEm)} · {retiradas[order.id].local}</span>
+                            : <span className="text-sky-300 text-xs inline-flex items-center gap-1"><Store className="w-3 h-3" />Retirada na loja</span>)}
                           {(() => {
                             const itens = getItems(order);
                             if (!itens) return null;
@@ -790,6 +807,19 @@ export default function CatalogOrdersAdmin() {
                               : <><Printer className="w-3 h-3 mr-1" />Etiqueta</>}
                           </Button>
                         )}
+                        {ehRetirada(order) && retiradas[order.id] && (
+                          <Button size="sm" data-teste="ver-comprovante" onClick={() => setComprovanteDe(order.id)}
+                            className="bg-gray-700 hover:bg-gray-600 text-white text-xs h-8 px-2" title="Comprovante de retirada">
+                            <FileCheck className="w-3 h-3 mr-1" />Comprovante
+                          </Button>
+                        )}
+                        {ehRetirada(order) && !retiradas[order.id] && vendaPodeSerRetirada(order) && (
+                          <Button size="sm" data-teste="registrar-retirada-botao"
+                            onClick={() => setRegistrando({ id: order.id, numero: numeroDoPedidoTela(order), produto: getDisplayTitle(order), comprador: order.buyer_name })}
+                            className="bg-sky-600 hover:bg-sky-700 text-white text-xs h-8 px-2">
+                            <Store className="w-3 h-3 mr-1" />Registrar retirada
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           onClick={() => handleOpenOrder(order)}
@@ -806,6 +836,18 @@ export default function CatalogOrdersAdmin() {
           </div>
         )}
       </div>
+
+      {/* 📦 Retirada digital */}
+      {registrando && (
+        <RegistrarRetiradaModal pedido={registrando} onFechar={() => setRegistrando(null)}
+          onRegistrada={(r) => {
+            const id = registrando.id;
+            setRetiradas((m) => ({ ...m, [id]: { local: r.local, retiradoEm: r.retiradoEm } }));
+            setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'entregue', fulfillment_status: 'entregue' } : o)));
+            setRegistrando(null);
+          }} />
+      )}
+      {comprovanteDe && <ComprovanteRetiradaModal saleId={comprovanteDe} onFechar={() => setComprovanteDe(null)} />}
 
       {/* Modal de Gerenciamento */}
       {selectedOrder && (

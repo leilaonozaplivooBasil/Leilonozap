@@ -8,6 +8,8 @@ import { Stars } from '@/components/loja/StarRating';
 import { imagemPedido, imagemFallback } from '@/lib/imagemPedido';
 import { itensDoPedido, quantosItens } from '@/lib/itensDoPedido';
 import PagarNovamenteBotao from '@/components/catalog/PagarNovamenteBotao';
+import CodigoDeRetirada from '@/components/retirada/CodigoDeRetirada';
+import { ehRetirada } from '@/lib/retirada';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
 // "Meus Pedidos" do Profile (extraído em 25/07 pra acabar com a versão pobre do
@@ -231,6 +233,9 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
             Excluir Pedido
           </button>
         )}
+
+        {/* 📦 30/09/2026 — retirada: o código pra falar no balcão, ou o comprovante */}
+        {ehRetirada(order) && <div className="px-4 pb-3"><CodigoDeRetirada saleId={order.id} /></div>}
 
         {/* RASTREIO (se houver) */}
         {order.tracking_code && (
