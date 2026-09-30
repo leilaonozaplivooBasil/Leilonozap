@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt, Sheet } from "lucide-react";
+import { Plus, FileText, Search, RefreshCw, LayoutDashboard, List, TrendingUp, Scale, Receipt, Sheet, Coins } from "lucide-react";
 import { format, startOfDay, startOfMonth, endOfMonth, isBefore, isAfter, parseISO } from "date-fns";
 import { toDate } from "@/lib/dateFmt";
 import { encontrarVencidosNaoMarcados } from "@/lib/financeiroVencidos";
@@ -25,6 +25,7 @@ import FinancialDashboard from "@/components/financial/FinancialDashboard";
 import IncomeTable from "@/components/financial/IncomeTable";
 import FinancialOverview from "@/components/financial/FinancialOverview";
 import ContasAPagarTab from "@/components/financial/ContasAPagarTab";
+import LucroDoDiaTab from "@/components/financial/LucroDoDiaTab";
 import PaymentModal from "@/components/financial/PaymentModal";
 import PortalPageHeader from "@/components/common/PortalPageHeader";
 import { DollarSign } from "lucide-react";
@@ -290,6 +291,19 @@ export default function Financial() {
           {/* 📋 Aba pedida pela Aline (29/08/2026): "clica e visualiza uma aba
               exclusiva para o contas a pagar". Sem filtro nenhum de propósito —
               a tela inteira já é a resposta. Ver ContasAPagarTab.jsx. */}
+          {/* 💹 DIR-190 (30/09/2026) — o painel "Lucro líquido — HOJE" saiu da Visão
+              Geral do Sistema de Alavancagem e mora aqui, no Setor Financeiro. */}
+          <button
+            onClick={() => setActiveTab("lucro")}
+            data-teste="aba-lucro"
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "lucro"
+                ? "bg-yellow-600/20 text-yellow-300 border border-yellow-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <Coins className="w-4 h-4" /> Lucro do dia
+          </button>
           <button
             onClick={() => setActiveTab("apagar")}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
@@ -302,7 +316,9 @@ export default function Financial() {
           </button>
         </div>
 
-        {activeTab === "apagar" ? (
+        {activeTab === "lucro" ? (
+          <LucroDoDiaTab />
+        ) : activeTab === "apagar" ? (
           isLoading ? (
             <div className="text-center py-12">
               <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />

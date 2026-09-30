@@ -13,14 +13,14 @@ import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, 
 import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
 import ConversionBox from "../components/network/ConversionBox";
 import { dataDeCriacao, criadoNosUltimosDias } from "@/lib/dataDeCriacao";
-import PainelLucroDiario from "../components/network/PainelLucroDiario";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, Link2 } from 'lucide-react';
+import { DollarSign, Link2, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
@@ -1357,14 +1357,21 @@ export default function NetworkOverview() {
             <ConversionBox conversion={conversion} depositsCount={financeStats.depositsCount} valorTotal={(financeStats.depositsTotal || 0) + (financeStats.purchasesTotal || 0)} />
           </div>
 
+          {/* 📈 DIR-190 (30/09/2026) — o "Lucro líquido — HOJE" foi para o Setor
+              Financeiro (aba Lucro do dia). Aqui entra a porta do Painel do
+              Investidor: dinheiro real por área, funil, leilão e mapa do Brasil. */}
           <div className="mb-2">
-            <PainelLucroDiario
-              purchasesToday={financeStats.purchasesToday}
-              arrematesToday={financeStats.arrematesToday}
-              depositsToday={financeStats.depositsToday}
-              depositsOperacaoToday={financeStats.depositsOperacaoToday}
-              purchasesUltimos12Meses={financeStats.purchasesUltimos12Meses}
-            />
+            <Link
+              to="/PainelInvestidor"
+              data-teste="botao-painel-investidor"
+              className="flex items-center justify-between gap-3 rounded-xl border border-amber-400/40 bg-gradient-to-r from-amber-500/15 to-yellow-500/5 px-4 py-3 text-left transition-colors hover:from-amber-500/25"
+            >
+              <span>
+                <span className="block text-sm font-black text-amber-200">Painel do Investidor</span>
+                <span className="block text-xs text-gray-300">Dinheiro real por área, funil, leilão ao vivo e mapa do Brasil — conciliado com o gateway</span>
+              </span>
+              <TrendingUp className="w-5 h-5 shrink-0 text-amber-300" />
+            </Link>
           </div>
 
           {showStats && (

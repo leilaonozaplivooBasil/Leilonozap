@@ -1,3 +1,19 @@
+## 📈 DIR-190 — Painel do Investidor: dinheiro real por área, funil, leilão ao vivo e mapa do Brasil; lucro do dia vai para o Financeiro (30/09/2026)
+
+**Dono, com quatro prints da Visão Geral:** "essa visão geral tem que ser foda e muito mais intuitiva, contemplar tudo, inclusive vendas dos parceiros, loja virtual; quanto do depósito vai pra compra, pra arremate, pra leilão esperando; volume financeiro por área em tempo real; quantas pessoas entrando; mapa do Brasil com calor por estado, clicável. Estou apresentando para muito investidor." Depois: "é mais de 40 mil em depósito, precisamos ser diligentes, números reais". E: "tira a parte do lucro dali e põe no setor financeiro numa aba".
+
+**Auditoria (números do banco, conciliados com o Mercado Pago em 30/09):** dinheiro que entrou pelo gateway = **R$ 45.538 em 153 pagamentos** (carteira R$ 34.858, operação R$ 457, loja PIX/cartão R$ 3.373, PDV R$ 5.027, adesão R$ 1.497, passaporte e frete R$ 327). O painel mostrava R$ 33.973 (só depósitos pós-marco) e "Valor Total R$ 43.185" somando depósitos com compras pagas com o saldo desses mesmos depósitos. Os 65 depósitos "cancelados" (R$ 36.661) foram conferidos um a um no gateway: 63 vencidos, 1 recusado, 1 pendente, nenhum aprovado sem crédito. Fluxo do depositado (R$ 35.315): arremates 31%, loja 13%, reservado em lances 1,5%, parado nas carteiras 52%. Ponto de atenção que fica marcado na tela: 54 arremates encerrados "aguardando pagamento" somam R$ 300 mil nominais e ficam fora do caixa.
+
+**O que muda:**
+
+- **`public.painel_investidor(_dias)`** (migração `20260930160000`): uma função no banco calcula tudo, com uma regra só: entrada = pago no gateway (nunca uso de saldo); áreas por `painel_area(kind, source)`; histórico importado (Nexus) à parte; mapa por estado do endereço ou pelo DDD (`painel_ddd_uf`), 92% da base localizada. Só o `service_role` executa.
+- **`api/functions/painelInvestidor.js`**: só admin/super_admin, chama a RPC com o período.
+- **Página `PainelInvestidor`** (só admin): período (hoje, 7, 30 dias, tudo), recálculo a cada minuto, KPIs, entrada por área e por mês, faixa "para onde vai o depósito", funil, compras por área, leilão ao vivo, **mapa do Brasil** com calor por estado (contornos `@svg-maps/brazil`, clicável, com painel do estado e top 6), cadastros por dia, últimos pagamentos.
+- **Visão Geral:** sai o "Lucro líquido — HOJE"; entra o botão "Painel do Investidor". Resumo, métricas e árvore ficam como estavam.
+- **Setor Financeiro:** aba nova **Lucro do dia** (`LucroDoDiaTab`, mesma regra de dinheiro real).
+
+**Prova:** `tests/painelInvestidor.test.mjs` (5 testes), suíte 3977/3977, lint 0 erros, build; a função rodou em produção com 30 dias e devolveu os números acima.
+
 ## 📱 DIR-189 — Topo sem clarão: a tela do navegador tem a cor da barra e o entalhe é opaco (30/09/2026)
 
 **Dono, com o print da home no iPhone:** "em cima da tela o degradê branco está atrapalhando a logo e a navegação."
