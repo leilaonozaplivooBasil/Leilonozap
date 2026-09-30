@@ -25,7 +25,9 @@ import { exigirSessao } from '../_lib/sessao.js';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const ESCOPOS = 'cart-read cart-write shipping-calculate shipping-checkout shipping-generate shipping-print orders-read users-read';
+// DIR-187 (30/09/2026): + shipping-tracking — sem ele o endpoint /shipment/tracking
+// responde 403. Só vale depois que o dono autorizar de novo (o token atual não tem).
+const ESCOPOS = 'cart-read cart-write shipping-calculate shipping-checkout shipping-generate shipping-print shipping-tracking orders-read users-read';
 const UA = 'Leilao NoZap (contato@leilaonozap.net)';
 
 function baseUrl(ambiente) {

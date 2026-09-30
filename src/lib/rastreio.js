@@ -111,9 +111,11 @@ export function ordenarEventos(eventos = []) {
  */
 export function situacaoDaEntrega(p = {}) {
   const status = String(p.status || 'pending_payment').toLowerCase();
-  if (CANCELADO.includes(status) || p.melhorEnvio?.canceled_at) {
+  if (CANCELADO.includes(status)) {
     return { etapa: 'cancelado', titulo: 'Pedido cancelado', descricao: 'Este pedido foi cancelado.' };
   }
+  // Etiqueta cancelada no Melhor Envio NÃO é pedido cancelado: o Herbert teve a etiqueta
+  // J&T cancelada e o objeto seguiu pelos Correios. Só o status da venda cancela.
   const pago = PAGO.includes(status);
   const eventos = ordenarEventos(p.eventos || []);
   const ultimo = eventos[0] || null;
@@ -175,7 +177,7 @@ export function linhaDoTempo(situacao, { criadoEm, pago, postadoEm, eventos = []
     { chave: 'pagamento', rotulo: 'Pagamento confirmado', feito: Boolean(pago) && etapa !== 'aguardando_pagamento', dica: etapa === 'aguardando_pagamento' ? 'Aguardando pagamento' : null },
     { chave: 'postado', rotulo: 'Postado na transportadora', feito: feito('postado'), quando: feito('postado') ? postadoEm || inicioDaEtapa(evs, RX_POSTADO) : null, dica: etapa === 'preparando' ? 'Em preparação pelo vendedor' : null },
     { chave: 'em_transito', rotulo: 'A caminho', feito: feito('em_transito'), quando: feito('em_transito') ? inicioDaEtapa(evs, RX_TRANSITO) : null, dica: etapa === 'problema' ? 'Ocorrência registrada — veja o aviso' : null },
-    { chave: 'saiu_entrega', rotulo: 'Saiu para entrega', feito: feito('saiu_entrega'), quando: feito('saiu_entrega') ? inicioDaEtapa(evs, RX_SAIU) : null },
+    { chave: 'saiu_entrega', rotulo: 'Saiu para entrega', feito: feito('saiu_entrega') || evs.some((e) => RX_SAIU.test(String(e?.descricao || ''))), quando: inicioDaEtapa(evs, RX_SAIU) },
     { chave: 'entregue', rotulo: 'Entregue', feito: etapa === 'entregue', quando: etapa === 'entregue' ? situacao?.quando || null : null },
   ];
 }
@@ -221,6 +223,41 @@ export function mensagemDoSuporte({ numeroPedido, codigo, produto } = {}) {
   if (codigo) partes.push(`Rastreio: ${codigo}`);
   if (produto) partes.push(`Produto: ${produto}`);
   return partes.join(' · ');
+}
+
+/**
+ * Eventos do Melhor Rastreio (rastreador público do Melhor Envio — GraphQL searchParcel)
+ * → nosso formato. É por aqui que os eventos dos Correios chegam: a API pública dos
+ * Correios recusa consulta feita por servidor (403), o Melhor Rastreio não.
+ */
+export function eventosDoMelhorRastreio(json) {
+  const parcel = json?.data?.result || json?.result || json || null;
+  const lista = Array.isArray(parcel?.trackingEvents) ? parcel.trackingEvents : [];
+  return lista.map((e) => {
+    const de = String(e?.from || '').replace(/^\d+\s*-\s*/, '').trim();
+    const para = String(e?.to || '').replace(/^\d+\s*-\s*/, '').trim();
+    const local = de && para && de !== para ? `${de} → ${para}` : (de || para);
+    return {
+      descricao: String(e?.title || '').trim(),
+      detalhe: String(e?.description || e?.notes || '').trim(),
+      data: e?.createdAt || e?.registeredAt || null,
+      local: local === 'BR' ? '' : local,
+      fonte: e?.trackerType === 'correios' ? 'correios' : 'melhor_rastreio',
+    };
+  }).filter((e) => e.descricao);
+}
+
+/** Qual rastreador do Melhor Rastreio consultar, pelo código e pela transportadora. */
+export function tipoDoRastreador({ codigo, transportadora } = {}) {
+  if (ehCodigoCorreios(codigo)) return 'correios';
+  const t = String(transportadora || '').toLowerCase();
+  if (/j&t|jet/.test(t)) return 'jet';
+  if (/jadlog/.test(t)) return 'jadlog';
+  if (/loggi/.test(t)) return 'loggi';
+  if (/azul/.test(t)) return 'azul';
+  if (/latam/.test(t)) return 'latam';
+  if (/buslog/.test(t)) return 'buslog';
+  return 'unknown';
 }
 
 /** O número que o cliente vê nos avisos: "LZ" + começo do id (loja) ou "AR" (arremate). Não rastreia. */

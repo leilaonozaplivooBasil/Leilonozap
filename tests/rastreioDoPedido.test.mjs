@@ -11,7 +11,16 @@ import { semComentarios } from './_ajuda.mjs';
 import {
   situacaoDaEntrega, linhaDoTempo, rotuloDaEntrega, codigoReal, ehCodigoInterno, ehCodigoCorreios,
   linksDeRastreio, eventosDosCorreios, ehEventoDeEntrega, numeroInternoDoPedido, orientacaoDoProblema, mensagemDoSuporte,
+  eventosDoMelhorRastreio, tipoDoRastreador,
 } from '../src/lib/rastreio.js';
+
+// Resposta REAL do Melhor Rastreio para o objeto do Herbert (30/09/2026 13:31Z)
+const MELHOR_RASTREIO_HERBERT = { data: { result: { id: '6aa4433f2d0bfeadd908f247', lastStatus: 'INFO', postedAt: '2026-09-14T13:11:36.000Z', receivedAt: null, trackingEvents: [
+  { createdAt: '2026-09-28T18:34:30.000Z', title: 'Objeto não entregue - Endereço inexistente', description: null, notes: null, from: '99 - SAO PAULO/SP', to: null, status: '99', trackerType: 'correios' },
+  { createdAt: '2026-09-28T11:54:24.000Z', title: 'Objeto saiu para entrega ao destinatário', description: null, notes: null, from: '01 - SAO PAULO/SP', to: null, status: '01', trackerType: 'correios' },
+  { createdAt: '2026-09-14T13:11:36.000Z', title: 'Objeto postado', description: null, notes: null, from: '01 - RIO DE JANEIRO/RJ', to: null, status: '01', trackerType: 'correios' },
+  { createdAt: '2026-09-11T15:06:45.000Z', title: 'Etiqueta emitida', description: null, notes: null, from: '82 - BR', to: null, status: '82', trackerType: 'correios' },
+] } } };
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
 
@@ -70,7 +79,8 @@ test('demais etapas: aguardando pagamento, postado, a caminho, saiu para entrega
   assert.equal(situacaoDaEntrega({ status: 'paid', eventos: [{ descricao: 'Objeto saiu para entrega ao destinatário', data: '2026-09-16' }] }).etapa, 'saiu_entrega');
   assert.equal(situacaoDaEntrega({ status: 'paid', fulfillment_status: 'saiu_entrega' }).etapa, 'saiu_entrega');
   assert.equal(situacaoDaEntrega({ status: 'cancelado' }).etapa, 'cancelado');
-  assert.equal(situacaoDaEntrega({ status: 'paid', melhorEnvio: { canceled_at: '2026-09-15' } }).etapa, 'cancelado');
+  // etiqueta cancelada no Melhor Envio NÃO cancela o pedido (o objeto pode ir por outra transportadora)
+  assert.notEqual(situacaoDaEntrega({ status: 'paid', melhorEnvio: { canceled_at: '2026-09-15', status: 'canceled' } }).etapa, 'cancelado');
 });
 
 test('código: LZ/AR é número interno; o real vem do próprio campo ou do Melhor Envio; padrão dos Correios reconhecido', () => {
@@ -110,6 +120,26 @@ test('eventos dos Correios (sro-rastro) viram descrição/detalhe/data/local sem
   assert.deepEqual(eventosDosCorreios({ objetos: [{ mensagem: 'Objeto não encontrado' }] }), []);
 });
 
+test('Melhor Rastreio: a resposta real do objeto do Herbert vira eventos com local, e a situação é ATENÇÃO com "saiu para entrega" marcado', () => {
+  const evs = eventosDoMelhorRastreio(MELHOR_RASTREIO_HERBERT);
+  assert.equal(evs.length, 4);
+  assert.equal(evs[0].descricao, 'Objeto não entregue - Endereço inexistente');
+  assert.equal(evs[0].local, 'SAO PAULO/SP');
+  assert.equal(evs[0].fonte, 'correios');
+  assert.equal(evs[3].local, '', 'o "82 - BR" da etiqueta não é local');
+  const s = situacaoDaEntrega({ status: 'shipped', fulfillment_status: 'enviado', tracking_code: 'AV091829611BR', eventos: evs });
+  assert.equal(s.etapa, 'problema');
+  assert.equal(s.problema.data, '2026-09-28T18:34:30.000Z');
+  const lt = linhaDoTempo(s, { pago: true, postadoEm: '2026-09-14T13:11:36.000Z', eventos: evs });
+  assert.equal(lt.find((e) => e.chave === 'saiu_entrega').feito, true);
+  assert.equal(lt.find((e) => e.chave === 'saiu_entrega').quando, '2026-09-28T11:54:24.000Z');
+  assert.equal(lt.find((e) => e.chave === 'entregue').feito, false);
+  assert.deepEqual(eventosDoMelhorRastreio(null), []);
+  assert.equal(tipoDoRastreador({ codigo: 'AV091829611BR', transportadora: 'JeT' }), 'correios', 'o código manda');
+  assert.equal(tipoDoRastreador({ codigo: '888030920056332', transportadora: 'JeT' }), 'jet');
+  assert.equal(tipoDoRastreador({ codigo: 'X' }), 'unknown');
+});
+
 test('orientação e mensagem de suporte prontas, com número do pedido e código', () => {
   assert.match(orientacaoDoProblema('Objeto aguardando retirada no endereço indicado'), /documento com foto/);
   assert.match(orientacaoDoProblema('Carteiro não atendido'), /nova tentativa/i);
@@ -144,11 +174,16 @@ test('o card e o modal de detalhes usam a situação da entrega (com prova), e o
   assert.ok(M.includes('data-teste="detalhes-link-rastreio"'));
 });
 
-test('a function rastrearPedido consulta Melhor Envio e Correios, guarda em raw_base44.rastreio e NUNCA mexe em status/dinheiro', () => {
+test('a function rastrearPedido consulta Melhor Envio e Melhor Rastreio, guarda em raw_base44.rastreio e NUNCA mexe em status/dinheiro', () => {
   const F = ler('../api/functions/rastrearPedido.js');
   assert.ok(F.includes("from '../../src/lib/rastreio.js'"), 'mesma biblioteca da tela');
   assert.ok(F.includes('/api/v2/me/shipment/tracking') || F.includes('${API}/shipment/tracking'));
-  assert.ok(F.includes('https://proxyapp.correios.com.br/v1/sro-rastro/'));
+  assert.ok(F.includes("'https://api.melhorrastreio.com.br/graphql'"));
+  assert.ok(F.includes('searchParcel(tracker:$tracker)'));
+  assert.ok(F.includes('etiquetaCancelada'), 'etiqueta cancelada no ME não pode virar pedido cancelado');
+  assert.ok(F.includes("(ehCodigoCorreios(codigo) ? 'Correios' : '')"));
+  const O = ler('../api/functions/melhorEnvioOAuth.js');
+  assert.ok(O.includes('shipping-tracking'), 'escopo de rastreio no OAuth');
   assert.ok(F.includes("estourouLimite(`rastreio:ip:${ip}`"));
   assert.ok(F.includes('rastreio: resultado'));
   assert.ok(F.includes('patch.delivered_at = situacao.quando'));

@@ -256,7 +256,8 @@ export default function CatalogOrderTracking() {
     ...hero,
   };
   const atualizadoEm = fmtDateTime(rastreio?.consultado_em);
-  const fonteTexto = (rastreio?.fonte || []).map((f) => (f === 'correios' ? 'Correios' : f === 'melhor_envio' ? 'Melhor Envio' : f)).join(' · ');
+  const NOME_FONTE = { correios: 'Correios', melhor_rastreio: 'Melhor Rastreio', melhor_envio: 'Melhor Envio' };
+  const fonteTexto = (rastreio?.fonte || []).map((f) => NOME_FONTE[f] || f).join(' · ');
 
   const total = Number(order.total_amount || order.sale_price || 0);
   const discount = Number(order.discount_amount || 0);

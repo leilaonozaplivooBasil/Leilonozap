@@ -11,7 +11,8 @@
 // as outras — o cliente sempre recebe o que foi possível apurar):
 //   1. carrega a venda (service_role) — só os campos da entrega, nunca dinheiro;
 //   2. pergunta ao Melhor Envio (tracking + detalhe do pedido → transportadora/serviço);
-//   3. pergunta aos Correios (rastreio público) quando o código é deles;
+//   3. pergunta ao Melhor Rastreio (rastreador público do Melhor Envio) os eventos
+//      da transportadora — a API pública dos Correios recusa servidor (403), esta não;
 //   4. deriva a situação com a MESMA biblioteca que a tela usa (src/lib/rastreio.js);
 //   5. guarda o resultado em raw_base44.rastreio (cache de 5 min) e, quando a
 //      transportadora PROVA algo, grava tracking_code/carrier/shipped_at/delivered_at/
@@ -22,7 +23,7 @@
 import { getAccessToken, baseUrl, ambienteAtual, UA } from '../_lib/melhorEnvioShipment.js';
 import { ipDoRequest, estourouLimite } from '../_lib/rateLimit.js';
 import {
-  situacaoDaEntrega, codigoReal, linksDeRastreio, ordenarEventos, eventosDosCorreios,
+  situacaoDaEntrega, codigoReal, linksDeRastreio, ordenarEventos, eventosDoMelhorRastreio, tipoDoRastreador,
   ehCodigoCorreios, ehCodigoInterno, numeroInternoDoPedido,
 } from '../../src/lib/rastreio.js';
 
@@ -96,18 +97,26 @@ async function consultarMelhorEnvio(orderId, ambiente) {
   return out;
 }
 
-// ---- Correios (rastreio público, o mesmo que o app deles usa) -----------------
-async function consultarCorreios(codigo) {
-  if (!ehCodigoCorreios(codigo)) return { eventos: [], erro: null };
+// ---- Melhor Rastreio (rastreador público do Melhor Envio) --------------------
+// Os Correios respondem 403 a qualquer consulta feita por servidor (testado 30/09/2026
+// com vários User-Agents). O Melhor Rastreio expõe os mesmos eventos, sem token.
+const MELHOR_RASTREIO = 'https://api.melhorrastreio.com.br/graphql';
+const QUERY_RASTREIO = 'mutation($tracker: TrackerSearchInput!){ result: searchParcel(tracker:$tracker){ id lastStatus postedAt receivedAt updatedAt trackingEvents { createdAt registeredAt title description notes from to status trackerType } } }';
+async function consultarMelhorRastreio(codigo, tipo) {
+  if (!codigo) return { eventos: [], parcel: null, erro: null };
   try {
-    const r = await comTempo(`https://proxyapp.correios.com.br/v1/sro-rastro/${encodeURIComponent(codigo)}`, {
-      headers: { Accept: 'application/json', 'User-Agent': UA },
-    }, 6000);
-    if (!r.ok) return { eventos: [], erro: `correios_http_${r.status}` };
+    const r = await comTempo(MELHOR_RASTREIO, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': UA },
+      body: JSON.stringify({ query: QUERY_RASTREIO, variables: { tracker: { trackingCode: codigo, type: tipo } } }),
+    }, 8000);
+    if (!r.ok) return { eventos: [], parcel: null, erro: `melhor_rastreio_http_${r.status}` };
     const j = await r.json().catch(() => null);
-    return { eventos: eventosDosCorreios(j), erro: null };
+    const parcel = j?.data?.result || null;
+    if (!parcel) return { eventos: [], parcel: null, erro: j?.errors?.[0]?.message ? String(j.errors[0].message).slice(0, 120) : 'sem_resultado' };
+    return { eventos: eventosDoMelhorRastreio(j), parcel: { lastStatus: parcel.lastStatus || null, postedAt: parcel.postedAt || null, receivedAt: parcel.receivedAt || null, updatedAt: parcel.updatedAt || null }, erro: null };
   } catch (e) {
-    return { eventos: [], erro: String(e?.message || e).slice(0, 120) };
+    return { eventos: [], parcel: null, erro: String(e?.message || e).slice(0, 120) };
   }
 }
 
@@ -175,42 +184,51 @@ export default async function handler(req, res) {
     const ambiente = raw?.melhor_envio?.ambiente || ambienteAtual();
     const meOrderId = raw?.melhor_envio?.order_id || null;
     const me = await consultarMelhorEnvio(meOrderId, ambiente);
-    const melhorEnvio = me.tracking
+    // 🔴 Etiqueta cancelada no Melhor Envio = o Melhor Envio deixou de ser fonte (o objeto
+    // pode ter seguido por outra transportadora — foi o caso do Herbert: etiqueta J&T
+    // cancelada, objeto postado nos Correios). Nunca vira "pedido cancelado".
+    const etiquetaCancelada = Boolean(me.tracking?.canceled_at) || me.tracking?.status === 'canceled' || me.pedido?.status === 'canceled';
+    const meBruto = me.tracking
       ? { ...me.tracking, tracking_url: me.pedido?.tracking_url || null }
       : (me.pedido ? { status: me.pedido.status, tracking: me.pedido.tracking, posted_at: me.pedido.posted_at, delivered_at: me.pedido.delivered_at, tracking_url: me.pedido.tracking_url } : null);
+    const melhorEnvio = meBruto
+      ? (etiquetaCancelada ? { status: 'canceled', etiqueta_cancelada: true, tracking: null, posted_at: null, delivered_at: null, canceled_at: meBruto.canceled_at || null } : meBruto)
+      : null;
 
     const codigo = codigoReal({ tracking_code: sale.tracking_code, melhorEnvio });
-    const correios = await consultarCorreios(codigo);
-
-    const transportadora = me.pedido?.transportadora
-      || sale.carrier
+    const transportadora = (!etiquetaCancelada && me.pedido?.transportadora)
       || (ehCodigoCorreios(codigo) ? 'Correios' : '')
+      || sale.carrier
       || raw?.frete?.empresa || '';
-    const servico = me.pedido?.servico || raw?.frete?.servico || '';
+    const servico = (!etiquetaCancelada && me.pedido?.servico) || (ehCodigoCorreios(codigo) ? '' : raw?.frete?.servico) || '';
 
-    const eventos = ordenarEventos([...correios.eventos, ...(correios.eventos.length ? [] : eventosDoMelhorEnvio({ tracking: melhorEnvio }))]);
+    const rastreador = await consultarMelhorRastreio(codigo, tipoDoRastreador({ codigo, transportadora }));
+    const eventos = ordenarEventos([...rastreador.eventos, ...(rastreador.eventos.length ? [] : eventosDoMelhorEnvio({ tracking: melhorEnvio }))]);
     const situacao = situacaoDaEntrega({
       status: sale.status, fulfillment_status: sale.fulfillment_status, shipped_at: sale.shipped_at, delivered_at: sale.delivered_at,
       tracking_code: sale.tracking_code, melhorEnvio, eventos,
     });
     const fonte = [];
+    if (rastreador.eventos.some((e) => e.fonte === 'correios')) fonte.push('correios');
+    if (rastreador.eventos.length) fonte.push('melhor_rastreio');
     if (me.tracking || me.pedido) fonte.push('melhor_envio');
-    if (correios.eventos.length) fonte.push('correios');
-    const avisos = [me.erro ? `melhor_envio:${me.erro}` : null, correios.erro ? `correios:${correios.erro}` : null].filter(Boolean);
+    const avisos = [me.erro ? `melhor_envio:${me.erro}` : null, rastreador.erro ? `melhor_rastreio:${rastreador.erro}` : null].filter(Boolean);
+    const postadoEm = melhorEnvio?.posted_at || rastreador.parcel?.postedAt || null;
 
     const resultado = {
       consultado_em: new Date().toISOString(), codigo, transportadora, servico, melhor_envio: melhorEnvio, eventos: eventos.slice(0, 40), situacao, fonte, avisos,
+      postado_em: postadoEm, rastreador: rastreador.parcel,
     };
 
     // 🔒 Só o que a transportadora PROVOU — e nunca o status de pagamento.
     const patch = {};
     if (codigo && (ehCodigoInterno(sale.tracking_code) || !sale.tracking_code)) patch.tracking_code = codigo;
-    if (transportadora && !sale.carrier) patch.carrier = transportadora;
+    if (transportadora && transportadora !== sale.carrier) patch.carrier = transportadora;
     if (situacao.etapa === 'entregue' && situacao.quando && !sale.delivered_at) {
       patch.delivered_at = situacao.quando;
       patch.fulfillment_status = 'entregue';
     } else if (['postado', 'em_transito', 'saiu_entrega', 'problema'].includes(situacao.etapa)) {
-      if (!sale.shipped_at && (melhorEnvio?.posted_at || eventos.length)) patch.shipped_at = melhorEnvio?.posted_at || eventos[eventos.length - 1]?.data || null;
+      if (!sale.shipped_at && (postadoEm || eventos.length)) patch.shipped_at = postadoEm || eventos[eventos.length - 1]?.data || null;
       if (!patch.shipped_at) delete patch.shipped_at;
       if (['a_enviar', 'preparando', null, undefined, ''].includes(sale.fulfillment_status)) patch.fulfillment_status = situacao.etapa === 'saiu_entrega' ? 'saiu_entrega' : 'enviado';
       if (situacao.etapa === 'saiu_entrega' && sale.fulfillment_status === 'enviado') patch.fulfillment_status = 'saiu_entrega';
