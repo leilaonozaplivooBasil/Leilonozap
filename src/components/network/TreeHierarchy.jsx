@@ -877,8 +877,10 @@ export default function TreeHierarchy({
             // e o dono leu como "quando expando não recolhe". Agora: contra-escala
             // quando o zoom reduz (nunca fica menor que o tamanho base), halo de
             // toque invisível ao redor (classe org-pilula em index.css) e o número
-            // de indicados sempre visível, para a pílula ser mais larga.
-            const contraEscala = zoom < 1 ? 1 / zoom : 1;
+            // de indicados sempre visível, para a pílula ser mais larga. A
+            // contra-escala tem teto (1,6×) e cresce a partir do centro, para
+            // não cobrir o nome da pessoa quando o zoom está bem reduzido.
+            const contraEscala = zoom < 1 ? Math.min(1.6, 1 / zoom) : 1;
             const expandButton =
               n.childCount > 0 ? (
                 <button
@@ -892,7 +894,7 @@ export default function TreeHierarchy({
                   style={
                     mode === 'list'
                       ? { transform: `scale(${contraEscala})`, transformOrigin: 'left center' }
-                      : { transform: `translateX(-50%) scale(${contraEscala})`, transformOrigin: 'top center' }
+                      : { transform: `translateX(-50%) scale(${contraEscala})`, transformOrigin: 'center' }
                   }
                   className={
                     mode === 'list'

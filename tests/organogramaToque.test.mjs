@@ -12,8 +12,8 @@ const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf
 
 test('a pílula não encolhe com o zoom (contra-escala) e leva a classe org-pilula nos dois modos', () => {
   const T = ler('../src/components/network/TreeHierarchy.jsx');
-  assert.ok(T.includes('const contraEscala = zoom < 1 ? 1 / zoom : 1;'));
-  assert.ok(T.includes('{ transform: `translateX(-50%) scale(${contraEscala})`, transformOrigin: \'top center\' }'), 'organograma');
+  assert.ok(T.includes('const contraEscala = zoom < 1 ? Math.min(1.6, 1 / zoom) : 1;'), 'com teto, para não cobrir o nome');
+  assert.ok(T.includes('{ transform: `translateX(-50%) scale(${contraEscala})`, transformOrigin: \'center\' }'), 'organograma');
   assert.ok(T.includes('{ transform: `scale(${contraEscala})`, transformOrigin: \'left center\' }'), 'lista');
   assert.ok(T.includes('`org-pilula relative flex items-center gap-0.5 h-6'), 'lista com classe e position');
   assert.ok(T.includes('`org-pilula absolute -bottom-2 left-1/2 flex'), 'organograma com classe');
@@ -27,10 +27,9 @@ test('o número de indicados aparece sempre, aberto ou fechado (pílula mais lar
   assert.ok(T.includes('<ChevronRight className="w-3 h-3" />}\n                  {n.childCount}'));
 });
 
-test('index.css dá o halo de toque e o tamanho mínimo no celular (ponteiro grosso)', () => {
+test('index.css dá o halo de toque, maior em tela de toque (ponteiro grosso)', () => {
   const C = readFileSync(new URL('../src/index.css', import.meta.url), 'utf8');
   assert.ok(/\.org-pilula::before\s*\{[^}]*content: '';[^}]*position: absolute;[^}]*inset: -8px;/s.test(C));
   const coarse = C.slice(C.indexOf('@media (pointer: coarse)'));
-  assert.ok(coarse.includes('.org-pilula {') && coarse.includes('min-height: 26px;') && coarse.includes('min-width: 40px;'));
   assert.ok(/\.org-pilula::before\s*\{[^}]*inset: -14px;/s.test(coarse));
 });

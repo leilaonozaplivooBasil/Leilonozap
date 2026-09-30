@@ -1394,14 +1394,6 @@ select[class*="bg-slate-900"] option {
   inset: -8px;
 }
 @media (pointer: coarse) {
-  .org-pilula {
-    min-height: 26px;
-    min-width: 40px;
-    padding-left: 8px;
-    padding-right: 8px;
-    font-size: 12px;
-    justify-content: center;
-  }
   .org-pilula::before {
     inset: -14px;
   }
