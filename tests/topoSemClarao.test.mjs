@@ -45,6 +45,13 @@ test('o Safari recebe o esquema escuro da página (material da barra de status) 
   assert.ok(LAYOUT.includes("if (cor) cor.setAttribute('content', temaClaroDaBarra ? '#FFFFFF' : '#21222B');"));
 });
 
-test('a árvore em tela cheia recua pela área segura do iPhone (o botão "Sair da tela cheia" fica alcançável)', () => {
-  assert.ok(NETWORK.includes(`style={treeFullscreen ? { paddingTop: 'var(--nz-entalhe)', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' } : undefined}`));
+test('todo painel em tela cheia recua pela área segura do iPhone (o botão "Sair da tela cheia" fica alcançável)', () => {
+  assert.match(CSS, /\.nz-tela-cheia \{\s*padding-top: var\(--nz-entalhe\);\s*padding-bottom: env\(safe-area-inset-bottom, 0px\);\s*padding-left: env\(safe-area-inset-left, 0px\);\s*padding-right: env\(safe-area-inset-right, 0px\);\s*\}/);
+  assert.ok(NETWORK.includes('"nz-tela-cheia fixed inset-0 z-[120] bg-gray-950 flex flex-col"'), 'Visão Geral (super admin)');
+  const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
+  // 🔴 o print do dono era ESTA tela: o Organograma da própria pessoa (DIR-186), não a Visão Geral
+  assert.ok(ler('../src/components/painel/MinhaArvoreRede.jsx').includes("'nz-escuro nz-tela-cheia fixed inset-0 z-[120] bg-gray-950 flex flex-col'"), 'Organograma da pessoa');
+  assert.ok(ler('../src/components/admin/ImagePositionEditor.jsx').includes('"nz-tela-cheia fixed inset-0 bg-black/95 z-[100] flex flex-col"'));
+  assert.ok(ler('../src/components/admin/CanvasOverview.jsx').includes('"nz-tela-cheia fixed inset-0 z-[200] bg-[#0b0e14] flex flex-col'));
+  assert.ok(ler('../src/components/licensing/CentralVendas/EncontroMentalidade.jsx').includes('"nz-tela-cheia fixed inset-0 z-[80] flex flex-col"'));
 });

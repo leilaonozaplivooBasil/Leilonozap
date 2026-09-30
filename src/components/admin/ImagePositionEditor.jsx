@@ -136,7 +136,7 @@ export default function ImagePositionEditor({ imageUrl, onSave, onCancel, device
   }, [isDragging, position, dragStart]);
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-[100] flex flex-col">
+    <div className="nz-tela-cheia fixed inset-0 bg-black/95 z-[100] flex flex-col">
       {/* Header */}
       <div className="bg-gray-900 border-b border-gray-700 p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">

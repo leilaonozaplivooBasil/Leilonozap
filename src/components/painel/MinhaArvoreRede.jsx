@@ -117,7 +117,7 @@ export default function MinhaArvoreRede({ user }) {
     // nz-escuro: a árvore mantém o visual escuro do Painel de Controle mesmo
     // dentro do painel claro (é a MESMA tela, não pode mudar de cara).
     <div className={telaCheia
-      ? 'nz-escuro fixed inset-0 z-[120] bg-gray-950 flex flex-col'
+      ? 'nz-escuro nz-tela-cheia fixed inset-0 z-[120] bg-gray-950 flex flex-col'
       : 'nz-escuro rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden'}>
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
         <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
