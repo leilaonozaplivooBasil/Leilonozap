@@ -871,6 +871,14 @@ export default function TreeHierarchy({
               },
             };
 
+            // 📱 DIR-188 (30/09/2026) — A PÍLULA PRECISA CABER NUM DEDO.
+            // No celular ela media 21×16 px (e 14×11 depois do "Ver tudo", porque
+            // encolhe junto com o zoom). O dedo caía no avatar, que abre o perfil,
+            // e o dono leu como "quando expando não recolhe". Agora: contra-escala
+            // quando o zoom reduz (nunca fica menor que o tamanho base), halo de
+            // toque invisível ao redor (classe org-pilula em index.css) e o número
+            // de indicados sempre visível, para a pílula ser mais larga.
+            const contraEscala = zoom < 1 ? 1 / zoom : 1;
             const expandButton =
               n.childCount > 0 ? (
                 <button
@@ -880,14 +888,20 @@ export default function TreeHierarchy({
                     e.stopPropagation();
                     toggle(n.id);
                   }}
+                  data-teste="org-pilula"
+                  style={
+                    mode === 'list'
+                      ? { transform: `scale(${contraEscala})`, transformOrigin: 'left center' }
+                      : { transform: `translateX(-50%) scale(${contraEscala})`, transformOrigin: 'top center' }
+                  }
                   className={
                     mode === 'list'
-                      ? `flex items-center gap-0.5 h-6 px-1.5 rounded-md text-[10.5px] font-bold border flex-shrink-0 transition-colors ${
+                      ? `org-pilula relative flex items-center gap-0.5 h-6 px-1.5 rounded-md text-[10.5px] font-bold border flex-shrink-0 transition-colors ${
                           n.isOpen
                             ? 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
                             : 'bg-emerald-600 border-emerald-400 text-white hover:bg-emerald-500'
                         }`
-                      : `absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-0.5 px-1.5 h-5 rounded-full text-[10px] font-bold border transition-colors ${
+                      : `org-pilula absolute -bottom-2 left-1/2 flex items-center gap-0.5 px-1.5 h-5 rounded-full text-[10px] font-bold border transition-colors ${
                           n.isOpen
                             ? 'bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700'
                             : 'bg-emerald-600 border-emerald-400 text-white hover:bg-emerald-500'
@@ -896,7 +910,7 @@ export default function TreeHierarchy({
                   title={n.isOpen ? 'Recolher indicados' : `Ver ${n.childCount} indicados`}
                 >
                   {n.isOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                  {(mode === 'list' || !n.isOpen) && n.childCount}
+                  {n.childCount}
                 </button>
               ) : null;
 
