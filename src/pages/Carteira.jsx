@@ -10,6 +10,7 @@ import CarteiraDeslogada from '@/components/wallet/CarteiraDeslogada';
 import BotaoVoltar from '@/components/common/BotaoVoltar';
 import CarteiraHeader from '@/components/wallet/CarteiraHeader';
 import CarteiraSaldosUnificados from '@/components/wallet/CarteiraSaldosUnificados';
+import SaldoEmLeilaoCard from '@/components/wallet/SaldoEmLeilaoCard';
 // 📦 estoque próprio: crédito travado + extrato das vendas do estoque dele
 import CreditoEstoqueCard from '@/components/wallet/CreditoEstoqueCard';
 import ExtratoEstoqueProprio from '@/components/wallet/ExtratoEstoqueProprio';
@@ -120,6 +121,9 @@ export default function Carteira() {
         {/* 💰 CARTEIRA ÚNICA — os quatro saldos reais do mesmo getMyWallet:
             depósito/leilão, comissões de vendas, reservado em lances e a liberar. */}
         <CarteiraSaldosUnificados w={w} />
+
+        {/* 🔒 30/09/2026 — quanto está preso pra loja em leilão rolando, e até quando */}
+        <SaldoEmLeilaoCard w={w} />
 
         {/* 📦 Crédito de Estoque (travado) — só aparece pra quem tem estoque próprio */}
         <CreditoEstoqueCard user={user} />
