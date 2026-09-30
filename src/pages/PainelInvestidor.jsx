@@ -7,10 +7,10 @@ import { ADMIN_ROLES } from '@/lib/roles';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
 import MapaBrasil, { nomeDoEstado } from '@/components/investidor/MapaBrasil';
 import {
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell,
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie,
 } from 'recharts';
 import {
-  TrendingUp, Users, Wallet, PiggyBank, RefreshCw, Gavel, ShoppingBag, MapPin, Activity, Loader2, ArrowLeft, Landmark,
+  TrendingUp, Users, Wallet, PiggyBank, RefreshCw, Gavel, ShoppingBag, MapPin, Activity, Loader2, ArrowLeft, Landmark, UserRound, Megaphone, Cake,
 } from 'lucide-react';
 
 // 📈 PAINEL DO INVESTIDOR — DIR-190 (30/09/2026)
@@ -49,6 +49,10 @@ const COMPRAS = {
   loja: { rotulo: 'Loja virtual', cor: '#38BDF8' },
   pdv: { rotulo: 'PDV', cor: '#2DD4BF' },
   arremate: { rotulo: 'Arremates no leilão', cor: '#A78BFA' },
+};
+const CANAIS = {
+  Instagram: '#E1306C', Facebook: '#1877F2', WhatsApp: '#25D366', Google: '#FBBC05', TikTok: '#69C9D0', YouTube: '#FF0000',
+  'Indicação de membro': '#34D399', Direto: '#F5C451', 'Outros sites': '#A78BFA', 'Sem registro': '#4B5563',
 };
 const moeda = (v) => `R$ ${fmtBR(Number(v) || 0)}`;
 const pct = (parte, todo) => (Number(todo) > 0 ? Math.round((Number(parte) / Number(todo)) * 1000) / 10 : 0);
@@ -181,6 +185,16 @@ export default function PainelInvestidor() {
   ];
   const leilao = p?.leilao || {};
   const nexus = p?.compras?.total?.nexus;
+  const perfil = p?.perfil || null;
+  const generoBase = perfil?.genero ? (dias === 0 ? perfil.genero : perfil.genero.periodo) : null;
+  const fatiasGenero = generoBase ? [
+    { nome: 'Homens', valor: generoBase.masculino || 0, cor: '#38BDF8' },
+    { nome: 'Mulheres', valor: generoBase.feminino || 0, cor: '#F472B6' },
+    { nome: 'Sem estimativa', valor: generoBase.indefinido || 0, cor: '#4B5563' },
+  ].filter((f) => f.valor > 0) : [];
+  const totalGenero = fatiasGenero.reduce((s, f) => s + f.valor, 0);
+  const canais = (perfil?.canais?.lista || []).map((c) => ({ nome: c.canal, valor: dias === 0 ? c.n : c.periodo, total: c.n, cor: CANAIS[c.canal] || '#9CA3AF' })).filter((c) => c.valor > 0).sort((a, b) => b.valor - a.valor);
+  const totalCanais = canais.reduce((s, c) => s + c.valor, 0);
 
   if (authStatus === 'checking') {
     return <div className="min-h-[60vh] grid place-items-center text-gray-400"><Loader2 className="w-8 h-8 animate-spin text-emerald-400" /></div>;
@@ -322,11 +336,71 @@ export default function PainelInvestidor() {
               </Secao>
             </div>
 
+            {/* Perfil das pessoas */}
+            {perfil && (
+              <div className="grid lg:grid-cols-3 gap-5" data-teste="investidor-perfil">
+                <Secao icon={UserRound} titulo="Homens e mulheres" sub={`${rotuloPeriodo} · ${perfil.genero?.metodo || 'estimado pelo primeiro nome'}`} teste="investidor-genero">
+                  <div className="flex items-center gap-4">
+                    <div className="h-40 w-40 shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={fatiasGenero} dataKey="valor" nameKey="nome" innerRadius={44} outerRadius={70} paddingAngle={2} stroke="none">
+                            {fatiasGenero.map((f) => <Cell key={f.nome} fill={f.cor} />)}
+                          </Pie>
+                          <Tooltip content={<TooltipEscuro formatador={(v) => `${v} pessoas`} />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ul className="flex-1 space-y-2">
+                      {fatiasGenero.map((f) => (
+                        <li key={f.nome} className="flex items-baseline justify-between text-sm">
+                          <span className="flex items-center gap-2 text-gray-200"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: f.cor }} /> {f.nome}</span>
+                          <span className="tabular-nums font-bold text-white">{f.valor} <span className="text-xs font-medium text-gray-500">· {pct(f.valor, totalGenero)}%</span></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </Secao>
+
+                <Secao icon={Megaphone} titulo="Por onde chegaram" sub={`${rotuloPeriodo} · origem registrada no cadastro desde ${perfil.canais?.registro_desde ? new Date(perfil.canais.registro_desde).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '25/09'}`} teste="investidor-canais">
+                  <div className="flex items-center gap-4">
+                    <div className="h-40 w-40 shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={canais} dataKey="valor" nameKey="nome" innerRadius={44} outerRadius={70} paddingAngle={2} stroke="none">
+                            {canais.map((c) => <Cell key={c.nome} fill={c.cor} />)}
+                          </Pie>
+                          <Tooltip content={<TooltipEscuro formatador={(v) => `${v} pessoas`} />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <ul className="flex-1 space-y-1.5">
+                      {canais.map((c) => (
+                        <li key={c.nome} className="flex items-baseline justify-between text-sm">
+                          <span className="flex items-center gap-2 text-gray-200"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: c.cor }} /> {c.nome}</span>
+                          <span className="tabular-nums font-bold text-white">{c.valor} <span className="text-xs font-medium text-gray-500">· {pct(c.valor, totalCanais)}%</span></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">Antes de {perfil.canais?.registro_desde ? new Date(perfil.canais.registro_desde).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '25/09'} o cadastro não guardava a origem: quem entrou por link de membro aparece como indicação.</p>
+                </Secao>
+
+                <Secao icon={Cake} titulo="Faixa etária" teste="investidor-idade">
+                  <div className="rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-sm text-gray-300">
+                    <p className="font-bold text-white">Ainda não coletamos data de nascimento.</p>
+                    <p className="mt-1">Nenhum cadastro tem esse dado hoje, e a idade não pode ser estimada com honestidade. Para esta fatia acender: um campo opcional de data de nascimento no cadastro e no perfil, e a leitura pelo KYC de quem já validou o CPF.</p>
+                  </div>
+                </Secao>
+              </div>
+            )}
+
             <div className="grid lg:grid-cols-5 gap-5">
               {/* Mapa */}
+              <div className="lg:col-span-3">
               <Secao icon={MapPin} titulo="Onde estão as pessoas" sub={`${totalLocalizados} localizadas pelo endereço ou pelo DDD · ${p.geografia?.sem_localizacao || 0} sem localização`} teste="investidor-mapa">
-                <div className="grid sm:grid-cols-5 gap-4">
-                  <div className="sm:col-span-3">
+                <div className="grid sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
                     <div className="mb-2 flex gap-2">
                       {[{ c: 'n', r: 'Toda a base' }, { c: 'periodo', r: rotuloPeriodo }].map((o) => (
                         <button key={o.c} type="button" onClick={() => setCampoMapa(o.c)} className={`rounded-lg px-3 py-1 text-xs font-bold ${campoMapa === o.c ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/40' : 'border border-white/10 bg-white/5 text-gray-300'}`}>{o.r}</button>
@@ -334,7 +408,7 @@ export default function PainelInvestidor() {
                     </div>
                     <MapaBrasil porUf={geo} campo={campoMapa} selecionado={ufSelecionada} onSelecionar={(uf) => setUfSelecionada((atual) => (atual === uf ? null : uf))} />
                   </div>
-                  <div className="sm:col-span-2 space-y-2">
+                  <div className="space-y-2">
                     {ufDetalhe ? (
                       <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3" data-teste="mapa-estado-selecionado">
                         <div className="text-[10px] font-bold uppercase tracking-wider text-amber-200/80">{nomeDoEstado(ufDetalhe.uf)}</div>
@@ -358,6 +432,7 @@ export default function PainelInvestidor() {
                   </div>
                 </div>
               </Secao>
+              </div>
 
               {/* Cadastros por dia + últimos pagamentos */}
               <div className="lg:col-span-2 space-y-5">
