@@ -1543,13 +1543,9 @@ export default function NetworkOverview() {
                 <div
                   className={
                     treeFullscreen
-                      ? "fixed inset-0 z-[120] bg-gray-950 flex flex-col"
+                      ? "nz-tela-cheia fixed inset-0 z-[120] bg-gray-950 flex flex-col"
                       : "rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden"
                   }
-                  /* 📱 DIR-189 — em tela cheia o painel vai até a borda do iPhone; sem o
-                     recuo da área segura, a linha com "Sair da tela cheia" ficava debaixo
-                     da barra de status e o dono não conseguia mais fechar. */
-                  style={treeFullscreen ? { paddingTop: 'var(--nz-entalhe)', paddingBottom: 'env(safe-area-inset-bottom, 0px)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)' } : undefined}
                 >
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
                     <Network className="w-4 h-4 text-green-400 flex-shrink-0" />

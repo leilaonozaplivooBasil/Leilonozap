@@ -152,7 +152,7 @@ export default function CanvasOverview({ onClose, currentPageName }) {
   }, [navigate, onClose]);
 
   return (
-    <div className="fixed inset-0 z-[200] bg-[#0b0e14] flex flex-col animate-in fade-in duration-200">
+    <div className="nz-tela-cheia fixed inset-0 z-[200] bg-[#0b0e14] flex flex-col animate-in fade-in duration-200">
       {/* --- Top bar --- */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/10 bg-[#0a0f1c] z-10 flex-shrink-0">
         <Map className="w-4 h-4 text-emerald-400 flex-shrink-0" />

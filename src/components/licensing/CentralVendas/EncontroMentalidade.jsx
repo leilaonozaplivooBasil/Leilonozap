@@ -931,7 +931,7 @@ export default function EncontroMentalidade({ currentUser, hojeISO, podeConduzir
 
       {/* ── 🎞️ a apresentação em tela cheia ── */}
       {apresentando && (
-        <div className="fixed inset-0 z-[80] flex flex-col" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="apresentacao" data-slide={slides[slide]?.id}>
+        <div className="nz-tela-cheia fixed inset-0 z-[80] flex flex-col" style={{ background: 'var(--xeos-preto, #00020C)' }} data-teste="apresentacao" data-slide={slides[slide]?.id}>
           <div className="flex items-center gap-3 px-4 sm:px-8 pt-4">
             <p className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase">Encontro da Mentalidade · {fmtDia(dataEncontro)}</p>
             <div className="ml-auto flex items-center gap-3">
