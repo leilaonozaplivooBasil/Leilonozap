@@ -21,6 +21,7 @@ export const TIPOS_NA_TELA = Object.freeze([
   'superado', 'arrematou', 'ultima_hora',
   'compra_confirmada', 'compra_enviada',
   'deposito', 'saque_pago', 'kyc_aprovado', 'comissao_paga_manual',
+  'retirada_confirmada',
 ]);
 
 /** "Superado" do mesmo leilão não empilha: a notificação é renovada. */
@@ -55,6 +56,8 @@ export function notificacaoDaTela(tipo, d = {}) {
       return { titulo: 'Saque pago', texto: `${reais(d.valor)} foi pago no PIX do seu CPF.`, link: '/Carteira' };
     case 'kyc_aprovado':
       return { titulo: 'Identidade validada', texto: 'O saque está liberado na sua Carteira.', link: '/Carteira' };
+    case 'retirada_confirmada':
+      return { titulo: 'Pedido retirado', texto: `A retirada do pedido #${d.pedido} foi registrada (${d.local}).`, link: d.arremate ? '/MyWinnings' : '/MyCatalogOrders' };
     case 'comissao_paga_manual':
       return { titulo: 'Comissão paga', texto: `Sua comissão de ${reais(d.valor)} foi paga.`, link: '/Carteira' };
     default:

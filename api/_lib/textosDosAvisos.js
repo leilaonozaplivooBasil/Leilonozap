@@ -30,6 +30,8 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   // ⏳ 28/09/2026 — PIX gerado e não pago, ~1h depois (avisoPixPendente.js).
   // Só e-mail: o dono não quer esse aviso na tela ("não tem cabimento").
   pix_pendente: 'conta',
+  // 📦 30/09/2026 — o comprovante da retirada no balcão (retiradaNaLoja.js)
+  retirada_confirmada: 'conta',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -150,6 +152,12 @@ export function montarAviso(tipo, d = {}) {
           'Se você já pagou, pode ignorar este e-mail: a confirmação chega sozinha.'];
         botao = d.link ? { rotulo: 'Abrir o PIX', url: d.link } : { rotulo: 'Ver meus pedidos', url: `${SITE}/MyCatalogOrders` };
       }
+      break;
+    case 'retirada_confirmada':
+      assunto = `Pedido #${d.pedido} retirado`;
+      linhas = [`${oi} A retirada do seu pedido #${d.pedido} foi registrada em ${quandoBR(d.quando)}, no local: ${d.local}.${d.terceiro ? ` Quem retirou: ${d.terceiro}.` : ''}`,
+        'O comprovante com o termo assinado fica guardado no seu pedido. Se não foi você nem alguém autorizado por você, responda este e-mail agora.'];
+      botao = { rotulo: 'Ver meu pedido', url: `${SITE}/${d.arremate ? 'MyWinnings' : 'MyCatalogOrders'}` };
       break;
     default:
       return null;

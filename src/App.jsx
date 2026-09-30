@@ -41,6 +41,8 @@ const XGame = React.lazy(() => import('@/pages/XGame'));
 // 🏆 RANKING X-GAME — o link compartilhável do pódio + tabela (DIR-138)
 const RankingXGame = React.lazy(() => import('@/pages/RankingXGame'));
 const Carteira = React.lazy(() => import('@/pages/Carteira'));
+// 🏪 30/09/2026 — balcão de retiradas (acesso decidido no servidor)
+const BalcaoRetiradas = React.lazy(() => import('@/pages/BalcaoRetiradas'));
 const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
 // 💰 Extrato de Aportes do Parceiro de Compra (leitura + conciliação com o Mercado Pago)
 const AportesParceiro = React.lazy(() => import('@/pages/AportesParceiro'));
@@ -256,6 +258,7 @@ const AuthenticatedApp = () => {
           lateral). Sem o botão Voltar, o usuário ficaria preso — agora entram
           no mesmo Layout das demais e recebem a navegação padrão. */}
       <Route path="/Carteira" element={<LayoutWrapper currentPageName="Carteira"><Carteira /></LayoutWrapper>} />
+      <Route path="/Retiradas" element={<LayoutWrapper currentPageName="BalcaoRetiradas"><BalcaoRetiradas /></LayoutWrapper>} />
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />
