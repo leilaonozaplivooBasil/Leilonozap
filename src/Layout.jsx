@@ -120,6 +120,28 @@ export default function Layout({ children, currentPageName }) {
   // 📣 25/09/2026 — o PRIMEIRO toque de tráfego (utm/fbclid/gclid) fica no
   // aparelho até a pessoa se cadastrar; aí sobe com o cadastro. É o que
   // responde "quantos leads vieram do Meta Ads".
+  // 📱 DIR-189 (30/09/2026) — A TELA DO NAVEGADOR (html/body) SEGUE A COR DA BARRA.
+  // No iPhone o dono viu um clarão branco em degradê sobre a logo, na área da
+  // barra de status. O body era branco (cor padrão) e a barra do topo, fixa e
+  // com desfoque (backdrop-filter), fica debaixo da barra de status desde o
+  // viewport-fit=cover (DIR-179): o desfoque do WebKit puxa a cor da borda da
+  // tela — branca — e a espalha pelos primeiros pixels. Corpo escuro nas telas
+  // escuras, branco nas claras (index.css lê o atributo), e a faixa do entalhe
+  // fica opaca na própria barra (veja o backgroundImage do <nav>). Fica aqui em
+  // cima, antes de qualquer retorno antecipado, por causa da regra dos hooks.
+  const temaClaroDaBarra = currentPageName === 'Recepcao' || currentPageName === 'LiveShopNoZap' || PAGINAS_TEMA_CLARO.has(currentPageName);
+  useEffect(() => {
+    if (temaClaroDaBarra) document.body.dataset.temaClaro = '1';
+    else delete document.body.dataset.temaClaro;
+    // o esquema de cores da página guia o material da barra de status no Safari
+    const esquema = temaClaroDaBarra ? 'light' : 'dark';
+    document.documentElement.style.colorScheme = esquema;
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute('content', esquema);
+    const cor = document.querySelector('meta[name="theme-color"]');
+    if (cor) cor.setAttribute('content', temaClaroDaBarra ? '#FFFFFF' : '#21222B');
+  }, [temaClaroDaBarra]);
+
   useEffect(() => {
     try { capturarOrigemDoTrafego(window.location.search, { referrer: document.referrer, landing: window.location.pathname }); } catch { /* medição, nunca derruba */ }
   }, []);
@@ -891,6 +913,7 @@ export default function Layout({ children, currentPageName }) {
   // criando um choque visual de "app dentro de outro app". Estendendo a MESMA
   // barra clara da Recepção para toda tela do tema claro do painel (PAGINAS_TEMA_CLARO).
   const isPainelClaro = isRecepcao || PAGINAS_TEMA_CLARO.has(currentPageName);
+  const corDaBarra = isPainelClaro ? '#FFFFFF' : '#21222B';
 
   const shouldShowLoading = isLoading;
 
@@ -970,7 +993,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backgroundImage: `linear-gradient(to bottom, ${corDaBarra} 0, ${corDaBarra} var(--nz-entalhe), transparent var(--nz-entalhe))`, backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 

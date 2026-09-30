@@ -56,7 +56,13 @@
     <link rel="preload" as="image" href="/brand/logo-horizontal-dark.webp" fetchpriority="high" />
 
     <!-- Theme -->
-    <meta name="theme-color" content="#111827" />
+    <!-- 📱 DIR-189 (30/09/2026): theme-color na cor da barra do topo e color-scheme
+         escuro. O Safari do iPhone pinta o material da barra de status (o
+         degradê translúcido em cima da página) conforme o esquema da PÁGINA;
+         sem declarar, com o aparelho em modo claro, ele vem branco por cima da
+         logo. O Layout troca para "light" nas telas claras do painel. -->
+    <meta name="theme-color" content="#21222B" />
+    <meta name="color-scheme" content="dark" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
 

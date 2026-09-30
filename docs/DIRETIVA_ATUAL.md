@@ -1,3 +1,19 @@
+## 📱 DIR-189 — Topo sem clarão: a tela do navegador tem a cor da barra e o entalhe é opaco (30/09/2026)
+
+**Dono, com o print da home no iPhone:** "em cima da tela o degradê branco está atrapalhando a logo e a navegação."
+
+**Causa:** desde o `viewport-fit=cover` (DIR-179) a barra fixa do topo fica debaixo da barra de status do iPhone. Ela é translúcida com desfoque (`backdrop-filter`), e o corpo da página (`body`) era branco, a cor padrão do navegador. Na borda de cima o desfoque do WebKit puxa a cor da tela do navegador, o branco, e a espalha pelos primeiros pixels: um clarão em degradê exatamente na área da barra de status, sobre a logo. Em Chromium não aparece (o desfoque não vaza a borda), por isso nunca foi visto nos testes de tela.
+
+**O que muda:**
+
+- **`html`/`body` com a cor da barra** (`#21222B`) em `index.css`. Telas claras (Recepção, Live Shop, painel com tema claro e páginas com `data-painel-nav`) marcam o body com `data-tema-claro` e voltam ao branco, para a barra clara não ganhar um vazamento escuro.
+- **Faixa do entalhe opaca** na própria barra: um `linear-gradient` na cor da barra cobre exatamente `var(--nz-entalhe)`; abaixo dele, a barra continua translúcida como sempre. Nada atravessa o desfoque na área da barra de status.
+- `Layout.jsx` marca o body num efeito colocado antes de qualquer retorno antecipado (regra dos hooks).
+
+**Segundo print do dono (organograma em tela cheia):** o mesmo degradê claro aparecia sobre um painel opaco (`fixed inset-0 bg-gray-950`), onde nenhum desfoque nosso existe. Logo o degradê é o **material da barra de status do próprio Safari**, que segue o esquema de cores da página: sem declaração, com o aparelho em modo claro, vem branco. Por isso entram `<meta name="color-scheme" content="dark">` e `color-scheme` no `<html>` (o Layout troca para `light` nas telas claras), e o `theme-color` passa a ser a cor da barra (`#21222B`, também no manifesto do app). E, em tela cheia, o painel do organograma recua pela área segura (`--nz-entalhe` e `safe-area-inset-*`): o botão "Sair da tela cheia" ficava debaixo da barra de status e o dono não conseguia mais fechar.
+
+**Prova:** `tests/topoSemClarao.test.mjs` (5 testes), suíte completa, lint 0 erros, build; iPhone emulado com entalhe de 59 px: Home com body escuro e faixa opaca, Meus Pedidos com body branco. A confirmação final do degradê é no aparelho do dono, porque o material é do Safari.
+
 ## 📱 DIR-188 — Organograma no celular: a pílula de expandir/recolher cabe num dedo (30/09/2026)
 
 **Dono, com o organograma aberto no iPhone:** "ficou top, porém no celular quando expando não está recolhendo. Veja toda a experiência do cliente, teste todos os botões, volta e tals."
