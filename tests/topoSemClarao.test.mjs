@@ -14,6 +14,8 @@ const LAYOUT = semComentarios(readFileSync(new URL('../src/Layout.jsx', import.m
 
 test('html/body têm a cor da barra do topo, e só as telas claras voltam ao branco', () => {
   assert.match(CSS, /html, body \{ background-color: #21222B; \}/);
+  // precisa vir DEPOIS do `body { @apply bg-background }` do shadcn — antes dele, perdia e o body seguia branco
+  assert.ok(CSS.indexOf('html, body { background-color: #21222B; }') > CSS.indexOf('@apply bg-background text-foreground;'), 'a regra do body escuro está antes do bg-background e perde');
   assert.match(CSS, /body\[data-tema-claro\], body\[data-painel-nav\] \{ background-color: #FFFFFF; \}/);
 });
 
