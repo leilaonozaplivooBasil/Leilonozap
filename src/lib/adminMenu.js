@@ -87,6 +87,8 @@ export function buildAdminMenu(isSuperAdmin = false) {
       items: [
         { title: "Gerenciar Loja Virtual", pageName: "CatalogManagement", icon: Store },
         { title: "Pedidos da Loja", pageName: "CatalogOrdersAdmin", icon: ShoppingBag },
+        // 🏪 30/09/2026 — retirada digital (a folha assinada virou comprovante no pedido)
+        { title: "Balcão de Retiradas", pageName: "Retiradas", icon: ShoppingBag },
         { title: "Cupons", pageName: "CuponsAdmin", icon: Ticket },
         { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
         { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
