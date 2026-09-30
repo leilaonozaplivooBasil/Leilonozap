@@ -116,6 +116,13 @@ export default function TreeHierarchy({
   const [drag, setDrag] = useState(null);
   const [dropTarget, setDropTarget] = useState(null);
   const [pendingMove, setPendingMove] = useState(null);
+  // 📱 30/09/2026 — "Mover para outra pessoa" sem arrastar. No celular o dono
+  // tentou mover alguém e não achou como: arrastar num dedo só é frágil e o
+  // menu de botão direito não existe no toque. Agora o menu da pessoa e o
+  // painel dela têm "Mover para…", que abre uma busca por nome e cai na MESMA
+  // confirmação do arraste (pendingMove) — uma regra só, um caminho só de gravação.
+  const [moverDe, setMoverDe] = useState(null);
+  const [buscaMover, setBuscaMover] = useState('');
   const [isMoving, setIsMoving] = useState(false);
   const [fitRequest, setFitRequest] = useState(0);
   const [didFit, setDidFit] = useState(false);
@@ -501,6 +508,31 @@ export default function TreeHierarchy({
     },
     [byId]
   );
+
+  // Quem pode receber `moverDe` embaixo: qualquer pessoa que não seja ela mesma,
+  // não seja descendente dela (viraria laço) e não seja o indicador atual.
+  const candidatosParaMover = useMemo(() => {
+    if (!moverDe) return [];
+    const termo = buscaMover.trim().toLowerCase();
+    const lista = [];
+    for (const u of byId.values()) {
+      if (u.isGroup) continue;
+      if (u.id === moverDe.id) continue;
+      if (u.id === moverDe.referred_by_id) continue;
+      if (isDescendant(moverDe.id, u.id)) continue;
+      if (termo && !`${u.full_name || ''} ${u.email || ''}`.toLowerCase().includes(termo)) continue;
+      lista.push(u);
+    }
+    lista.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'pt-BR'));
+    return lista.slice(0, 60);
+  }, [moverDe, buscaMover, byId, isDescendant]);
+
+  const escolherNovoIndicador = (parent) => {
+    if (!moverDe || !parent) return;
+    setPendingMove({ moved: moverDe, parent });
+    setMoverDe(null);
+    setBuscaMover('');
+  };
 
   const onPointerUp = (e) => {
     endPan(e);
@@ -1098,6 +1130,14 @@ export default function TreeHierarchy({
                     <Star className="w-3.5 h-3.5" />
                     Promover / mudar cargo
                   </button>
+                  {typeof onRelink === 'function' && (
+                    <button type="button" className={`${item} text-violet-300 hover:bg-violet-500/15`}
+                      data-teste="arvore-mover-para"
+                      onClick={() => { setMenu(null); setBuscaMover(''); setMoverDe(target); }}>
+                      <Move className="w-3.5 h-3.5" />
+                      Mover para outra pessoa…
+                    </button>
+                  )}
                 </>
               )}
 
@@ -1210,6 +1250,14 @@ export default function TreeHierarchy({
                       <Star className="w-3.5 h-3.5 mr-1.5" />
                       Promover
                     </Button>
+                    {typeof onRelink === 'function' && (
+                      <Button size="sm" variant="outline" data-teste="painel-mover-para"
+                        onClick={() => { setBuscaMover(''); setMoverDe(selected); }}
+                        className="h-9 text-[12px] bg-violet-100 border-violet-300 text-violet-900 hover:bg-violet-50 hover:text-violet-950 font-semibold">
+                        <Move className="w-3.5 h-3.5 mr-1.5" />
+                        Mover
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline"
                       onClick={() => { const alvo = selected; setSelectedId(null); onDelete?.(alvo); }}
                       className={`h-9 text-[12px] font-semibold ${
@@ -1358,6 +1406,59 @@ export default function TreeHierarchy({
                     })}
                   </div>
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* -------- Mover para outra pessoa: escolher o novo indicador -------- */}
+      {moverDe && (
+        <div className="absolute inset-0 z-40 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-3 sm:p-4" data-teste="mover-para-escolha">
+          <div className="w-full max-w-md rounded-xl border border-violet-500/30 bg-gray-900 shadow-2xl overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800">
+              <Move className="w-4 h-4 text-violet-300" />
+              <p className="text-sm font-semibold text-white truncate">
+                Mover <span className="text-violet-300">{moverDe.full_name}</span> para baixo de…
+              </p>
+              <button type="button" className="ml-auto p-1 rounded-md text-gray-400 hover:bg-white/10" aria-label="Fechar"
+                onClick={() => { setMoverDe(null); setBuscaMover(''); }}>
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-3 pt-3">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  autoFocus
+                  value={buscaMover}
+                  onChange={(e) => setBuscaMover(e.target.value)}
+                  placeholder="Buscar pelo nome ou e-mail do novo indicador"
+                  data-teste="mover-para-busca"
+                  className="w-full h-10 rounded-lg bg-gray-800 border border-gray-700 pl-8 pr-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-violet-500/60"
+                />
+              </div>
+            </div>
+            <div className="max-h-[50vh] overflow-y-auto px-3 py-3 space-y-1">
+              {candidatosParaMover.length === 0 ? (
+                <p className="text-xs text-gray-500 px-1 py-2">Ninguém encontrado com esse nome.</p>
+              ) : candidatosParaMover.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  data-teste="mover-para-opcao"
+                  onClick={() => escolherNovoIndicador(c)}
+                  className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-violet-500/10 border border-transparent hover:border-violet-500/30"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-white truncate">{c.full_name}</p>
+                    <p className="text-[11px] text-gray-500 truncate">{c.email}{c.children?.length ? ` · ${c.children.length} indicado(s)` : ''}</p>
+                  </div>
+                  <CornerDownRight className="w-4 h-4 text-violet-300 shrink-0" />
+                </button>
+              ))}
+              {candidatosParaMover.length >= 60 && (
+                <p className="text-[11px] text-gray-500 px-1 pt-1">Mostrando os 60 primeiros — refine a busca.</p>
               )}
             </div>
           </div>

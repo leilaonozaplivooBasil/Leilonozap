@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Users, Loader2, ChevronDown, ChevronRight, Award, Eye, Search, Pencil, Trash2, Network, Maximize2, Minimize2, Star, UserRound, RotateCcw, TriangleAlert, ShieldCheck, Briefcase } from 'lucide-react';
 import NetworkFinanceBadges from "../components/network/NetworkFinanceBadges";
 import ConversionBox from "../components/network/ConversionBox";
+import { dataDeCriacao, criadoNosUltimosDias } from "@/lib/dataDeCriacao";
 import PainelLucroDiario from "../components/network/PainelLucroDiario";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
@@ -263,6 +264,8 @@ export default function NetworkOverview() {
   const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
   const [isLinkingOrphans, setIsLinkingOrphans] = useState(false);
   const [editingUserFull, setEditingUserFull] = useState(null);
+  // 🔐 papel do admin logado lido do banco (ver isSuperAdmin)
+  const [papelNoBanco, setPapelNoBanco] = useState(null);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   // Faixa de estatísticas recolhível + árvore em tela cheia (mais espaço de trabalho)
@@ -296,7 +299,7 @@ export default function NetworkOverview() {
       // R$ 903,00 e 1 comprador a menos que o CRM lendo o MESMO banco).
       // Mesma busca do CRM agora: mais recentes primeiro, limite folgado —
       // toda venda pós-marco (01/08/2026) cabe com sobra.
-      const sales = await plataforma.entities.CatalogSale.list('-created_date', 5000);
+      const sales = await plataforma.entities.CatalogSale.listAll('-created_date');
       const list = Array.isArray(sales) ? sales : [];
       const hoje = new Date();
       const ehHoje = (dataStr) => {
@@ -365,7 +368,10 @@ export default function NetworkOverview() {
       return { totalPeople: 0, compradoresUnicos: buyerIds.size, taxaGeral: 0, recentJoinersCount: 0, compradoresRecentes, taxaRecente: 0 };
     }
     const cutoff = new Date(Date.now() - CONVERSAO_JANELA_DIAS * 24 * 60 * 60 * 1000);
-    const recentJoinersCount = allUsers.filter(u => new Date(u.created_date) >= cutoff).length;
+    // 📅 30/09/2026 — created_date é o campo herdado do Base44 e está VAZIO em
+    // 117 cadastros (72 dos últimos 30 dias). `new Date(null)` virava 1970 e o
+    // painel dizia 358 novos quando o banco tinha 430. Ver src/lib/dataDeCriacao.js.
+    const recentJoinersCount = allUsers.filter(u => criadoNosUltimosDias(u, CONVERSAO_JANELA_DIAS)).length;
     return {
       totalPeople,
       compradoresUnicos: buyerIds.size,
@@ -450,18 +456,24 @@ export default function NetworkOverview() {
     // Agora sim busca os dados
     setIsLoading(true);
     try {
-      const users = await AppUser.list("-created_date", 1000);
-      const auctions = await Auction.list("-created_date", 500);
+      const users = await AppUser.listAll("-created_date");
+      const auctions = await Auction.listAll("-created_date");
 
       setAllUsers(Array.isArray(users) ? users : []);
       setAllAuctions(Array.isArray(auctions) ? auctions : []);
+      // 🔐 o papel de quem está logado, direto do banco (a lista já veio inteira)
+      try {
+        const meuId = JSON.parse(localStorage.getItem('currentUser') || '{}')?.id;
+        const eu = meuId ? (Array.isArray(users) ? users : []).find((u) => u.id === meuId) : null;
+        if (eu?.role) setPapelNoBanco(eu.role);
+      } catch { /* sem cache: fica na reserva */ }
 
       // Auto-link órfãos (role=user) ao Site Oficial
       try {
         const hasOrphans = (Array.isArray(users) ? users : []).some(u => !u.referred_by_id && u.role === 'user');
         if (hasOrphans) {
           await linkOrphanUsers();
-          const refreshed = await AppUser.list("-created_date", 1000);
+          const refreshed = await AppUser.listAll("-created_date");
           setAllUsers(Array.isArray(refreshed) ? refreshed : (Array.isArray(users) ? users : []));
         }
       } catch (e) {
@@ -915,7 +927,7 @@ export default function NetworkOverview() {
     toast.info("Buscando duplicatas...");
 
     try {
-      const allUsersToProcess = await AppUser.list("-created_date", 1000);
+      const allUsersToProcess = await AppUser.listAll("-created_date");
 
       if (!Array.isArray(allUsersToProcess)) {
         throw new Error("Falha ao buscar usuários.");
@@ -1140,9 +1152,15 @@ export default function NetworkOverview() {
 
   // 🔐 Admin comum só VISUALIZA a rede. Editar, excluir, promover, mover na
   // árvore, vincular executivo e conceder comissão são exclusivos do Super Admin.
-  const isSuperAdmin = (() => {
-    try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.role === 'super_admin'; } catch { return false; }
-  })();
+  // 🔐 30/09/2026 — o lápis sumia no celular do dono (super_admin no banco)
+  // porque isto lia SÓ a cópia do aparelho, que pode estar velha ou sem o
+  // papel. Agora vale o papel lido do BANCO ao carregar (papelNoBanco), e o
+  // cache só entra como reserva enquanto a leitura não chega.
+  const isSuperAdmin = papelNoBanco
+    ? papelNoBanco === 'super_admin'
+    : (() => {
+        try { return JSON.parse(localStorage.getItem('currentUser') || '{}')?.role === 'super_admin'; } catch { return false; }
+      })();
   const requireSuperAdmin = () => {
     if (!isSuperAdmin) {
       toast.error('Somente o Super Admin pode fazer essa alteração. Administradores só podem visualizar.');
@@ -1682,7 +1700,7 @@ export default function NetworkOverview() {
                                     </Badge>
                                   </TableCell>
                                   <TableCell className="text-gray-400 text-sm">
-                                    {new Date(user.created_date).toLocaleDateString('pt-BR')}
+                                    {dataDeCriacao(user) ? new Date(dataDeCriacao(user)).toLocaleDateString('pt-BR') : '—'}
                                   </TableCell>
                                   <TableCell>
                                     {isSuperAdmin ? (

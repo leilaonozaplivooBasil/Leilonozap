@@ -228,7 +228,14 @@ export default async function handler(req, res) {
       payload.primary_career_level = CARGOS_VALIDOS.has(p) ? p : (RENOMEAR_CARGO[p] || 'usuario');
     }
     if (Object.keys(payload).length === 0) {
-      return res.status(400).json({ success: false, error: 'Nenhum campo válido para atualizar' });
+      // 🔎 30/09/2026 — 7 de 8 chamadas em 24h voltaram 400 sem ninguém saber o
+      // porquê. Agora a recusa diz quais campos chegaram, pra tela mostrar.
+      const recebidos = Object.keys(updates);
+      return res.status(400).json({
+        success: false,
+        error: `Nenhum campo válido para atualizar (recebi: ${recebidos.length ? recebidos.join(', ') : 'nada'})`,
+        campos_recebidos: recebidos,
+      });
     }
 
     // 🛡️ ANTI-REBAIXAMENTO: nunca tirar o acesso de um admin/super_admin sem pedir explicitamente.

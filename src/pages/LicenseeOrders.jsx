@@ -46,7 +46,7 @@ export default function LicenseeOrders(){
     queryKey: ["catalogSales"],
     queryFn: async () => {
       // Carrega últimas 1000 vendas (ajuste conforme necessário)
-      const rows = await plataforma.entities.CatalogSale.list("-created_date", 1000);
+      const rows = await plataforma.entities.CatalogSale.listAll("-created_date");
       return rows || [];
     },
     initialData: []

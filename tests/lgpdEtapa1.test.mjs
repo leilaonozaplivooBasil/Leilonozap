@@ -53,7 +53,8 @@ test('o adaptador lê e grava pedindo só as colunas públicas', () => {
   assert.match(A, /const colunasDe = \(table\) => \(table === 'app_users' \? COLUNAS_PUBLICAS_APP_USERS : colunasPublicasDe\(table\)\);/);
   const semComentario = A.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
   assert.doesNotMatch(semComentario, /\.select\(\)/, 'select() vazio = * = "permission denied" depois da migração');
-  assert.equal((A.match(/await _comCamposSensiveis\(table, /g) || []).length, 3, 'list, filter e get completam para o admin');
+  // 30/09/2026 — 4 caminhos: list, filter, get e _tudo (a leitura paginada de listAll/filterAll, src/lib/paginacao.js)
+  assert.equal((A.match(/await _comCamposSensiveis\(table, /g) || []).length, 4, 'list, filter, get e a leitura paginada completam para o admin');
   assert.doesNotMatch(ler('../src/pages/PedidosDistribuidor.jsx'), /from\('catalog_sales'\)\.select\('\*'\)/);
 });
 

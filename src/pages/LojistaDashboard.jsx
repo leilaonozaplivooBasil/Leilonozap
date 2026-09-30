@@ -140,7 +140,7 @@ export default function LojistaDashboard() {
       const storeAuctions = allAuctions.filter(a => a.seller_id === storeId);
       setAuctions(storeAuctions);
 
-      const allCatalogSales = await CatalogSaleEntity.list("-created_date", 500);
+      const allCatalogSales = await CatalogSaleEntity.listAll("-created_date");
       const storeCatalogSales = allCatalogSales.filter(s => s.seller_id === storeId);
       setCatalogSales(storeCatalogSales);
 

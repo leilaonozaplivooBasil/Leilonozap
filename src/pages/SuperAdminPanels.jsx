@@ -19,7 +19,7 @@ export default function SuperAdminPanels() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const list = await AppUser.list("-created_date", 500);
+      const list = await AppUser.listAll("-created_date");
       setUsers(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Erro ao carregar usuários:", err);
