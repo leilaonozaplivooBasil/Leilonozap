@@ -1,3 +1,18 @@
+## 📱 DIR-188 — Organograma no celular: a pílula de expandir/recolher cabe num dedo (30/09/2026)
+
+**Dono, com o organograma aberto no iPhone:** "ficou top, porém no celular quando expando não está recolhendo. Veja toda a experiência do cliente, teste todos os botões, volta e tals."
+
+**O que foi medido (iPhone emulado, toques de verdade):** a pílula com o número de indicados media 21×16 px aberta e 14×11 px depois do "Ver tudo", porque encolhia junto com o zoom. Um toque a 8 px acima dela caía no avatar, que abre o perfil da pessoa. Era isso que parecia "não recolhe": o dedo nunca acertava a pílula. Todos os outros botões (Expandir todos, Recolher, Ver tudo, zoom, busca, Lista/Organograma, fechar perfil) já funcionavam no toque.
+
+**O que muda (`TreeHierarchy.jsx` + `index.css`):**
+
+- **Contra-escala:** quando o zoom reduz, a pílula cresce na mesma proporção e nunca fica menor que o tamanho base, em qualquer nível de zoom, nos dois modos (organograma e lista).
+- **Halo de toque invisível** ao redor da pílula (8 px; 14 px em tela de toque): o toque perto dela vai para ela, não para o avatar.
+- **No celular** (ponteiro grosso) a pílula tem no mínimo 40×26 px, e o número de indicados aparece sempre, aberta ou fechada, para ela ser mais larga.
+- Os moldes da árvore não mudam: mesmas posições, mesmos cartões, mesmos botões.
+
+**Prova:** `tests/organogramaToque.test.mjs` (3 testes), suíte 3967/3967, lint 0 erros, build; percurso de toque no iPhone emulado: pílulas 40×26 em todos os zooms, toque 8 px acima da pílula recolhe (antes abria o perfil), expandir/recolher/Ver tudo/zoom/busca/modos conferidos.
+
 ## 📦 DIR-187 — Acompanhar Pedido: a entrega vem da transportadora, com código real, link dos Correios e ocorrência à vista (30/09/2026)
 
 **Dono, com quatro prints (o site, os Correios, o WhatsApp do cliente):** "preciso de uma atualização nos acompanhamentos dos pedidos e deixar mais transparente para os clientes. Deu como entregue, porém no Melhor Envio está em trânsito e nos Correios outra informação. O cliente precisa ter acesso a todas as informações pelo nosso site, e não pensar que o erro é nosso." Depois: "a partir do escritório virtual desse cliente, analise e corrija o painel — precisa ter link do site do Correio, código aparecendo e etc."

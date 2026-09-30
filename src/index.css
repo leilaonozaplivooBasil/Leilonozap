@@ -1383,3 +1383,18 @@ select[class*="bg-slate-900"] option {
     color: #F4F4F4;
   }
 }
+
+/* 📱 DIR-188 — pílula de expandir/recolher do organograma: cabe num dedo.
+   O halo invisível (::before) faz o toque perto da pílula ir para ela, e não
+   para o avatar atrás (que abre o perfil). No celular (ponteiro grosso) a
+   pílula cresce para o mínimo de toque e o halo fica maior. */
+.org-pilula::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+@media (pointer: coarse) {
+  .org-pilula::before {
+    inset: -14px;
+  }
+}
