@@ -42,7 +42,11 @@ test('a página é só de admin, tem período, KPIs, entrada por área, fluxo do
   for (const m of ['investidor-periodos', 'investidor-kpis', 'investidor-entrada', 'investidor-fluxo', 'investidor-funil', 'investidor-compras', 'investidor-leilao', 'investidor-mapa', 'investidor-cadastros', 'investidor-ultimos']) {
     assert.ok(P.includes(`teste="${m}"`), `falta ${m}`);
   }
-  assert.ok(P.includes('setInterval(() => carregar(true), 60000)'), 'ao vivo, a cada minuto');
+  assert.ok(P.includes('const INTERVALO_SEG = 20;') && P.includes('setInterval(() => carregar(true), INTERVALO_SEG * 1000)'), 'ao vivo, a cada 20 s');
+  assert.ok(P.includes("document.addEventListener('visibilitychange', aoVoltar)"), 'recalcula ao voltar para a aba');
+  assert.ok(P.includes('onClick={() => carregar(true, true)}') && P.includes("{atualizando ? 'Atualizando…' : 'Atualizar agora'}"), 'botão com resposta visível');
+  assert.ok(P.includes('toast.success(`Atualizado às ${hora('), 'confirma a atualização manual');
+  assert.ok(P.includes("if (!painel) setErro("), 'falha não derruba os últimos números');
   assert.ok(!P.includes('depositsTotal + purchasesTotal') && !P.includes('depositado + '), 'entrada e uso de saldo não se somam');
 });
 
