@@ -46,6 +46,7 @@ import FreteResumo from '@/components/cart/FreteResumo';
 import LeveJunto from '@/components/cart/LeveJunto';
 import { useSectionTracking, trackBeginCheckoutLoja, trackPurchaseLoja } from '@/lib/tracking';
 import { lerCarrinho, lerJSON } from '@/lib/storageSeguro';
+import { avisoNoCheckout } from '@/lib/saldoEmLeilao';
 
 export default function Cart() {
   useSectionTracking('carrinho', 'Carrinho');
@@ -83,6 +84,8 @@ export default function Cart() {
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [saldo, setSaldo] = useState(0);
   const [saldoOk, setSaldoOk] = useState(false);
+  // 🔒 30/09/2026 — o que está preso em leilão rolando (fora do `saldo` da loja), pra explicar a diferença
+  const [emLeilao, setEmLeilao] = useState({ valor: 0, itens: [] });
   const [paymentDetected, setPaymentDetected] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [createdSales, setCreatedSales] = useState([]);
@@ -196,6 +199,7 @@ export default function Cart() {
               if (w?.success) {
                 const soma = (Number(w.saldo_livre_loja) || 0) + (Number(w.commission_balance) || 0);
                 setSaldo(Math.round(soma * 100) / 100);
+                setEmLeilao({ valor: Number(w.saldo_comprometido_leilao) || 0, itens: Array.isArray(w.leiloes_comprometidos) ? w.leiloes_comprometidos : [] });
               }
             } catch { /* carteira fora do ar → segue com a comissão, como era antes */ }
             setFormData(prev => ({
@@ -1547,11 +1551,18 @@ export default function Cart() {
                     <div>
                       <p className="text-white font-semibold flex items-center gap-2"><Wallet className="w-4 h-4 text-green-400" /> Saldo da carteira <span className="text-green-400">({money(saldo)})</span></p>
                       <p className="text-gray-400 text-xs mt-0.5">{calcularTotalFinal() > saldo ? `Saldo insuficiente p/ este pedido (${money(calcularTotalFinal())})` : 'Use seu crédito do leilão e suas comissões — aprovação na hora'}</p>
+                      {emLeilao.valor > 0 && <p data-teste="saldo-em-leilao-checkout" className="text-gray-300 text-xs mt-1 leading-snug">{avisoNoCheckout(emLeilao.valor, emLeilao.itens)}</p>}
                     </div>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${paymentType === 'SALDO' ? 'border-green-500 bg-green-500' : 'border-gray-500'}`}>
                       {paymentType === 'SALDO' && <Check className="w-3 h-3 text-white" />}
                     </span>
                   </button>
+                )}
+                {/* todo o saldo está em leilão rolando: o botão acima some, mas a explicação fica */}
+                {saldo <= 0 && emLeilao.valor > 0 && !roleGrant && (
+                  <p data-teste="saldo-em-leilao-checkout" className="mt-3 rounded-lg border border-gray-600 bg-gray-700/30 p-3 text-gray-300 text-xs leading-snug">
+                    <Wallet className="w-4 h-4 text-green-400 inline mr-1.5 -mt-0.5" />{avisoNoCheckout(emLeilao.valor, emLeilao.itens)}
+                  </p>
                 )}
               </Card>
             )}

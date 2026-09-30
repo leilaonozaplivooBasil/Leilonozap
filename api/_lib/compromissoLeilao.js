@@ -45,22 +45,37 @@ function sb(path) {
  * ainda está dentro do disponível. Ver a explicação longa no corpo da função.
  */
 export async function compromissoEmLeiloes(userId) {
+  return (await detalheDoCompromisso(userId)).total;
+}
+
+/**
+ * O mesmo cálculo, com a lista dos leilões (30/09/2026). Caso Paulo Victor: a
+ * carteira mostrava R$ 220 e o checkout só R$ 44,78 — os R$ 175,22 do lance
+ * coberto no iPhone estavam presos pra loja pela regra, mas nenhuma tela dizia
+ * onde. `itens` é o que a tela mostra: os leilões vivos em que a pessoa NÃO
+ * lidera (o da liderança já aparece em "Reservado em lances").
+ * @returns {Promise<{total:number, itens:Array<{auction_id:string, titulo:string, valor:number, termina:string|null}>}>}
+ */
+export async function detalheDoCompromisso(userId) {
+  const vazio = { total: 0, itens: [] };
   const uid = String(userId || '').trim();
-  if (!uid || !SUPABASE_URL || !SR) return 0;
+  if (!uid || !SUPABASE_URL || !SR) return vazio;
 
   // leilões vivos em que esta pessoa deu lance
   const lances = await (await sb(
     `auction_messages?select=auction_id,bid_amount,frete_amount&message_type=eq.bid&sender_id=eq.${encodeURIComponent(uid)}&limit=1000`
   )).json();
-  if (!Array.isArray(lances) || lances.length === 0) return 0;
+  if (!Array.isArray(lances) || lances.length === 0) return vazio;
 
   const ids = [...new Set(lances.map((l) => l.auction_id).filter(Boolean))];
-  if (!ids.length) return 0;
+  if (!ids.length) return vazio;
   const inList = ids.map((i) => `"${i}"`).join(',');
-  const leiloes = await (await sb(`auctions?select=id,status,winner_id&id=in.(${inList})`)).json();
+  const leiloes = await (await sb(`auctions?select=id,title,status,winner_id,end_time&id=in.(${inList})`)).json();
 
   const vivos = {};
+  const dados = {}; // título/fim/líder — SÓ pra lista da tela; o total abaixo não olha isto
   for (const a of (Array.isArray(leiloes) ? leiloes : [])) {
+    dados[a.id] = a;
     // 🔧 17/09/2026 — TODO leilão rolando entra, liderando ou não.
     //
     // O QUE ESTAVA ERRADO: aqui se pulava o leilão quando `winner_id === uid`,
@@ -96,7 +111,17 @@ export async function compromissoEmLeiloes(userId) {
   const uRows = await (await sb(`app_users?select=saldo_reservado&id=eq.${encodeURIComponent(uid)}&limit=1`)).json();
   const reservado = money(Array.isArray(uRows) ? uRows[0]?.saldo_reservado : 0);
 
-  return money(Math.max(0, emLances - reservado));
+  const total = money(Math.max(0, emLances - reservado));
+  // A lista é só o "onde está" da tela: o leilão que ela lidera sai dela porque
+  // já aparece em "Reservado em lances". O TOTAL acima não depende de quem lidera.
+  const itens = total > 0
+    ? Object.entries(porLeilao)
+      .map(([id, valor]) => ({ auction_id: id, titulo: String(dados[id]?.title || 'Leilão'), valor, termina: dados[id]?.end_time || null, lidera: dados[id]?.winner_id === uid }))
+      .filter((i) => !i.lidera)
+      .map(({ lidera: _lidera, ...i }) => i)
+      .sort((a, b) => String(a.termina || '').localeCompare(String(b.termina || '')))
+    : [];
+  return { total, itens };
 }
 
 /**
