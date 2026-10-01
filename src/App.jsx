@@ -43,6 +43,8 @@ const RankingXGame = React.lazy(() => import('@/pages/RankingXGame'));
 const Carteira = React.lazy(() => import('@/pages/Carteira'));
 // 🏪 30/09/2026 — balcão de retiradas (acesso decidido no servidor)
 const BalcaoRetiradas = React.lazy(() => import('@/pages/BalcaoRetiradas'));
+// 🐯 01/10/2026 — cópia da página de leilões, pra personalizar depois
+const TigrinhoNoLeilao = React.lazy(() => import('@/pages/TigrinhoNoLeilao'));
 const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
 // 💰 Extrato de Aportes do Parceiro de Compra (leitura + conciliação com o Mercado Pago)
 const AportesParceiro = React.lazy(() => import('@/pages/AportesParceiro'));
@@ -125,6 +127,7 @@ const ROUTE_ALIASES = {
   'catalog': '/Loja-Virtual', 'produtos': '/Loja-Virtual',
   // Leilões
   'leiloes': '/leiloes', 'leilao': '/leiloes', 'auctions': '/leiloes',
+  'tigrinho': '/tigrinhonoleilao', 'tigrinho-no-leilao': '/tigrinhonoleilao',
   // Entrar / conta
   'entrar': '/Home', 'login': '/Home', 'signin': '/Home', 'conta': '/Carteira',
   'carteira': '/Carteira', 'wallet': '/Carteira', 'carrinho': '/Cart', 'cart': '/Cart',
@@ -227,6 +230,13 @@ const AuthenticatedApp = () => {
       <Route path="/leiloes" element={
         <LayoutWrapper currentPageName="Home">
           <MainPage />
+        </LayoutWrapper>
+      } />
+      {/* 🐯 01/10/2026 — /tigrinhonoleilao: cópia da página de leilões (src/pages/TigrinhoNoLeilao.jsx).
+          Mesmo currentPageName da /leiloes, pra o cabeçalho e a barra do app ficarem iguais. */}
+      <Route path="/tigrinhonoleilao" element={
+        <LayoutWrapper currentPageName="Home">
+          <TigrinhoNoLeilao />
         </LayoutWrapper>
       } />
       {/* 🔒 Compatibilidade: /Home continua renderizando a Home de leilões */}
