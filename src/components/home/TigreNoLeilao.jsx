@@ -58,7 +58,7 @@ function CenaDoTigre() {
           src={tigre}
           alt="O tigre da Leilão NoZap vestido de leiloeiro, com o martelo erguido"
           width={900}
-          height={1183}
+          height={1169}
           fetchPriority="high"
           decoding="async"
           className="absolute left-1/2 bottom-[9%] h-[90%] w-auto max-w-none -translate-x-1/2 drop-shadow-[0_30px_40px_rgba(0,0,0,0.55)]"
