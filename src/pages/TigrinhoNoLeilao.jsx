@@ -33,7 +33,7 @@ import AuctionSearchBar from "../components/auction/AuctionSearchBar";
 const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
-import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
+import { HeroTigre, ComoFuncionaTigre } from '../components/home/TigreNoLeilao';
 import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
 import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import useDragRow from '@/hooks/useDragRow';
@@ -869,24 +869,11 @@ export default function TigrinhoNoLeilao() {
         background: 'radial-gradient(ellipse at 80% 10%, rgba(16,185,129,0.08) 0%, transparent 50%), radial-gradient(ellipse at 10% 60%, rgba(16,185,129,0.05) 0%, transparent 50%)'
       }} />
       
-      {/* BANNER FULL-BLEED — estilo Loja Virtual: toma a largura toda da tela, no mobile e no desktop */}
-      {banners.length > 0 &&
-      <div className="relative w-full z-0">
-          {/* PONTO 92 — no celular o banner ficava numa faixa baixa com sobras
-              escuras (contain num aspect largo). Agora usa a MESMA receita da
-              Loja Virtual no mobile: altura fixa de 220px preenchida (cover).
-              Do md+ pra cima nada muda: aspect 16/5 com contain e ambiente. */}
-          <HeroBannerLeiloes banners={banners} />
-          {/* 🖼️ 16/09/2026 — NADA POR CIMA DA ARTE.
-              Aqui havia um degradê de 176px (96 no celular) escurecendo a base do
-              banner, para o card "Leilões Ativos" subir e fundir com o fundo. O
-              `contain` nunca cortou nada — mas esse degradê escondia o terço de
-              baixo da arte, e no banner do PS5 isso engolia a faixa "ENTREGA
-              RÁPIDA · SITE SEGURO · COMPRE EM TODO BRASIL".
-              Ordem do dono (16/09): o banner tem que ser visto completo onde
-              estiver. O efeito de camadas sai; a arte inteira fica. */}
-        </div>
-      }
+      {/* 🐯 01/10/2026 — Nesta página o topo não é o carrossel de banners do
+          painel: é o banner fixo do leiloeiro com o tigre e, logo abaixo, os
+          três passos do "ganha ou ganha". O resto da página é a de Leilões. */}
+      <HeroTigre />
+      <ComoFuncionaTigre />
 
       {/* 🪟 17/09/2026 — LIQUID GLASS, IGUAL À LOJA VIRTUAL.
           Pedido do dono: "o destaque dos leilões ficar em cima, mas com aquela
@@ -898,7 +885,7 @@ export default function TigrinhoNoLeilao() {
           ser visto completo". Aqui o bloco sobe sobre a BASE do banner sendo
           translúcido: a arte continua aparecendo através dele, que é exatamente
           o "por cima, mas transparente" que o dono pediu. Vidro não é cortina. */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10 -mt-8 sm:-mt-14">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
         {/* Hero Section - Glass */}
         <div className="mb-6">
           {/* 🎯 PONTO 83 — DE VOLTA À COR DO SITE, EM VERSÃO CLEAN.
