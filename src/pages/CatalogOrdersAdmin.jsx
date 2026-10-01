@@ -1,4 +1,4 @@
-import { itensDoPedido, dinheiroDoPedido, itensSemNome } from '@/lib/itensDoPedido';
+import { itensDoPedido, dinheiroDoPedido, itensSemNome, idsDosItens } from '@/lib/itensDoPedido';
 import { DEPOSITO_MINIMO } from '@/lib/depositoMinimo';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
@@ -135,22 +135,23 @@ const getItems = (order) => itensDoPedido(order);
 
 // 📦 Checklist SEMPRE mostra ao menos o produto principal como card clicável
 // (mesmo pedido de 1 item só) — não fica só em texto/descrição.
-// 🖼️ Imagem real do produto — só existe hoje pro pedido de 1 item
-// (`order.product_image`, o mesmo campo que a lista já usa). Pedido com vários
-// itens (items_json/raw_base44.items) não grava imagem por item em lugar nenhum
-// do banco; sem inventar fonte nova, esse caso fica sem imagem e o
-// OrderItemsChecklist cai no ícone genérico.
-const getItemsForChecklist = (order, nomes = {}) => {
+// 🖼️ Imagem real do produto. Pedido de 1 item usa `order.product_image` (o
+// mesmo campo que a lista já usa). Pedido com vários itens não grava imagem por
+// item; a tela busca `products.image_urls` pelo id de cada um (01/10/2026 —
+// a operadora não identificava os nove produtos de um pedido só pelo nome).
+const getItemsForChecklist = (order, nomes = {}, imagens = {}) => {
   const bundle = getItems(order);
   // 🔴 22/09/2026 — os cinco "Item".
   // A loja da rede guarda só {product_id, qty}: sem nome, a conferência virava
   // "Item · Item · Item · Item · Item" e ninguém sabia o que separar. `nomes`
   // é o que a tela foi buscar em `products`; sem ele, o card diz em português
   // que o nome não veio no pedido — em vez de fingir que "Item" é um nome.
+  // 🖼️ 01/10/2026 — `imagens` vem da mesma busca: a foto do produto pelo id.
   if (bundle) {
     return bundle.map((it) => ({
       ...it,
       title: it.title || nomes[it.id] || (it.id ? 'Produto sem nome no pedido' : 'Item'),
+      image: it.image || imagens[it.id] || null,
     }));
   }
   return [{ title: order.product_title, qty: order.quantity || 1, image: order.product_image || null }];
@@ -262,26 +263,39 @@ export default function CatalogOrdersAdmin() {
   const [comprovanteDe, setComprovanteDe] = useState(null);
   // 📛 nome dos produtos que o pedido guardou só por id (loja da rede)
   const [nomesDosItens, setNomesDosItens] = useState({});
+  // 🖼️ foto de cada produto do pedido, pelo id (products.image_urls[0])
+  const [imagensDosItens, setImagensDosItens] = useState({});
 
   // 📛 22/09/2026 — busca o nome dos produtos que o pedido guardou só por id.
   // A loja da rede grava `items_json` com {product_id, qty} e mais nada; sem
   // isto a conferência lista "Item" cinco vezes e o operador não sabe o que
   // separar. Só busca o que falta, e uma vez por pedido aberto.
+  // 🖼️ 01/10/2026 — a mesma busca traz a foto. Pedido de vários itens não
+  // guarda imagem por item, e a conferência mostrava só o ícone de caixa: a
+  // operadora não conseguia identificar os produtos pelo nome.
   useEffect(() => {
-    const faltando = itensSemNome(selectedOrder).filter((id) => !nomesDosItens[id]);
+    const semNome = new Set(itensSemNome(selectedOrder));
+    const faltando = idsDosItens(selectedOrder).filter((id) => (semNome.has(id) && !nomesDosItens[id]) || !(id in imagensDosItens));
     if (!faltando.length) return;
     let vivo = true;
     (async () => {
       try {
         const achados = await plataforma.entities.Product.filter({ id: faltando });
         const lista = Array.isArray(achados) ? achados : [];
-        if (!vivo || !lista.length) return;
+        if (!vivo) return;
         setNomesDosItens((atual) => {
           const novo = { ...atual };
           for (const p of lista) if (p?.id && p?.description) novo[p.id] = p.description;
           return novo;
         });
-      } catch { /* sem nome a tela já diz que o nome não veio; não vale quebrar a conferência */ }
+        // guarda null para quem não tem foto, para não buscar de novo a cada abertura
+        setImagensDosItens((atual) => {
+          const novo = { ...atual };
+          for (const id of faltando) if (!(id in novo)) novo[id] = null;
+          for (const p of lista) if (p?.id) novo[p.id] = (Array.isArray(p.image_urls) && p.image_urls[0]) || p.image_url || null;
+          return novo;
+        });
+      } catch { /* sem nome a tela já diz que o nome não veio; sem foto fica o ícone; não vale quebrar a conferência */ }
     })();
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1028,7 +1042,7 @@ export default function CatalogOrdersAdmin() {
               {/* 📦 Itens do pedido em cards clicáveis — logística marca ao separar/embalar */}
               {!isPassaporte(selectedOrder) && (
                 <OrderItemsChecklist
-                  items={getItemsForChecklist(selectedOrder, nomesDosItens)}
+                  items={getItemsForChecklist(selectedOrder, nomesDosItens, imagensDosItens)}
                   packedIndices={getPackedItems(selectedOrder)}
                   onToggle={(idx) => handleTogglePacked(selectedOrder, idx)}
                 />

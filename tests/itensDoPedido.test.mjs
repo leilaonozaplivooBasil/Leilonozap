@@ -8,7 +8,7 @@
  */
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { itensDoPedido, quantosItens, dinheiroDoPedido, itensSemNome } from '../src/lib/itensDoPedido.js';
+import { itensDoPedido, quantosItens, dinheiroDoPedido, itensSemNome, idsDosItens } from '../src/lib/itensDoPedido.js';
 
 const CASO_REAL = {
   product_title: 'Kit 10 Lâmpada Led Dicróica Mr16',
@@ -253,5 +253,17 @@ describe('💰 pedido da loja da rede — itens sem preço', () => {
 
   test('🔴 os 5 itens são contados, mesmo sem nome nem preço', () => {
     assert.equal(quantosItens(DA_REDE), 5, 'o operador precisa saber quantas caixas conferir');
+  });
+});
+
+describe('idsDosItens — a foto de cada item mora em products, e a tela busca pelo id (01/10/2026)', () => {
+  test('devolve os ids dos dois formatos, sem repetir e sem os vazios', () => {
+    const daRede = { items_json: [{ product_id: 'aaa', qty: 1 }, { product_id: 'bbb', qty: 2 }, { product_id: 'aaa', qty: 1 }, { qty: 1 }] };
+    assert.deepEqual(idsDosItens(daRede), ['aaa', 'bbb']);
+    const daLoja = { raw_base44: JSON.stringify({ items: [{ id: 'p1', title: 'X', qty: 1 }, { id: 'p2', title: 'Y', qty: 1 }] }) };
+    assert.deepEqual(idsDosItens(daLoja), ['p1', 'p2']);
+  });
+  test('pedido de um item só não tem lista: devolve vazio', () => {
+    assert.deepEqual(idsDosItens({ product_id: 'p1', product_title: 'Um' }), []);
   });
 });
