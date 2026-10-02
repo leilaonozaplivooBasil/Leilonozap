@@ -4,7 +4,8 @@ import ParceiroSecao from './ParceiroSecao';
 const INDICADORES = [
   { rotulo: 'Crescimento em 4 meses', valor: '+1.000%', destaque: true },
   { rotulo: 'Linhas de código proprietário', valor: '178.000' },
-  { rotulo: 'Vigência de cada parceria', valor: '12', sufixo: 'meses' },
+  // 02/10/2026 — dono: "36 e não 12 meses" (repasses de 12 a 36 meses, conforme o plano)
+  { rotulo: 'Vigência de cada parceria', valor: '36', sufixo: 'meses' },
 ];
 
 // Bloco 01 — a tese: ineficiência estrutural operada com método.
