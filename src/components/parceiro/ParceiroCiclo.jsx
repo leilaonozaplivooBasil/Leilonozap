@@ -7,11 +7,11 @@ import ParceiroCicloRoda from './ParceiroCicloRoda';
 const IMG_CICLO = '/midia/a5ded50b6_generated_image.png';
 
 const ETAPAS = [
-  { quando: 'Dia 0', titulo: 'Aceite e aporte', texto: 'Assinatura do instrumento e transferência do capital. A vigência de doze meses conta do aceite.' },
+  { quando: 'Dia 0', titulo: 'Aceite e aporte', texto: 'Assinatura do instrumento e transferência do capital. A vigência, de 12 a 36 meses conforme o plano, conta do aceite.' },
   { quando: 'Dias 1–15', titulo: 'Teste e colocação', texto: 'Aquisição dos lotes, preparação e entrada nos canais de venda.' },
   { quando: 'Dias 16–30', titulo: 'Giro do capital', texto: 'Quinze dias de giro comercial. Primeiro repasse em até trinta dias.' },
-  { quando: 'A partir do 1º repasse', titulo: 'Repasses mensais', texto: '12 meses de repasses, contados a partir do primeiro repasse. A cada trinta dias, com retirada opcional. O capital segue alocado em novas operações.' },
-  { quando: 'Mês 12 + 30 dias', titulo: 'Encerramento', texto: 'Encerramento automático da parceria. Capital disponível para retirada em até trinta dias.' },
+  { quando: 'A partir do 1º repasse', titulo: 'Repasses mensais', texto: 'De 12 a 36 meses de repasses, contados a partir do primeiro repasse. A cada trinta dias, com retirada opcional. O capital segue alocado em novas operações.' },
+  { quando: 'Fim do prazo + 30 dias', titulo: 'Encerramento', texto: 'Encerramento automático da parceria ao fim do prazo contratado. Capital disponível para retirada em até trinta dias.' },
 ];
 
 // Bloco 05 — ciclo operacional e financeiro (Cláusula 8). Sem valores.
@@ -20,11 +20,11 @@ export default function ParceiroCiclo() {
     <ParceiroSecao numero="05" rotulo="Ciclo operacional" referencia="Cláusula 8">
       <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <h2 className="text-2xl font-bold leading-tight text-pc-tinta sm:text-4xl">
-          12 meses de repasses, mais os <span className="text-pc-ouro">30 dias de estruturação</span>
+          De 12 a 36 meses de repasses, mais os <span className="text-pc-ouro">30 dias de estruturação</span>
         </h2>
         <p className="text-sm leading-relaxed text-pc-tinta-fraca lg:text-right">
           Os primeiros 30 dias são de estruturação e não entram na contagem:
-          <br className="hidden sm:block" /> os 12 meses de repasses começam no primeiro repasse.
+          <br className="hidden sm:block" /> os repasses, de 12 a 36 meses conforme o plano, começam no primeiro repasse.
         </p>
       </div>
 

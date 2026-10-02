@@ -20,6 +20,12 @@
 //     R$ 714.458) sobre uma receita de R$ 240 mil/mês — que na prática cairia em
 //     outra faixa do Simples. Aqui o cenário "Hoje" usa a receita real que
 //     originou esse RBT12, mantendo a alíquota legítima.
+//
+// 🔴 02/10/2026 — A LINHA "PARCEIROS DE COMPRA (5%)" SAIU DE TODOS OS CENÁRIOS,
+//     por decisão da diretoria (Luciano, véspera da apresentação; dono: "recalcular").
+//     Tudo abaixo foi recalculado sem ela: resultado do lote, cenário Hoje,
+//     escala de R$ 1M, escada e valuation. Os números anteriores ficam no
+//     ponto de restauração: branch restauracao/parceiro-antes-luciano-2026-10-02.
 
 // ── Premissas operacionais (por lote) ──────────────────────────────────────────
 export const PREMISSAS = {
@@ -29,7 +35,6 @@ export const PREMISSAS = {
   pctAquisicao: 25,        // custo de aquisição sobre a receita
   pctComissaoRede: 30,     // comissão paga à rede de vendas
   pctDespesaOperacional: 20, // despesa operacional no estágio atual
-  pctParceirosCompra: 5,   // remuneração dos parceiros de compra
   aliquotaSimples: 7.56,   // PGDAS-D 06/2026, RBT12 R$ 714.458 (Anexo I, Faixa 3)
   rbt12: 714458,
   despesaFixaMensal: 48000, // estrutura atual em valor absoluto
@@ -43,10 +48,9 @@ export const POR_LOTE = {
   aquisicao: 25000,
   comissaoRede: 24000,
   despesaOperacional: 16000,
-  parceirosCompra: 4000,
   imposto: 6048,           // 7,56% de 80.000
-  lucro: 4952,
-  roiPct: 19.8,            // 4.952 / 25.000
+  lucro: 8952,
+  roiPct: 35.8,            // 8.952 / 25.000
   // Sem estrutura operacional (arbitragem pura) — referência teórica de teto:
   lucroSemEstrutura: 24952,
   roiSemEstruturaPct: 99.8,
@@ -61,14 +65,13 @@ export const HOJE = {
   lucroBruto: 44653,
   comissaoRede: 17861,
   despesaOperacional: 11908,
-  parceirosCompra: 2977,
-  ebitda: 11907,
+  ebitda: 14884,
   imposto: 4501,
-  lucro: 7407,
-  margemPct: 12.4,
+  lucro: 10383,
+  margemPct: 17.4,
   capital: 14885,
-  roiPct: 49.8,
-  lucroAnual: 88884,
+  roiPct: 69.8,
+  lucroAnual: 124596,
   apurado: true,
 };
 
@@ -80,19 +83,18 @@ export const ESCALA_1M = {
   lucroBruto: 750000,
   comissaoRede: 300000,
   despesaFixa: 55000,
-  parceirosCompra: 50000,
-  lair: 345000,
-  irpj: 84250,             // 15% de 345.000 + 10% sobre (345.000 − 20.000)
-  csll: 31050,             // 9% do LAIR
+  lair: 395000,
+  irpj: 96750,             // 15% de 395.000 + 10% sobre (395.000 − 20.000)
+  csll: 35550,             // 9% do LAIR
   pisCofins: 23250,        // não-cumulativo líquido, com crédito de entradas
   icms: 18000,             // líquido, com crédito de entradas
-  impostoTotal: 156550,
-  cargaSobreReceitaPct: 15.66,
-  lucro: 188450,
-  margemPct: 18.8,
+  impostoTotal: 173550,
+  cargaSobreReceitaPct: 17.36,
+  lucro: 221450,
+  margemPct: 22.1,
   capital: 250000,
-  roiPct: 75.4,
-  lucroAnual: 2261400,
+  roiPct: 88.6,
+  lucroAnual: 2657400,
   apurado: false,
 };
 
@@ -108,9 +110,9 @@ export const ESCADA = [
     capital: 14885,
     lair: null,
     imposto: 4501,
-    lucro: 7407,
-    roiPct: 49.8,
-    lucroAnual: 88884,
+    lucro: 10383,
+    roiPct: 69.8,
+    lucroAnual: 124596,
     apurado: true,
   },
   {
@@ -118,11 +120,11 @@ export const ESCADA = [
     regime: 'Lucro Real',
     receita: 500000,
     capital: 125000,
-    lair: 152000,
-    imposto: 70305,
-    lucro: 81695,
-    roiPct: 65.4,
-    lucroAnual: 980340,
+    lair: 177000,
+    imposto: 78805,
+    lucro: 98195,
+    roiPct: 78.6,
+    lucroAnual: 1178340,
     apurado: false,
   },
   {
@@ -130,11 +132,11 @@ export const ESCADA = [
     regime: 'Lucro Real',
     receita: 1000000,
     capital: 250000,
-    lair: 345000,
-    imposto: 156550,
-    lucro: 188450,
-    roiPct: 75.4,
-    lucroAnual: 2261400,
+    lair: 395000,
+    imposto: 173550,
+    lucro: 221450,
+    roiPct: 88.6,
+    lucroAnual: 2657400,
     apurado: false,
     destaque: true,
   },
@@ -143,11 +145,11 @@ export const ESCADA = [
     regime: 'Lucro Real',
     receita: 2000000,
     capital: 500000,
-    lair: 752000,
-    imposto: 336180,
-    lucro: 415820,
-    roiPct: 83.2,
-    lucroAnual: 4989840,
+    lair: 852000,
+    imposto: 370180,
+    lucro: 481820,
+    roiPct: 96.4,
+    lucroAnual: 5781840,
     apurado: false,
   },
   {
@@ -155,11 +157,11 @@ export const ESCADA = [
     regime: 'Lucro Real',
     receita: 5000000,
     capital: 1250000,
-    lair: 1952000,
-    imposto: 867930,
-    lucro: 1084070,
-    roiPct: 86.7,
-    lucroAnual: 13008840,
+    lair: 2202000,
+    imposto: 952930,
+    lucro: 1249070,
+    roiPct: 99.9,
+    lucroAnual: 14988840,
     apurado: false,
   },
   {
@@ -167,11 +169,11 @@ export const ESCADA = [
     regime: 'Lucro Real',
     receita: 10000000,
     capital: 2500000,
-    lair: 3952000,
-    imposto: 1754180,
-    lucro: 2197820,
-    roiPct: 87.9,
-    lucroAnual: 26373840,
+    lair: 4452000,
+    imposto: 1924180,
+    lucro: 2527820,
+    roiPct: 101.1,
+    lucroAnual: 30333840,
     apurado: false,
   },
 ];
@@ -183,13 +185,13 @@ export const MULTIPLOS = { min: 3, max: 6 };
 
 export const VALUATION = {
   // Sobre resultado APURADO (o único número auditável hoje)
-  apuradoLucroAnual: 88884,
-  apuradoMin: 266652,      // 88.884 × 3
-  apuradoMax: 533304,      // 88.884 × 6
+  apuradoLucroAnual: 124596,
+  apuradoMin: 373788,      // 124596 × 3
+  apuradoMax: 747576,      // 124596 × 6
   // Sobre o cenário projetado de R$ 1M/mês (projeção, não valor atual)
-  projetadoLucroAnual: 2261400,
-  projetadoMin: 6784200,   // 2.261.400 × 3
-  projetadoMax: 13568400,  // 2.261.400 × 6
+  projetadoLucroAnual: 2657400,
+  projetadoMin: 7972200,   // 2657400 × 3
+  projetadoMax: 15944400,  // 2657400 × 6
 };
 
 export const FONTE_FISCAL = {

@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   PREMISSAS,
+  POR_LOTE,
   HOJE,
   ESCALA_1M,
   FONTE_FISCAL,
@@ -29,7 +30,7 @@ export default function ParceiroMemorando() {
           <DocLinha rotulo="Inscrição" valor={FONTE_FISCAL.cnpj} />
           <DocLinha rotulo="Natureza" valor="Parceria comercial em compra e revenda" />
           <DocLinha rotulo="Instrumento" valor="Contrato de Parceria Comercial" />
-          <DocLinha rotulo="Primeiro ciclo" valor="Até 60 dias (Cláusula 8.2)" />
+          <DocLinha rotulo="Primeiro ciclo" valor="30 dias (Cláusula 8.2)" />
           <DocLinha rotulo="Prestação de contas" valor="Demonstrativo por ciclo (Cláusula 7.4)" />
           <DocLinha rotulo="Sigilo" valor="5 anos (Cláusula 12)" />
         </DocQuadro>
@@ -74,13 +75,15 @@ export default function ParceiroMemorando() {
 
       <DocSecao numero="03" titulo="A economia por lote">
         <DocQuadro cabecalho="Um lote, do arremate ao resultado" etiqueta="Simples 7,56%">
-          <DocLinha rotulo="Receita da venda" valor={real(80000)} />
-          <DocLinha rotulo="Custo de aquisição" nota="(25%)" valor={real(25000)} negativo />
-          <DocLinha rotulo="Comissão da rede" nota="(30%)" valor={real(24000)} negativo />
-          <DocLinha rotulo="Despesa operacional" nota="(20%)" valor={real(16000)} negativo />
-          <DocLinha rotulo="Parceiros de compra" nota="(5%)" valor={real(4000)} negativo />
-          <DocLinha rotulo="Imposto" nota="(7,56%)" valor={real(6048)} negativo />
-          <DocLinha rotulo="Resultado líquido do lote" valor={real(4952)} total />
+          {/* 🔴 02/10/2026 — a linha "Parceiros de compra (5%)" saiu e o resultado
+              foi recalculado (decisão da diretoria). Os números vêm da fonte
+              única (POR_LOTE), então o quadro sempre fecha. */}
+          <DocLinha rotulo="Receita da venda" valor={real(POR_LOTE.receita)} />
+          <DocLinha rotulo="Custo de aquisição" nota="(25%)" valor={real(POR_LOTE.aquisicao)} negativo />
+          <DocLinha rotulo="Comissão da rede" nota="(30%)" valor={real(POR_LOTE.comissaoRede)} negativo />
+          <DocLinha rotulo="Despesa operacional" nota="(20%)" valor={real(POR_LOTE.despesaOperacional)} negativo />
+          <DocLinha rotulo="Imposto" nota="(7,56%)" valor={real(POR_LOTE.imposto)} negativo />
+          <DocLinha rotulo="Resultado líquido do lote" valor={real(POR_LOTE.lucro)} total />
         </DocQuadro>
         <DocTexto>
           Cada linha desse quadro é custo real da operação, inclusive a comissão de 30% da rede — que
@@ -122,13 +125,13 @@ export default function ParceiroMemorando() {
         <DocTexto>
           A participação é definida no Contrato de Parceria Comercial, calculada sobre o capital
           aportado e paga a partir do <strong>resultado apurado de cada ciclo</strong>. O primeiro
-          ciclo se encerra em até 60 dias do aporte (Cláusula 8.2), acompanhado do demonstrativo
+          ciclo se encerra em 30 dias do aporte (Cláusula 8.2), acompanhado do demonstrativo
           previsto na Cláusula 7.4.
         </DocTexto>
         <DocQuadro cabecalho="Condições contratuais">
           <DocLinha rotulo="Base de cálculo" valor="Capital aportado" />
           <DocLinha rotulo="Origem do pagamento" valor="Resultado apurado do ciclo" />
-          <DocLinha rotulo="Prazo do primeiro ciclo" valor="Até 60 dias" />
+          <DocLinha rotulo="Prazo do primeiro ciclo" valor="30 dias" />
           <DocLinha rotulo="Prestação de contas" valor="Demonstrativo por ciclo" />
           <DocLinha rotulo="Garantia de retorno" valor="Não há" />
         </DocQuadro>
