@@ -35,6 +35,7 @@
  * Functions: redirecionadas para /api/functions/<name> (Vercel) ou Edge Functions.
  */
 import { tudoEmPaginas, precisaPaginar } from '@/lib/paginacao';
+import { normalizarEventoRealtime } from '@/lib/eventoRealtime';
 import { supabase } from './supabaseClient';
 import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
@@ -130,6 +131,8 @@ function mapToDB(entity, data) {
   }
   return out;
 }
+
+let _canaisAbertos = 0;
 
 function mapFromDB(entity, row) {
   if (!row || typeof row !== 'object') return row;
@@ -650,11 +653,22 @@ function entityProxy(entity) {
       return data.map((r) => mapFromDB(entity, r));
     },
 
-    subscribe(callback) {
+    // 📡 01/10/2026 — assina mudanças da tabela no Supabase Realtime.
+    //   - `opts.event`: 'INSERT' | 'UPDATE' | 'DELETE' | '*' (padrão)
+    //   - `opts.filter`: ex. 'id=eq.<id>' — filtra NO SERVIDOR; a sala do leilão
+    //     assina só a linha do leilão aberto, não a tabela inteira.
+    // Cada assinatura ganha um canal próprio: duas telas assinando a mesma tabela
+    // com o mesmo nome de canal brigavam pelo mesmo tópico.
+    // O evento chega normalizado (src/lib/eventoRealtime.js): `type`/`data`/`id`
+    // para quem lê no formato antigo e `new`/`old`/`eventType` para quem lê o do
+    // Supabase — as duas leituras coexistem no código.
+    subscribe(callback, opts = {}) {
+      if (typeof callback !== 'function') return () => {};
+      const { event = '*', filter } = opts || {};
       const channel = supabase
-        .channel(`realtime:${table}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-          callback(payload);
+        .channel(`realtime:${table}:${++_canaisAbertos}`)
+        .on('postgres_changes', { event, schema: 'public', table, ...(filter ? { filter } : {}) }, (payload) => {
+          callback(normalizarEventoRealtime(payload, (linha) => mapFromDB(entity, linha)));
         })
         .subscribe();
       return () => supabase.removeChannel(channel);

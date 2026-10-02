@@ -1,8 +1,20 @@
 import { useEffect, useRef, useCallback } from "react";
 import { plataforma } from "@/api/plataformaClient";
+import { filtroPorId } from "@/lib/eventoRealtime";
+import { cadenciaDaSincronizacao, LIMBO_MAXIMO_MS, fundirLinhaDoLeilao } from "@/lib/sincronizacaoDaSala";
 
 const Auction = plataforma.entities.Auction;
 const AuctionMessage = plataforma.entities.AuctionMessage;
+
+// 📡 01/10/2026 — COMO A SALA FICA SABENDO (ver src/lib/sincronizacaoDaSala.js).
+// O "VENDIDO" não chegava para todo mundo: a sala dependia da própria chamada
+// ao servidor ou de uma consulta a cada 15 s, e o tempo real que o código
+// assinava nunca funcionou (publicação vazia no banco). Agora:
+//   1. a linha do leilão é assinada em tempo real — status, vencedor, preço e
+//      novo tempo chegam a todos em frações de segundo;
+//   2. a consulta é reserva de verdade: forçada ao zerar o relógio, a cada 3 s
+//      no limbo (relógio zerado, status ainda `active`) e ao voltar para a aba;
+//   3. as mensagens do chat (lances) também chegam em tempo real.
 
 export default function useAuctionSync({
   auctionId,
@@ -14,6 +26,7 @@ export default function useAuctionSync({
   getServerSyncedTime,
   lastOffsetCalibrationRef,
   onEndAuction,
+  timeRemaining = null,
 }) {
   const lastAuctionSyncTimeRef = useRef(0);
   const lastMessageCountRef = useRef(0);
@@ -35,13 +48,15 @@ export default function useAuctionSync({
   useEffect(() => { auctionRef.current = auction; }, [auction]);
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  const syncAuctionDataOnly = useCallback(async () => {
+  // `forcar === true` pula a trava de 10 s: é para o fim do leilão, quando
+  // esperar 10 s é exatamente o problema.
+  const syncAuctionDataOnly = useCallback(async (forcar = false) => {
     const auction = auctionRef.current;
     if (!auctionId || !auction) return;
 
     const now = Date.now();
     if (isBlockedRef.current && now < blockUntilRef.current) return;
-    if (now - lastAuctionSyncTimeRef.current < 10000) return;
+    if (forcar !== true && now - lastAuctionSyncTimeRef.current < 10000) return;
     if (isSyncingAuctionRef.current) return;
 
     isSyncingAuctionRef.current = true;
@@ -117,6 +132,49 @@ export default function useAuctionSync({
     }
   }, [auctionId, syncAuctionDataOnly, setMessages]);
 
+  // 📡 A LINHA DO LEILÃO, EM TEMPO REAL — independe do status: pega o fim, a
+  // reativação, o novo tempo e a pausa. Só a linha deste leilão (filtro no
+  // servidor), não a tabela inteira. É o caminho que faz o "VENDIDO" chegar a
+  // todo mundo ao mesmo tempo, sem depender do relógio nem da rede de cada um.
+  useEffect(() => {
+    if (!auctionId) return undefined;
+    let cancelar = null;
+    try {
+      cancelar = Auction.subscribe((evento) => {
+        const linha = evento?.data;
+        if (!linha || String(linha.id) !== String(auctionId)) return;
+        setAuction((prev) => fundirLinhaDoLeilao(prev, linha));
+      }, { event: 'UPDATE', filter: filtroPorId(auctionId) });
+    } catch (e) {
+      console.warn("⚠️ [SYNC] Assinatura do leilão falhou; fica a consulta:", e?.message);
+    }
+    return () => { if (typeof cancelar === 'function') { try { cancelar(); } catch { /* cleanup */ } } };
+  }, [auctionId, setAuction]);
+
+  // 🔄 Voltou para a aba (celular que apagou a tela, outra aba): consulta na hora.
+  // Em segundo plano o navegador estrangula os temporizadores; é ao voltar que a
+  // pessoa olha a tela, e ela precisa estar certa nesse instante.
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    const aoVoltar = () => { if (!document.hidden && auctionRef.current?.status === 'active') syncAuctionDataOnly(true); };
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => document.removeEventListener('visibilitychange', aoVoltar);
+  }, [syncAuctionDataOnly]);
+
+  // ⏱️ O LIMBO: relógio zerado, status ainda `active`. A própria chamada de
+  // encerramento pode ter falhado (rede) ou o martelo do servidor pode estar a
+  // caminho. Consulta a cada 3 s, forçada, por até 2 min — depois volta à
+  // cadência normal (o leilão pode ter ganhado tempo novo).
+  const noLimbo = auction?.status === 'active' && timeRemaining === 0;
+  useEffect(() => {
+    if (!noLimbo) return undefined;
+    const cadencia = cadenciaDaSincronizacao({ status: 'active', timeRemaining: 0 });
+    syncAuctionDataOnly(true);
+    const t = setInterval(() => syncAuctionDataOnly(true), cadencia);
+    const fim = setTimeout(() => clearInterval(t), LIMBO_MAXIMO_MS);
+    return () => { clearInterval(t); clearTimeout(fim); };
+  }, [noLimbo, syncAuctionDataOnly]);
+
   // Real-time subscription for messages + polling fallback for auction data
   useEffect(() => {
     if (!auction || auction.status !== 'active') {
@@ -131,11 +189,12 @@ export default function useAuctionSync({
       return;
     }
 
-    // REAL-TIME: Subscribe to AuctionMessage changes (instant lance delivery)
+    // REAL-TIME: mensagens do chat (lances) — o evento chega normalizado
+    // (type 'create' + data) pelo adaptador; ver src/lib/eventoRealtime.js
     let unsubscribeMessages = null;
     try {
       unsubscribeMessages = AuctionMessage.subscribe((event) => {
-        if (!event?.data?.auction_id || event.data.auction_id !== auctionId) return;
+        if (!event?.data?.auction_id || String(event.data.auction_id) !== String(auctionId)) return;
 
         if (event.type === 'create') {
           setMessages(prev => {
@@ -149,12 +208,16 @@ export default function useAuctionSync({
             return [event.data, ...cleaned];
           });
           lastMessageCountRef.current++;
-          // If it's a new bid, sync auction data to get updated price
           if (event.data.message_type === 'bid') {
+            // lance novo: busca o preço/tempo atualizados
             setTimeout(syncAuctionDataOnly, 300);
+          } else {
+            // mensagem de sistema (vitória, encerramento): o leilão mudou de
+            // estado — consulta já, sem a trava de 10 s
+            setTimeout(() => syncAuctionDataOnly(true), 300);
           }
         }
-      });
+      }, { event: 'INSERT', filter: `auction_id=eq.${auctionId}` });
       console.log("✅ [SYNC] Real-time subscription ativa para mensagens");
     } catch (subError) {
       console.warn("⚠️ [SYNC] Subscription falhou, usando polling:", subError.message);
