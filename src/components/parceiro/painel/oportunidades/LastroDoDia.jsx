@@ -8,7 +8,7 @@ import {
   pctBr,
   inteiro,
   PCT_VENDA_SOBRE_MERCADO,
-  PCT_REPASSE_PARCEIRO_CICLO,
+  ROTULO_REPASSE_PARCEIRO,
 } from '@/lib/lastroOperacao';
 
 // 🏛️ GERADOR DE RIQUEZA · LASTRO DO DIA — componente PURO (só recebe e soma).
@@ -29,7 +29,7 @@ export default function LastroDoDia({ oportunidades = [] }) {
     },
     { rotulo: 'Lucro projetado da operação', valor: brl(r.lucro), forte: true },
     {
-      rotulo: `Repasse ao parceiro (${PCT_REPASSE_PARCEIRO_CICLO}% do aporte)`,
+      rotulo: `Repasse ao parceiro (${ROTULO_REPASSE_PARCEIRO} do aporte)`,
       valor: brl(r.repasse),
     },
   ];

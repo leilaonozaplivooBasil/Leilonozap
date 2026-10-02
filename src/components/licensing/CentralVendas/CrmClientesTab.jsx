@@ -29,7 +29,7 @@ import { calcularCaptacao } from '@/lib/captacaoParceiros';
 import { calcularMetaCentral, ritmoDiario } from '@/lib/metaCentral';
 import { calcularDashboardDiretoria } from '@/lib/dashboardDiretoria';
 import { resumoEscada, ESCADA_LICENCAS } from '@/lib/escadaLicencas';
-import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
+import { PLANOS_PARCEIRO, TAXA_PARCEIRO, PRAZO_PARCEIRO } from '@/lib/planosParceiro';
 import { quemContatarHoje } from '@/lib/quemContatarHoje';
 import { alertasEsteira, vendaRealDoCliente, resumoEsteira } from '@/lib/esteiraCaptacao';
 import { linhaDoTempoCliente } from '@/lib/linhaDoTempoCliente';
@@ -2670,7 +2670,7 @@ _Enviado via CRM Leilão NoZap_`;
                               <p className="text-[11px] text-gray-400 mt-0.5">
                                 {plano.isCustom ? 'valor livre' : `a partir de R$ ${plano.minInvestment.toLocaleString('pt-BR')}`}
                               </p>
-                              <p className="text-[10px] text-gray-500">{plano.expectedReturn}%/mês · {plano.duration} meses</p>
+                              <p className="text-[10px] text-gray-500">{TAXA_PARCEIRO.rotulo} · {PRAZO_PARCEIRO.rotulo}</p>
                             </button>
                           );
                         })}

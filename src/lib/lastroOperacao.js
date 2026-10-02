@@ -7,36 +7,30 @@
 // 📐 REGRAS OFICIAIS (validadas contra o código em produção em 06/08/2026):
 //  • Venda a 80% do valor de mercado — mesma premissa de operacaoNumeros.js
 //    (PREMISSAS.valorMercado 100.000 → PREMISSAS.precoVenda 80.000).
-//  • Repasse ao parceiro = 3% sobre o CAPITAL APORTADO por ciclo de 30 dias.
+//  • Repasse ao parceiro = TAXA_PARCEIRO (até 2,15%, 02/10/2026; era 3%) sobre o
+//    CAPITAL APORTADO por ciclo de 30 dias.
 //    É EXATAMENTE a regra do motor que já roda no painel
 //    (useRentabilidadeAcumulada: alvo = capital × taxaMensalPct / 100).
 //    ❌ NÃO é 3% sobre a receita de venda — isso pagaria ~3,5x mais do que a
 //    operação paga de verdade e contradiria o contador do ciclo do parceiro.
-//  • Orçamento de parceiros de compra = 5% da receita (PREMISSAS.pctParceirosCompra).
-//    Serve para demonstrar FOLGA DE PAGAMENTO (cobertura do repasse).
 //  • Lucro da operação = RESIDUAL da DRE (receita − aquisição real − comissão de
-//    rede − estrutura de venda − parceiros de compra − imposto). Calculado assim
-//    a conta FECHA na tela: a soma das linhas dá exatamente a receita. Os
-//    percentuais de cada linha são os de operacaoNumeros (PREMISSAS/POR_LOTE):
-//    comissão de rede 30%, despesa operacional 20%, parceiros de compra 5% e
-//    imposto 7,56% (Simples, PGDAS-D 06/2026) — todos sobre a receita.
+//    rede − imposto). Calculado assim a conta FECHA na tela: a soma das linhas
+//    dá exatamente a receita. Os percentuais são os de operacaoNumeros
+//    (PREMISSAS/POR_LOTE): comissão de rede 30% e imposto 7,56% (Simples,
+//    PGDAS-D 06/2026), sobre a receita.
+//  🔴 02/10/2026 — a linha "parceiros de compra (5% = 3% + 2%)" SAIU da DRE e
+//    do memorial, por decisão da diretoria. Ponto de restauração:
+//    branch restauracao/parceiro-antes-luciano-2026-10-02.
 //  • ROI do ciclo (Retorno sobre o Investimento) = lucro ÷ capital aportado.
 
 import { PREMISSAS } from '@/lib/operacaoNumeros';
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 
 export const PCT_VENDA_SOBRE_MERCADO = 80;
-export const PCT_REPASSE_PARCEIRO_CICLO = 3;
-export const PCT_ORCAMENTO_PARCEIROS = PREMISSAS.pctParceirosCompra;
+export const PCT_REPASSE_PARCEIRO_CICLO = TAXA_PARCEIRO.pct;
+export const ROTULO_REPASSE_PARCEIRO = TAXA_PARCEIRO.rotulo;
 export const PCT_COMISSAO_REDE = PREMISSAS.pctComissaoRede;
 export const PCT_IMPOSTO = PREMISSAS.aliquotaSimples;
-// 🔀 PARCEIROS DE COMPRA = 5% sobre o CAPITAL APORTADO (não sobre a receita),
-// dividido em: 3% para o parceiro de compra + 2% para a estrutura do braço
-// operacional da captação. Regra confirmada pela diretoria em 06/08/2026.
-// ❌ NÃO existe linha separada de "estrutura de venda e operação" na DRE do
-// memorial: a estrutura desse braço JÁ É os 2% aqui dentro.
-export const PCT_PARCEIRO_COMPRA_TOTAL = 5;
-export const PCT_PARCEIRO_REPASSE = 3;
-export const PCT_PARCEIRO_ESTRUTURA = 2;
 
 // 💰 Real sem centavos — padrão dos documentos institucionais do Parceiro
 export function brl(valor) {
@@ -77,12 +71,10 @@ export function resumirLastro(lotes = []) {
 
   const receita = lastro * (PCT_VENDA_SOBRE_MERCADO / 100);
   const repasse = capital * (PCT_REPASSE_PARCEIRO_CICLO / 100);
-  // 💼 5% SOBRE O CAPITAL APORTADO (3% parceiro de compra + 2% estrutura do braço)
-  const orcamentoParceiros = capital * (PCT_PARCEIRO_COMPRA_TOTAL / 100);
   const comissaoRede = receita * (PCT_COMISSAO_REDE / 100);
   const imposto = receita * (PCT_IMPOSTO / 100);
   // 🧾 Lucro = residual da DRE. A soma das linhas fecha exatamente na receita.
-  const lucro = receita - capital - comissaoRede - orcamentoParceiros - imposto;
+  const lucro = receita - capital - comissaoRede - imposto;
 
   return {
     lotes: lista.length,
@@ -91,14 +83,10 @@ export function resumirLastro(lotes = []) {
     capital,
     receita,
     repasse,
-    orcamentoParceiros,
     comissaoRede,
     imposto,
     lucro,
     margemPct: receita > 0 ? (lucro / receita) * 100 : 0,
-    // 🔀 destinação dos 5% sobre o capital aportado
-    parceiroRepasseFatia: capital * (PCT_PARCEIRO_REPASSE / 100),
-    parceiroEstruturaFatia: capital * (PCT_PARCEIRO_ESTRUTURA / 100),
     // 🛒 quanto da lista foi efetivamente pago (capital ÷ valor de mercado)
     pctPagoDaLista: lastro > 0 ? (capital / lastro) * 100 : 0,
     descontoDaListaPct: lastro > 0 ? 100 - (capital / lastro) * 100 : 0,

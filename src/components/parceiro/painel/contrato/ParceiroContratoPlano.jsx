@@ -1,3 +1,4 @@
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 import React, { useState } from 'react';
 import { FileSignature, ShieldCheck, ScrollText, Info, Check } from 'lucide-react';
 import { real } from '@/lib/operacaoNumeros';
@@ -12,9 +13,9 @@ export default function ParceiroContratoPlano({ user, investimento, onContratar 
   const [lendo, setLendo] = useState(false);
   const demonstracao = !investimento;
 
-  const aporte = investimento?.amount || 15000;
-  const plano = investimento?.plan || 'Plano Sócios de Ouro (modelo)';
-  const taxa = investimento?.investmentRate || 3;
+  const aporte = investimento?.amount || 30000;
+  const plano = investimento?.plan || 'Plano Elite (modelo)';
+  const taxa = investimento?.investmentRate || TAXA_PARCEIRO.pct;
   const assinatura = investimento?.startDate || new Date(Date.now() - 18 * 86400000).toISOString();
 
   const linhas = [
@@ -22,7 +23,8 @@ export default function ParceiroContratoPlano({ user, investimento, onContratar 
     { r: 'E-mail do aceite', v: user?.email || '—' },
     { r: 'Plano', v: plano },
     { r: 'Aporte', v: real(aporte) },
-    { r: 'Participação no resultado', v: `${String(taxa).replace('.', ',')}% ao mês sobre o apurado` },
+    // 02/10/2026 — no modelo (sem contrato) vale o rótulo oficial; com contrato, a taxa dele
+    { r: 'Participação no resultado', v: investimento?.investmentRate ? `${String(taxa).replace('.', ',')}% ao mês sobre o apurado` : `${TAXA_PARCEIRO.rotuloMensal} sobre o apurado` },
     { r: 'Data do aceite', v: new Date(assinatura).toLocaleString('pt-BR') },
     { r: 'Primeiro ciclo', v: 'Fechamento e repasse em 30 dias (Cláusula 8.2)' },
     { r: 'Sigilo', v: '5 anos (Cláusula 12)' },

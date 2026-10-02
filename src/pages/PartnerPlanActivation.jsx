@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Search, CheckCircle, AlertCircle, FileText, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
-import { PLANOS_PARCEIRO } from '@/lib/planosParceiro';
+import { PLANOS_PARCEIRO, TAXA_PARCEIRO, PRAZO_PARCEIRO } from '@/lib/planosParceiro';
 
 // 🔗 DIR-25 — a lista oficial dos planos saiu daqui pra src/lib/planosParceiro.js
 // (fonte única, compartilhada com o cadastro de interesses do CRM).
@@ -280,8 +280,8 @@ export default function PartnerPlanActivation() {
                         {!plan.isCustom && (
                           <div className="flex gap-4 mt-2 text-xs text-gray-300">
                             <span>Investimento: R$ {plan.minInvestment.toLocaleString('pt-BR')}</span>
-                            <span>Retorno: {plan.expectedReturn}%</span>
-                            <span>Prazo: {plan.duration} dias</span>
+                            <span>Retorno: {TAXA_PARCEIRO.rotulo}</span>
+                            <span>Prazo: {PRAZO_PARCEIRO.rotulo}</span>
                           </div>
                         )}
                       </div>

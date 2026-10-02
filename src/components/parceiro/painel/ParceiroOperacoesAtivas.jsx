@@ -156,7 +156,7 @@ export default function ParceiroOperacoesAtivas({ investimentos }) {
                     <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                     <div>
                       <p className="text-xs sm:text-sm text-gray-400">
-                        Encerramento previsto (12 meses após o 1º repasse)
+                        Encerramento previsto (ao fim do prazo contratado)
                       </p>
                       <p className="font-bold text-white text-sm sm:text-base">
                         {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}

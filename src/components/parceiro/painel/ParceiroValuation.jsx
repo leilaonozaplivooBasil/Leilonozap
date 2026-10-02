@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  POR_LOTE,
   PREMISSAS,
   HOJE,
   ESCALA_1M,
@@ -49,18 +50,17 @@ export default function ParceiroValuation() {
           vantagem entregue ao comprador final e a razão da velocidade de giro.
         </DocTexto>
         <DocQuadro cabecalho="Resultado de um lote — estrutura operacional atual" etiqueta="Simples 7,56%">
-          <DocLinha rotulo="Receita da venda do lote" valor={real(80000)} />
-          <DocLinha rotulo="Custo de aquisição" nota="(25%)" valor={real(25000)} negativo />
-          <DocLinha rotulo="Comissão da rede de vendas" nota="(30%)" valor={real(24000)} negativo />
-          <DocLinha rotulo="Despesa operacional" nota="(20%)" valor={real(16000)} negativo />
-          <DocLinha rotulo="Parceiros de compra" nota="(5%)" valor={real(4000)} negativo />
-          <DocLinha rotulo="Imposto — Simples Nacional" nota="(7,56%)" valor={real(6048)} negativo />
-          <DocLinha rotulo="Resultado líquido do lote" valor={real(4952)} total />
+          <DocLinha rotulo="Receita da venda do lote" valor={real(POR_LOTE.receita)} />
+          <DocLinha rotulo="Custo de aquisição" nota="(25%)" valor={real(POR_LOTE.aquisicao)} negativo />
+          <DocLinha rotulo="Comissão da rede de vendas" nota="(30%)" valor={real(POR_LOTE.comissaoRede)} negativo />
+          <DocLinha rotulo="Despesa operacional" nota="(20%)" valor={real(POR_LOTE.despesaOperacional)} negativo />
+          <DocLinha rotulo="Imposto — Simples Nacional" nota="(7,56%)" valor={real(POR_LOTE.imposto)} negativo />
+          <DocLinha rotulo="Resultado líquido do lote" valor={real(POR_LOTE.lucro)} total />
         </DocQuadro>
         <div className="mb-5 grid grid-cols-3 gap-3">
           <DocIndicador valor={`${PREMISSAS.markupPct}%`} rotulo="Markup sobre a aquisição" />
           <DocIndicador valor={`${PREMISSAS.cicloDias} dias`} rotulo="Ciclo médio de giro" />
-          <DocIndicador valor={pct(19.8)} rotulo="Retorno sobre o capital do lote" />
+          <DocIndicador valor={pct(POR_LOTE.roiPct)} rotulo="Retorno sobre o capital do lote" />
         </div>
       </DocSecao>
 
@@ -76,8 +76,7 @@ export default function ParceiroValuation() {
           <DocLinha rotulo="Lucro bruto" nota="(75%)" valor={real(HOJE.lucroBruto)} />
           <DocLinha rotulo="Comissão da rede" nota="(30%)" valor={real(HOJE.comissaoRede)} negativo />
           <DocLinha rotulo="Despesa operacional" nota="(20%)" valor={real(HOJE.despesaOperacional)} negativo />
-          <DocLinha rotulo="Parceiros de compra" nota="(5%)" valor={real(HOJE.parceirosCompra)} negativo />
-          <DocLinha rotulo="EBITDA" nota="(20%)" valor={real(HOJE.ebitda)} />
+          <DocLinha rotulo="EBITDA" nota="(25%)" valor={real(HOJE.ebitda)} />
           <DocLinha rotulo="DAS — Simples Nacional" nota="(7,56%)" valor={real(HOJE.imposto)} negativo />
           <DocLinha rotulo="Resultado líquido mensal" valor={real(HOJE.lucro)} total />
         </DocQuadro>
@@ -101,7 +100,6 @@ export default function ParceiroValuation() {
           <DocLinha rotulo="Lucro bruto" nota="(75%)" valor={real(ESCALA_1M.lucroBruto)} />
           <DocLinha rotulo="Comissão da rede" nota="(30%)" valor={real(ESCALA_1M.comissaoRede)} negativo />
           <DocLinha rotulo="Despesa fixa diluída" nota="(5,5%)" valor={real(ESCALA_1M.despesaFixa)} negativo />
-          <DocLinha rotulo="Parceiros de compra" nota="(5%)" valor={real(ESCALA_1M.parceirosCompra)} negativo />
           <DocLinha rotulo="LAIR — base tributável" valor={real(ESCALA_1M.lair)} />
           <DocLinha rotulo="IRPJ" nota="(15% + adicional de 10%)" valor={real(ESCALA_1M.irpj)} negativo />
           <DocLinha rotulo="CSLL" nota="(9% do LAIR)" valor={real(ESCALA_1M.csll)} negativo />

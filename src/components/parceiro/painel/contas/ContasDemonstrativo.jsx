@@ -1,19 +1,20 @@
 import React from 'react';
 import { real, PREMISSAS, POR_LOTE } from '@/lib/operacaoNumeros';
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 
 // 📑 DEMONSTRATIVO DO CICLO — decomposição do resultado do lote comprado com o
 // aporte, na MESMA metodologia oficial da operação (src/lib/operacaoNumeros.js):
 // compra a ~25% do valor de mercado, venda a 20% abaixo do mercado, comissão de
-// rede 30%, despesa operacional 20%, parceiros de compra 5% e imposto vigente.
+// rede 30%, despesa operacional 20% e imposto vigente (a linha de parceiros de
+// compra saiu em 02/10/2026, por decisão da diretoria).
 // Nada é inventado aqui: são os percentuais oficiais aplicados ao seu aporte.
-export default function ContasDemonstrativo({ aporte, taxaMensalPct = 3 }) {
+export default function ContasDemonstrativo({ aporte, taxaMensalPct = TAXA_PARCEIRO.pct }) {
   const capital = Number(aporte) || 0;
   const receita = capital * (POR_LOTE.receita / POR_LOTE.aquisicao); // 3,2× o capital
   const comissaoRede = receita * (PREMISSAS.pctComissaoRede / 100);
   const despesaOperacional = receita * (PREMISSAS.pctDespesaOperacional / 100);
-  const parceirosCompra = receita * (PREMISSAS.pctParceirosCompra / 100);
   const imposto = receita * (PREMISSAS.aliquotaSimples / 100);
-  const resultado = receita - capital - comissaoRede - despesaOperacional - parceirosCompra - imposto;
+  const resultado = receita - capital - comissaoRede - despesaOperacional - imposto;
   const suaParte = capital * (taxaMensalPct / 100);
 
   const linhas = [
@@ -21,7 +22,6 @@ export default function ContasDemonstrativo({ aporte, taxaMensalPct = 3 }) {
     { r: 'Custo de aquisição do lote (seu capital aplicado)', v: -capital },
     { r: `Comissão da rede de vendas (${PREMISSAS.pctComissaoRede}%)`, v: -comissaoRede },
     { r: `Despesa operacional (${PREMISSAS.pctDespesaOperacional}%)`, v: -despesaOperacional },
-    { r: `Remuneração dos parceiros de compra (${PREMISSAS.pctParceirosCompra}%)`, v: -parceirosCompra },
     { r: `Imposto — Simples Nacional ${String(PREMISSAS.aliquotaSimples).replace('.', ',')}%`, v: -imposto },
   ];
 

@@ -208,7 +208,7 @@ export default function SystemChecklist() {
           id: 25,
           task: 'Ver planos disponíveis',
           status: 'ready',
-          description: 'Carousel: Visionário (R$5k), Ouro (R$15k), Elite (R$30k)',
+          description: 'Carousel: Elite (R$30k) e Private Galpão (a partir de R$50k)',
           page: 'InvestorDashboard'
         },
         {
