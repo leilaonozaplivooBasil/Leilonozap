@@ -57,13 +57,15 @@ export default function AuctionTestLab() {
 
   useEffect(() => {
     loadTestAuctions();
-    let subscription = null;
+    let cancelar = null;
     try {
-      subscription = Auction.subscribe('*', (payload) => {
+      // 📡 01/10/2026 — `subscribe(callback)`: o primeiro argumento era a string
+      // '*' e, com o tempo real ligado, cada evento quebrava dentro do canal.
+      cancelar = Auction.subscribe((payload) => {
         if ((payload.new?.title?.includes('[TESTE]')) || payload.old) loadTestAuctions();
       });
     } catch (e) {}
-    return () => { if (subscription?.unsubscribe) subscription.unsubscribe(); };
+    return () => { if (typeof cancelar === 'function') cancelar(); };
   }, []);
 
   const handleCreateTest = async () => {

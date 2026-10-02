@@ -15,14 +15,29 @@
 // festa — não é "ao vivo".
 const FINAIS = ['ended', 'sold'];
 
+// 🔄 01/10/2026 — A JANELA DO F5. No segundo final muita gente recarrega a
+// página ("travou?"). A sala abria já encerrada e, pela regra acima, ficava
+// muda — e a pessoa ESTAVA na sala na hora do arremate. Quem abre a sala até
+// 45 s depois do fim vê a festa. Mais que isso continua sendo "chegou depois".
+// O limite de baixo evita o caso do leilão encerrado à mão pelo operador com
+// `end_time` ainda no futuro: aí não há "segundos desde o fim" que façam sentido.
+export const JANELA_DO_F5_S = 45;
+
 /**
  * Deve celebrar agora?
- * @param {{anterior: string|null|undefined, atual: string|null|undefined, jaCelebrou: boolean}} x
+ * @param {{anterior: string|null|undefined, atual: string|null|undefined, jaCelebrou: boolean,
+ *          segundosDesdeOFim?: number|null}} x
+ *   `segundosDesdeOFim` só importa na PRIMEIRA leitura (sem `anterior`): é a janela do F5.
  */
-export function deveCelebrar({ anterior, atual, jaCelebrou }) {
+export function deveCelebrar({ anterior, atual, jaCelebrou, segundosDesdeOFim = null }) {
   if (jaCelebrou) return false;
-  if (anterior !== 'active') return false;
-  return FINAIS.includes(String(atual || ''));
+  const final = FINAIS.includes(String(atual || ''));
+  if (!final) return false;
+  if (anterior === 'active') return true;
+  if (anterior === null || anterior === undefined) {
+    return Number.isFinite(segundosDesdeOFim) && segundosDesdeOFim >= -5 && segundosDesdeOFim <= JANELA_DO_F5_S;
+  }
+  return false;
 }
 
 /** A frase do balão do leiloeiro na fase 4. */

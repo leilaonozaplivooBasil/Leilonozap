@@ -20,6 +20,7 @@ import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
 import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
+import { segundosDesdeOFim } from '@/lib/sincronizacaoDaSala';
 import { deveCelebrar, fraseDoVendido } from '@/lib/festaDoFim';
 import { statusDaCotacao, bloqueioDoFrete, abreModalDeCep } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
@@ -400,7 +401,7 @@ export default function AuctionRoom() {
           if (data?.seconds_remaining > 0) {
             console.warn(`⏱️ [END] Servidor: faltam ${data.seconds_remaining}s. Re-calibrando.`);
             await calibrateServerOffset();
-            await syncAuctionDataOnly();
+            await syncAuctionDataOnly(true);
             return;
           }
           console.warn("⚠️ [END] finalizeAuction sem sucesso:", data?.error);
@@ -414,7 +415,8 @@ export default function AuctionRoom() {
         // Backend indisponível: NÃO inventa resultado no cliente. Re-sincroniza e
         // deixa o próximo ciclo de sync tentar de novo.
         console.error("❌ [END] Servidor não confirmou o arremate. Aguardando novo ciclo.");
-        await syncAuctionDataOnly();
+        // 📡 forçada: o tempo real e o limbo (useAuctionSync) seguem tentando
+        await syncAuctionDataOnly(true);
         return;
       }
 
@@ -465,10 +467,13 @@ export default function AuctionRoom() {
     if (!atual) return;
     const anterior = statusAnteriorRef.current;
     statusAnteriorRef.current = atual;
-    if (deveCelebrar({ anterior, atual, jaCelebrou: celebrouRef.current })) {
+    // 🔄 01/10/2026 — a janela do F5: quem recarregou no segundo final abre a
+    // sala já encerrada e ainda assim estava aqui na hora. Ver festaDoFim.js.
+    const desdeOFim = segundosDesdeOFim(auction?.end_time, getServerSyncedTime() ?? Date.now());
+    if (deveCelebrar({ anterior, atual, jaCelebrou: celebrouRef.current, segundosDesdeOFim: desdeOFim })) {
       celebrarFim({ winner_id: auction?.winner_id, winner_name: auction?.winner_name });
     }
-  }, [auction?.status, auction?.winner_id, auction?.winner_name, celebrarFim]);
+  }, [auction?.status, auction?.winner_id, auction?.winner_name, auction?.end_time, celebrarFim, getServerSyncedTime]);
 
   // Sync hook
   const {
@@ -486,6 +491,7 @@ export default function AuctionRoom() {
     getServerSyncedTime,
     lastOffsetCalibrationRef,
     onEndAuction: endAuction,
+    timeRemaining,
   });
 
   // 📱 PONTO 86 (19/08/2026) — REGRA DE OURO deste projeto (ver

@@ -1,23 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import LeiloeiroAvatar from '@/assets/leiloeiro-avatar.webp';
 
 export default function AuctioneerFloat({ phase, message, onComplete }) {
   const [isVisible, setIsVisible] = useState(true);
+  // 🔴 01/10/2026 — `onComplete` chega como função nova a cada render da sala
+  // (e a sala re-renderiza a cada segundo, pelo cronômetro). Com ele nas
+  // dependências, o temporizador reiniciava a cada tique e o balão nunca
+  // obedecia à duração. Lido por ref: o temporizador só depende da fala.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   useEffect(() => {
-    // Fase 4 (VENDIDO) fica mais tempo
-    const duration = phase === 4 ? 4000 : 5000;
-    
+    // Fala nova REAPARECE, mesmo que a anterior já estivesse se despedindo.
+    // Antes, uma fala que chegasse na janela de meio segundo entre "sumir" e
+    // "avisar que sumiu" era descartada em silêncio — e o "VENDIDO" pode chegar
+    // exatamente aí, quando o relógio do aparelho e o do servidor discordam.
+    setIsVisible(true);
+    const duration = phase === 4 ? 4500 : 5000;
+    let despedida = null;
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(() => {
-        if (onComplete) onComplete();
-      }, 500);
+      despedida = setTimeout(() => { onCompleteRef.current?.(); }, 500);
     }, duration);
 
-    return () => clearTimeout(timer);
-  }, [onComplete, phase, message]);
+    return () => { clearTimeout(timer); if (despedida) clearTimeout(despedida); };
+  }, [phase, message]);
 
   const phaseConfig = {
     1: {

@@ -2,6 +2,8 @@
 // A banca (vite.config.mjs) aponta `@/api/plataformaClient` pra cá, então
 // componentes que chamam rotas/uploads rodam sem rede e a prova enxerga
 // cada chamada em window.__plataformaFalsa.chamadas.
+import { normalizarEventoRealtime } from '@/lib/eventoRealtime';
+
 const estado = { chamadas: [], respostas: {} };
 // entidade → tabela (só o que as bancas do Método usam; o resto ecoa o que recebeu)
 const TABELA_DA_ENTIDADE = { MetodoTarefa: 'metodo_tarefas', MetodoPerfil: 'metodo_perfil', Customer: 'customers', CaptacaoOportunidade: 'captacao_oportunidades', ReuniaoEmpresa: 'reunioes_empresa' };
@@ -62,7 +64,36 @@ export const plataforma = {
       return { id, ...(linha || {}), ...(d || {}) };
     },
     delete: async () => ({}),
+    // 📡 01/10/2026 — tempo real de mentira. A banca emite com
+    // window.__realtimeFalso.emitir('Auction', { eventType: 'UPDATE', new: {...} })
+    // e todo mundo que assinou aquela entidade recebe, no MESMO formato que o
+    // adaptador de verdade entrega (normalizado). O filtro `id=eq.X` /
+    // `auction_id=eq.X` é respeitado, como no servidor.
+    subscribe: (cb, opts = {}) => {
+      if (typeof cb !== 'function') return () => {};
+      const rt = (window.__realtimeFalso ||= { ouvintes: [], emitir: null });
+      const ouvinte = { entidade, cb, opts };
+      rt.ouvintes.push(ouvinte);
+      return () => { rt.ouvintes = rt.ouvintes.filter((o) => o !== ouvinte); };
+    },
   }) }),
   auth: { me: async () => null },
+  // o rastreador de desempenho das páginas chama isto ao montar; na banca, não faz nada
+  analytics: { track: () => {} },
 };
+
+if (typeof window !== 'undefined') {
+  const rt = (window.__realtimeFalso ||= { ouvintes: [], emitir: null });
+  rt.emitir = (entidade, payload) => {
+    const ev = normalizarEventoRealtime(payload);
+    for (const o of [...rt.ouvintes]) {
+      if (o.entidade !== entidade) continue;
+      const evento = String(o.opts?.event || '*').toUpperCase();
+      if (evento !== '*' && evento !== String(payload.eventType || '').toUpperCase()) continue;
+      const m = /^(\w+)=eq\.(.+)$/.exec(o.opts?.filter || '');
+      if (m && String(ev.data?.[m[1]]) !== m[2]) continue;
+      o.cb(ev);
+    }
+  };
+}
 export const supabase = null;
