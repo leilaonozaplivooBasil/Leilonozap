@@ -54,7 +54,8 @@ export default function MiniCanvasMobile({ sections, currentPageName, onNavigate
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-6">
+      {/* 📱 DIR-199 — overscroll-contain: chegar ao fim da lista não arrasta a página de trás (iPhone). */}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-6">
         {termo ? (
           resultados.length === 0 ? (
             <p className="px-1 py-8 text-center text-[13px] text-gray-500">

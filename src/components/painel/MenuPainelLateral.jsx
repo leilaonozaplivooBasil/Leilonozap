@@ -71,7 +71,8 @@ export default function MenuPainelLateral({ user, activeTab, onTab, menuOpen = f
   return (
     <>
       {menuOpen && <div className="md:hidden fixed inset-0 bg-black/60 z-40" onClick={onClose} />}
-      <aside className={`bg-gray-950 border-r border-gray-800 p-4 w-72 md:w-64 overflow-y-auto fixed md:sticky top-0 left-0 h-full md:h-auto md:min-h-screen md:self-start z-50 transition-transform duration-200 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
+      {/* 📱 DIR-199 — no celular a gaveta é fixa no topo da tela: recua pela área segura do iPhone (nz-tela-cheia), senão o X de fechar fica debaixo do relógio. */}
+      <aside className={`nz-tela-cheia bg-gray-950 border-r border-gray-800 p-4 w-72 md:w-64 overflow-y-auto overscroll-contain fixed md:sticky top-0 left-0 h-full md:h-auto md:min-h-screen md:self-start z-50 transition-transform duration-200 ${menuOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
         <div className="mb-6 px-2 flex items-start justify-between">
           <div className="min-w-0">
             <div className="text-xs text-gray-500 uppercase tracking-wide">Painel da Loja</div>

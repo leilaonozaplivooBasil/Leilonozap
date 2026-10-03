@@ -1,3 +1,17 @@
+## 📱 DIR-199 — Mapa do painel no iPhone: "Fechar" nunca mais debaixo do relógio (03/10/2026)
+
+**Dono, com vídeo:** "os botões de fechar estão subindo muito e não está aparecendo; essas coisas não podem acontecer de jeito nenhum."
+
+**O que o vídeo mostra (18 s, quadro a quadro):** no mapa do painel (Visão Geral em blocos), a barra "Visão Geral · Fechar" ora aparece abaixo do relógio do iPhone, ora some por baixo dele, alternando enquanto a pessoa mexe na tela.
+
+**Causa:** o modal tinha altura `h-screen` (100vh) **centralizado** numa camada `fixed inset-0` com padding. No iPhone, 100vh é maior que a área visível: o modal transbordava para cima e para baixo em partes iguais, e o transbordo mudava conforme a barra do navegador recolhia ou o toque puxava a tela. E não havia recuo pela área segura do entalhe.
+
+**Correção (`MiniCanvasOverview.jsx`, `MiniCanvasMobile.jsx`, `MenuPainelLateral.jsx`):** em tela cheia, a camada é uma coluna que recua pela área segura (`nz-tela-cheia`) e o modal preenche o que sobra (`flex-1 min-h-0`), sem 100vh; fora da tela cheia, `95dvh`. A página de trás fica travada enquanto o mapa está aberto, e a lista usa `overscroll-contain` para não arrastar o documento. A gaveta lateral do painel no celular (`top-0`) ganhou o mesmo recuo: o X de fechar ficava debaixo do relógio.
+
+**Varredura:** nenhum outro overlay do app usa `h-screen`/100vh em camada fixa; os painéis de tela cheia de DIR-189 já recuam pela área segura.
+
+**Prova:** iPhone emulado (390×844 e 390×700, entalhe de 47 px): "Fechar" a 58 px do topo nas duas alturas, e no mesmo lugar depois de rolar o documento. `tests/mapaDoPainelNoIphone.test.mjs` (4), suíte completa, lint 0 erros, build.
+
 ## 🧾 DIR-198 — Segurança real no depósito contestado: comissão cortada, fila de ações com rastro, pendência fecha com motivo (03/10/2026)
 
 **Dono:** "faz o que é o certo; tira a comissão de quem indicou (o João); segue essas regras pro futuro e organiza o passado. Precisamos ter segurança real nisso."

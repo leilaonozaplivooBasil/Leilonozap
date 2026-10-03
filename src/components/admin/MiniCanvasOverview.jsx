@@ -204,11 +204,27 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     if (e.target === e.currentTarget) handleClose();
   }, [handleClose]);
 
+  // 📱 DIR-199 (03/10/2026) — enquanto o mapa está aberto, a página de trás não rola.
+  // No iPhone, rolar a lista até o fim "puxava" o documento inteiro e a barra com
+  // "Fechar" subia junto, para baixo do relógio.
+  useEffect(() => {
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, []);
+
   return (
     <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 ${
-        closing ? "animate-out fade-out duration-180" : "animate-in fade-in duration-200"
-      }`}
+      // 📱 DIR-199 — vídeo do dono: a barra "Visão Geral · Fechar" ora aparecia abaixo do
+      // relógio do iPhone, ora sumia por baixo dele. Causa: o modal tinha altura 100vh
+      // (h-screen) CENTRALIZADO numa camada com padding; no iPhone 100vh é maior que a área
+      // visível, o modal transbordava para cima e para baixo em partes iguais, e o
+      // transbordo mudava conforme a barra do navegador recolhia ou o toque puxava a tela.
+      // Agora: em tela cheia a camada é uma coluna que recua pela área segura (nz-tela-cheia)
+      // e o modal preenche o que sobra (flex-1), sem 100vh. Fora da tela cheia, 95dvh.
+      className={`fixed inset-0 z-[200] flex flex-col nz-tela-cheia ${
+        isFullscreen ? "" : "items-center justify-center p-3 sm:p-6"
+      } ${closing ? "animate-out fade-out duration-180" : "animate-in fade-in duration-200"}`}
       onClick={onBackdropClick}
       style={{
         background: "rgba(0,0,0,0.45)",
@@ -218,7 +234,7 @@ export default function MiniCanvasOverview({ onClose, currentPageName }) {
     >
       {/* Modal container */}
       <div
-        className={`relative ${isFullscreen ? "w-screen h-screen max-w-none max-h-none rounded-none" : "w-[95vw] h-[95vh] max-w-none max-h-none rounded-2xl"} overflow-hidden flex flex-col ${
+        className={`relative ${isFullscreen ? "w-full flex-1 min-h-0 max-w-none max-h-none rounded-none" : "w-[95vw] h-[95dvh] max-w-none max-h-none rounded-2xl"} overflow-hidden flex flex-col ${
           closing ? "animate-out zoom-out-95 duration-180" : "animate-in zoom-in-95 duration-200"
         }`}
         style={{
