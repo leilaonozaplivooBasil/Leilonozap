@@ -14,7 +14,7 @@
 
 **Banco (migração `20261003210000`, aplicada em produção em partes pelo MCP):** `catalog_sales.gateway jsonb` + índice; `gateway_eventos` (só service_role); `bloquear_saldo_contestado` / `liberar_saldo_contestado` (idempotentes pela última linha do extrato; um bloqueio e uma liberação por venda); `painel_conciliacao()`.
 
-**Pendente do dono:** o cron de 30 em 30 minutos em `vercel.json` (`/api/functions/conciliarMercadoPago`, `*/30 * * * *`) não foi adicionado por mim: é mudança de infraestrutura compartilhada. A rota já aceita o `CRON_SECRET`. Enquanto isso, o botão e o webhook cobrem.
+**Cron (dono: "adiciona e deixa tudo perfeito"):** `vercel.json` ganha `/api/functions/conciliarMercadoPago` a cada 30 min e `maxDuration` 60 s para a rota; o cron confere até 150 pagamentos por rodada (orçamento de 50 s), 45 dias para trás, nunca conferido primeiro. Rede de segurança caso um aviso do webhook se perca.
 
 **Prova:** `tests/conciliacaoMercadoPago.test.mjs` (7), suíte completa, lint 0 erros, build.
 

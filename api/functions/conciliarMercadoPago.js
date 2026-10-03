@@ -28,7 +28,8 @@ const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABAS
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
 const PAGOS = ['paid', 'pago', 'entregue', 'shipped', 'delivered', 'preparando', 'saiu_entrega', 'confirmado', 'concluido'];
-const ORCAMENTO_MS = 8500; // a function da Vercel tem 10 s; devolve "restantes" e a tela chama de novo
+// A function tem maxDuration 60 s (vercel.json). Para em 50 s, devolve "restantes" e a tela (ou o próximo cron) continua.
+const ORCAMENTO_MS = 50000;
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -96,7 +97,7 @@ export default async function handler(req, res) {
       if (!ator || !['admin', 'super_admin'].includes(ator.role)) return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
     }
 
-    const lote = Math.max(1, Math.min(60, parseInt(body?.lote, 10) || (ehCron ? 40 : 25)));
+    const lote = Math.max(1, Math.min(200, parseInt(body?.lote, 10) || (ehCron ? 150 : 25)));
     const tudo = body?.tudo === true; // admin: reconferir tudo, mesmo o já conferido hoje
     const sales_ids = Array.isArray(body?.sale_ids) ? body.sale_ids.map(String).slice(0, 60) : null;
 
