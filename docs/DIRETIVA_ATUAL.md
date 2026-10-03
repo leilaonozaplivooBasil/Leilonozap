@@ -1,3 +1,20 @@
+## 🧾 DIR-198 — Segurança real no depósito contestado: comissão cortada, fila de ações com rastro, pendência fecha com motivo (03/10/2026)
+
+**Dono:** "faz o que é o certo; tira a comissão de quem indicou (o João); segue essas regras pro futuro e organiza o passado. Precisamos ter segurança real nisso."
+
+**O que o gateway revelou:** os 4 PIX do Diogo foram devolvidos ao pagador pelo próprio Mercado Pago em 02/10 18h21, por "suspeita de fraude" (devolução administrativa, escondida do pagamento: status segue "approved" e devolvido zero; só `/refunds` mostra). O indicador, João Vitor Paim, tinha R$ 330 de comissão de indicação a liberar em 09/10.
+
+**Regras (migração `20261004000000`, aplicada em produção):**
+
+- `estornar_comissoes_do_deposito`: cancela a_liberar, estorna disponivel (sai do saldo de comissão, nunca negativo). `bloquear_saldo_contestado` chama isso SEMPRE, mesmo se já bloqueado: todo caminho que trava saldo corta a comissão.
+- `gateway_acoes`: fila de ações (devolver pelo gateway com chave de idempotência, marcar resolvida), registrada antes de acontecer, executada pelo botão na hora ou pelo cron (até 3 tentativas), resultado na linha e evento em `gateway_eventos`.
+- `conciliacao_resolvida_em/por/motivo`: pendência tratada sai da lista com rastro. "Pago lá, cancelado aqui" com devolução na carteira fecha sozinha.
+- Rota `resolverPendencia` (admin, motivo obrigatório) e botões "Devolver pelo Mercado Pago" / "Marcar como tratada" em cada pendência.
+
+**Passado organizado (feito à parte):** comissões do João nas 4 vendas do Diogo canceladas (R$ 330, estavam a liberar). Fila: devolução de 2× R$ 2 do Gabriel pelo gateway; "resolvida" para Luiz (R$ 47,62) e Sophia (R$ 30,48), compras internas. Ronilson fecha sozinho. Conferido: nenhuma outra comissão de indicação sobre depósito cujo dinheiro saiu.
+
+**Prova:** `tests/segurancaDoDepositoContestado.test.mjs` (4), suíte completa, lint 0 erros, build.
+
 ## 🧾 DIR-197 — Auditoria caso a caso: cancelamento com rastro, painel pelo valor do gateway, conferência sem mexer na data (03/10/2026)
 
 **Dono:** "confere, não podemos ter nenhum achismo, quero entender tudo" e, depois do relatório, "pode fazer tudo que precisa fazer".

@@ -159,6 +159,7 @@ export default function PainelInvestidor() {
   const [campoMapa, setCampoMapa] = useState('n');
   const [conferindo, setConferindo] = useState(null); // 🏦 DIR-195 — progresso da conferência no gateway
   const [modalDepositos, setModalDepositos] = useState(null); // 🧾 DIR-196 — null | 'carteiras' | 'depositos'
+  const [resolvendo, setResolvendo] = useState(null); // 🧾 DIR-198 — sale_id da pendência em ação
   const timer = useRef(null);
 
   const carregar = useCallback(async (silencioso = false, manual = false) => {
@@ -214,6 +215,32 @@ export default function PainelInvestidor() {
       toast.error('Sem resposta do servidor. Os últimos números continuam na tela.');
     } finally {
       setConferindo(null);
+      carregar(true);
+    }
+  }, [carregar]);
+
+  // 🧾 DIR-198 — resolver uma pendência: devolver pelo gateway ou marcar tratada, sempre com motivo e rastro.
+  const resolverPendencia = useCallback(async (x, modo) => {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { user = null; }
+    if (!user?.id) return;
+    const valor = Number(x.gateway?.valor ?? x.valor) || 0;
+    const pergunta = modo === 'devolver'
+      ? `Devolver ${moeda(valor)} ao pagador pelo Mercado Pago (${x.nome})? Escreva o motivo; ele fica no histórico.`
+      : `Marcar a pendência de ${x.nome} (${moeda(valor)}) como tratada. Escreva o motivo; ele fica no histórico.`;
+    const motivo = window.prompt(pergunta, '');
+    if (motivo === null) return;
+    if (String(motivo).trim().length < 5) { toast.error('Escreva o motivo com pelo menos 5 letras.'); return; }
+    setResolvendo(x.sale_id);
+    try {
+      const r = await plataforma.functions.invoke('resolverPendencia', { user_id: user.id, sale_id: x.sale_id, modo, motivo: String(motivo).trim() });
+      const d = r?.data || r;
+      if (d?.success) toast.success(modo === 'devolver' ? `Devolvido ${moeda(d.valor)} pelo Mercado Pago.` : 'Pendência marcada como tratada.', { duration: 4000 });
+      else toast.error(d?.error || 'Não foi possível concluir.');
+    } catch {
+      toast.error('Sem resposta do servidor.');
+    } finally {
+      setResolvendo(null);
       carregar(true);
     }
   }, [carregar]);
@@ -412,6 +439,19 @@ export default function PainelInvestidor() {
                               {tel && <a href={`tel:+55${tel}`} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-gray-200 hover:bg-white/10"><Phone className="w-3 h-3" /> {x.telefone}</a>}
                               {tel && <a href={`https://wa.me/55${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-emerald-200 hover:bg-emerald-400/20"><MessageCircle className="w-3 h-3" /> WhatsApp</a>}
                               {x.email && <span className="text-gray-500 truncate max-w-[14rem]">{x.email}</span>}
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs" data-teste="pendencia-acoes">
+                              {x.acao_pendente ? (
+                                <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-sky-200">ação "{x.acao_pendente.acao}" aguardando o próximo ciclo</span>
+                              ) : (
+                                <>
+                                  {x.divergencia !== 'dinheiro_saiu' && x.situacao !== 'devolvido' && (
+                                    <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'devolver')} className="rounded-full border border-red-400/40 bg-red-400/10 px-2.5 py-1 font-bold text-red-200 hover:bg-red-400/20 disabled:opacity-60" data-teste="botao-devolver-gateway">Devolver pelo Mercado Pago</button>
+                                  )}
+                                  <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'resolver')} className="rounded-full border border-white/15 px-2.5 py-1 font-bold text-gray-200 hover:bg-white/10 disabled:opacity-60" data-teste="botao-marcar-resolvida">Marcar como tratada</button>
+                                </>
+                              )}
+                              {resolvendo === x.sale_id && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />}
                             </div>
                           </li>
                         );
