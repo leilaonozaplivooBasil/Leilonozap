@@ -1,3 +1,23 @@
+## 🏦 DIR-195 — Conciliação com o Mercado Pago: dinheiro que entra, sai e fica, com quem ligar (03/10/2026)
+
+**Dono, com o extrato do Mercado Pago na mão:** "tem cliente que depositou e depois veio 'cancelamento de liberação de dinheiro'. Preciso de uma auditoria muito grave: o dinheiro que entra, sai e fica tem que bater real, em tempo real, webhook, com a lista dos clientes que pediram chargeback para a gente entrar em contato. Preciso ser uma extensão do Mercado Pago com uma comunicação mais clara." E: "quero seguir suas decisões de forma sênior."
+
+**O caso:** Diogo dos Santos da Costa, conta de 11/09, 4 PIX em 02/10 (R$ 1.500, 800, 500, 500 = R$ 3.300). Às 18h21 do mesmo dia o Mercado Pago cancelou a liberação dos 4 (extrato: R$ 1.485,15 + 792,08 + 495,05 + 495,05). O webhook recebeu os 4 avisos (log da Vercel às 21:21Z), consultou os pagamentos, viu "approved", respondeu `already_paid` e seguiu. O dinheiro saiu da conta da empresa; os R$ 3.300 seguiam disponíveis na carteira dele, sem nenhum gasto ainda.
+
+**Decisões (tomadas e executadas):**
+
+1. **Travou primeiro.** `bloquear_saldo_contestado` nos 4 depósitos do Diogo às 17h59 de 03/10: saldo R$ 3.300 → R$ 0, quatro linhas no `wallet_ledger` (tipo `bloqueio_contestacao`), reversível por `liberar_saldo_contestado`. Nenhum status de venda mudou.
+2. **Régua única** `api/_lib/conferenciaMercadoPago.js`: lê o pagamento do Mercado Pago e resume em uma palavra (`liberado`, `retido`, `devolvido`, `devolvido_parcial`, `chargeback`, `disputa`, `cancelado`, `pendente`, `desconhecido`). Olha `status`, `money_release_status` e `transaction_amount_refunded`, que o webhook nunca olhava.
+3. **Webhook (`mpWebhook.js`):** todo aviso vira linha em `gateway_eventos` (tópico, id, formato, assinatura, status, situação, o que foi feito), mesmo quando a rota falha. O que o gateway diz é guardado em `catalog_sales.gateway` ANTES de qualquer decisão. Depósito pago cujo dinheiro saiu → saldo bloqueado na hora. Aviso de chargeback/reclamação (que vem com outro id) é resolvido até o pagamento em vez de descartado.
+4. **Auditoria `conciliarMercadoPago.js`:** admin (botão "Conferir agora" no Painel do Investidor, em lotes de 25 até acabar) ou cron (`Bearer CRON_SECRET`). Nunca conferido primeiro, depois o mais antigo. Só confere e bloqueia; nunca paga, credita, devolve ou cancela.
+5. **Painel do Investidor, seção "Conciliação com o Mercado Pago":** Bate / Dinheiro saiu / Pago lá, cancelado aqui / Pago aqui, sem pagamento lá; lista de pendências com nome, valor, situação no gateway, status aqui, saldo bloqueado, telefone (ligar e WhatsApp) e e-mail; distribuição por situação; saúde do webhook (avisos nas últimas 24 h e os últimos 6).
+
+**Banco (migração `20261003210000`, aplicada em produção em partes pelo MCP):** `catalog_sales.gateway jsonb` + índice; `gateway_eventos` (só service_role); `bloquear_saldo_contestado` / `liberar_saldo_contestado` (idempotentes pela última linha do extrato; um bloqueio e uma liberação por venda); `painel_conciliacao()`.
+
+**Pendente do dono:** o cron de 30 em 30 minutos em `vercel.json` (`/api/functions/conciliarMercadoPago`, `*/30 * * * *`) não foi adicionado por mim: é mudança de infraestrutura compartilhada. A rota já aceita o `CRON_SECRET`. Enquanto isso, o botão e o webhook cobrem.
+
+**Prova:** `tests/conciliacaoMercadoPago.test.mjs` (7), suíte completa, lint 0 erros, build.
+
 ## 🎂 DIR-194 — Data de nascimento no cadastro, opcional e leve (03/10/2026)
 
 **Dono:** "pode colocar a data de nascimento no cadastro, mas sem ferir, sem restringir e sem criar ainda mais bloqueio na entrada — isso precisa ser bem leve."

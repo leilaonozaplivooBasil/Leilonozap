@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, Users, Wallet, PiggyBank, RefreshCw, Gavel, ShoppingBag, MapPin, Activity, Loader2, ArrowLeft, Landmark, UserRound, Megaphone, Cake,
+  ShieldAlert, ShieldCheck, Phone, MessageCircle, Search,
 } from 'lucide-react';
 
 // 📈 PAINEL DO INVESTIDOR — DIR-190 (30/09/2026)
@@ -59,6 +60,20 @@ const CANAIS = {
   'Indicação de membro': '#34D399', Direto: '#F5C451', 'Outros sites': '#A78BFA', 'Sem registro': '#4B5563',
 };
 // 🎂 DIR-194 — faixas etárias (idade em anos completos hoje), na ordem do banco.
+// 🏦 DIR-195 — conciliação com o Mercado Pago: o que o gateway diz, em uma palavra.
+const SITUACAO = {
+  liberado: { rotulo: 'Liberado', cor: '#34D399' }, retido: { rotulo: 'Retido pelo gateway', cor: '#F87171' },
+  devolvido: { rotulo: 'Devolvido ao pagador', cor: '#F87171' }, devolvido_parcial: { rotulo: 'Devolvido em parte', cor: '#FB923C' },
+  chargeback: { rotulo: 'Contestado (chargeback)', cor: '#F87171' }, disputa: { rotulo: 'Em disputa', cor: '#FBBF24' },
+  cancelado: { rotulo: 'Cancelado no gateway', cor: '#6B7280' }, pendente: { rotulo: 'Pendente no gateway', cor: '#9CA3AF' },
+  desconhecido: { rotulo: 'Não reconhecido', cor: '#6B7280' }, nao_conferido: { rotulo: 'Ainda não conferido', cor: '#4B5563' },
+};
+const DIVERGENCIA = {
+  dinheiro_saiu: { rotulo: 'Dinheiro saiu no gateway, mas consta pago aqui', cor: 'text-red-300' },
+  pago_nao_creditado: { rotulo: 'Pago no gateway, cancelado aqui', cor: 'text-amber-300' },
+  pago_sem_pagamento: { rotulo: 'Pago aqui, sem pagamento no gateway', cor: 'text-red-300' },
+};
+const soDigitos = (v) => String(v || '').replace(/\D/g, '');
 const FAIXAS = { ate_17: 'até 17', '18_24': '18 a 24', '25_34': '25 a 34', '35_44': '35 a 44', '45_54': '45 a 54', '55_64': '55 a 64', '65_mais': '65 ou mais' };
 const CORES_FAIXAS = { ate_17: '#A78BFA', '18_24': '#38BDF8', '25_34': '#34D399', '35_44': '#FBBF24', '45_54': '#FB923C', '55_64': '#F87171', '65_mais': '#E879F9' };
 // ⏱️ DIR-192 (30/09/2026) — dono: "os números precisam atualizar em tempo real e o
@@ -138,6 +153,7 @@ export default function PainelInvestidor() {
   const [erro, setErro] = useState('');
   const [ufSelecionada, setUfSelecionada] = useState(null);
   const [campoMapa, setCampoMapa] = useState('n');
+  const [conferindo, setConferindo] = useState(null); // 🏦 DIR-195 — progresso da conferência no gateway
   const timer = useRef(null);
 
   const carregar = useCallback(async (silencioso = false, manual = false) => {
@@ -166,6 +182,33 @@ export default function PainelInvestidor() {
       setAtualizando(false);
     }
   }, [dias, painel]);
+
+  // 🏦 DIR-195 — "Conferir agora": consulta o Mercado Pago pagamento por pagamento, em lotes, até acabar.
+  const conferirAgora = useCallback(async () => {
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { user = null; }
+    if (!user?.id) return;
+    setConferindo({ conferidos: 0, restantes: null });
+    let total = 0; let bloqueados = 0;
+    try {
+      for (let i = 0; i < 12; i++) {
+        const r = await plataforma.functions.invoke('conciliarMercadoPago', { user_id: user.id, lote: 25 });
+        const d = r?.data || r;
+        if (!d?.success) { toast.error(d?.error || 'Não foi possível conferir agora.'); break; }
+        total += d.conferidos || 0;
+        bloqueados += (d.divergencias || []).filter((x) => x?.bloqueio?.bloqueado > 0 && !x.bloqueio.ja_bloqueado).length;
+        setConferindo({ conferidos: total, restantes: d.restantes });
+        if (!d.restantes || !d.conferidos) break;
+      }
+      if (total > 0) toast.success(`${total} pagamentos conferidos no Mercado Pago${bloqueados ? ` · ${bloqueados} saldo(s) bloqueado(s)` : ''}`, { duration: 4000 });
+      else toast.success('Tudo já conferido nos últimos 20 minutos.', { duration: 2500 });
+    } catch {
+      toast.error('Sem resposta do servidor. Os últimos números continuam na tela.');
+    } finally {
+      setConferindo(null);
+      carregar(true);
+    }
+  }, [carregar]);
 
   useEffect(() => { carregar(); }, [dias]); // eslint-disable-line react-hooks/exhaustive-deps
   // ⏱️ ao vivo: recalcula a cada INTERVALO_SEG e ao voltar para a aba
@@ -230,6 +273,12 @@ export default function PainelInvestidor() {
   const totalGenero = fatiasGenero.reduce((s, f) => s + f.valor, 0);
   const canais = (perfil?.canais?.lista || []).map((c) => ({ nome: c.canal, valor: dias === 0 ? c.n : c.periodo, total: c.n, cor: CANAIS[c.canal] || '#9CA3AF' })).filter((c) => c.valor > 0).sort((a, b) => b.valor - a.valor);
   const totalCanais = canais.reduce((s, c) => s + c.valor, 0);
+  // 🏦 DIR-195 — conciliação
+  const conc = p?.conciliacao || null;
+  const divg = conc?.divergencias || {};
+  const pendencias = conc?.pendencias || [];
+  const porSituacao = Object.entries(conc?.por_situacao || {}).map(([k, v]) => ({ chave: k, rotulo: SITUACAO[k]?.rotulo || k, cor: SITUACAO[k]?.cor || '#9CA3AF', n: v.n, valor: Number(v.valor) || 0 })).sort((a, b) => b.valor - a.valor);
+  const totalSituacao = porSituacao.reduce((s, x) => s + x.valor, 0);
   // 🎂 DIR-194 — faixa etária só com data INFORMADA (campo opcional no cadastro e no perfil). Nada se estima.
   const idade = perfil?.idade || null;
   const fatiasIdade = (idade?.faixas || []).map((f) => ({ nome: FAIXAS[f.faixa] || f.faixa, valor: dias === 0 ? f.n : f.periodo, cor: CORES_FAIXAS[f.faixa] || '#9CA3AF' })).filter((f) => f.valor > 0);
@@ -305,6 +354,78 @@ export default function PainelInvestidor() {
               <Kpi icon={Wallet} rotulo="Depositado nas carteiras" valor={moeda(fluxo.depositado)} detalhe={`${fluxo.depositantes || 0} pessoas depositaram · tudo pago no gateway`} teste="kpi-depositado" />
               <Kpi icon={PiggyBank} rotulo="Parado nas carteiras" valor={moeda(fluxo.parado)} detalhe={`${pct(fluxo.parado, fluxo.depositado)}% do depositado, esperando produto`} cor="text-yellow-200" teste="kpi-parado" />
             </div>
+
+            {/* 🏦 DIR-195 — Conciliação com o Mercado Pago */}
+            <Secao icon={pendencias.length ? ShieldAlert : ShieldCheck} titulo="Conciliação com o Mercado Pago" sub={conc?.conferencia ? `${conc.conferencia.conferidos || 0} de ${conc.conferencia.total || 0} pagamentos conferidos no gateway${conc.conferencia.ultima ? ` · última conferência às ${hora(conc.conferencia.ultima)}` : ''}` : 'sem dados de conferência'} teste="investidor-conciliacao">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <p className="text-sm text-gray-300 max-w-xl">Pagamento por pagamento, o que o Mercado Pago diz contra o que o nosso banco diz. Dinheiro retido, devolvido ou contestado em depósito trava o saldo na hora e entra na lista para contato.</p>
+                <button type="button" onClick={conferirAgora} disabled={!!conferindo} data-teste="botao-conferir-gateway"
+                  className="inline-flex items-center gap-2 rounded-xl border border-sky-400/40 bg-sky-400/10 px-4 py-2 text-sm font-bold text-sky-200 hover:bg-sky-400/20 disabled:opacity-60">
+                  {conferindo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {conferindo ? `Conferindo… ${conferindo.conferidos}${conferindo.restantes != null ? ` · faltam ${conferindo.restantes}` : ''}` : 'Conferir agora no Mercado Pago'}
+                </button>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4" data-teste="conciliacao-kpis">
+                <Kpi icon={ShieldCheck} rotulo="Bate" valor={(divg.ok?.n || 0).toLocaleString('pt-BR')} detalhe={`${moeda(divg.ok?.valor)} · gateway e banco dizem o mesmo`} cor="text-emerald-300" teste="kpi-bate" />
+                <Kpi icon={ShieldAlert} rotulo="Dinheiro saiu" valor={(divg.dinheiro_saiu?.n || 0).toLocaleString('pt-BR')} detalhe={`${moeda(divg.dinheiro_saiu?.valor)} · retido, devolvido ou contestado`} cor={divg.dinheiro_saiu?.n ? 'text-red-300' : 'text-white'} teste="kpi-dinheiro-saiu" />
+                <Kpi icon={ShieldAlert} rotulo="Pago lá, cancelado aqui" valor={(divg.pago_nao_creditado?.n || 0).toLocaleString('pt-BR')} detalhe={`${moeda(divg.pago_nao_creditado?.valor)} · entrou e não foi creditado`} cor={divg.pago_nao_creditado?.n ? 'text-amber-300' : 'text-white'} teste="kpi-nao-creditado" />
+                <Kpi icon={ShieldAlert} rotulo="Pago aqui, sem pagamento lá" valor={(divg.pago_sem_pagamento?.n || 0).toLocaleString('pt-BR')} detalhe={`${moeda(divg.pago_sem_pagamento?.valor)} · ${divg.nao_conferido?.n || 0} ainda não conferidos`} cor={divg.pago_sem_pagamento?.n ? 'text-red-300' : 'text-white'} teste="kpi-sem-pagamento" />
+              </div>
+              <div className="grid lg:grid-cols-3 gap-5">
+                <div className="lg:col-span-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Pendências · quem ligar agora</p>
+                  {pendencias.length === 0 ? (
+                    <div className="rounded-xl border border-dashed border-emerald-400/30 bg-emerald-400/5 p-4 text-sm text-emerald-200" data-teste="conciliacao-sem-pendencias">Nenhuma pendência: tudo o que o Mercado Pago diz bate com o nosso banco.</div>
+                  ) : (
+                    <ul className="space-y-2" data-teste="conciliacao-pendencias">
+                      {pendencias.map((x) => {
+                        const tel = soDigitos(x.telefone);
+                        const sit = SITUACAO[x.situacao] || { rotulo: x.situacao, cor: '#9CA3AF' };
+                        const div = DIVERGENCIA[x.divergencia] || { rotulo: x.divergencia, cor: 'text-gray-300' };
+                        return (
+                          <li key={x.sale_id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-bold text-white truncate">{x.nome || 'Sem nome'} <span className="text-xs font-medium text-gray-500">· {x.kind === 'wallet_deposit' ? 'depósito' : x.kind}</span></p>
+                                <p className={`text-xs ${div.cor}`}>{div.rotulo}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="tabular-nums font-black text-white">{moeda(x.valor)}</p>
+                                <p className="text-[11px] text-gray-500">{new Date(x.quando).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} · pagamento {x.payment_id}</p>
+                              </div>
+                            </div>
+                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-0.5 text-gray-200"><span className="inline-block w-2 h-2 rounded-full" style={{ background: sit.cor }} /> {sit.rotulo}</span>
+                              <span className="rounded-full border border-white/10 px-2 py-0.5 text-gray-400">aqui: {x.status}</span>
+                              {x.bloqueado > 0 && <span className="rounded-full border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-red-200">saldo bloqueado {moeda(x.bloqueado)}</span>}
+                              {x.kind === 'wallet_deposit' && x.divergencia === 'dinheiro_saiu' && !(x.bloqueado > 0) && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-amber-200">saldo disponível {moeda(x.saldo_disponivel)}</span>}
+                              {tel && <a href={`tel:+55${tel}`} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-gray-200 hover:bg-white/10"><Phone className="w-3 h-3" /> {x.telefone}</a>}
+                              {tel && <a href={`https://wa.me/55${tel}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-emerald-200 hover:bg-emerald-400/20"><MessageCircle className="w-3 h-3" /> WhatsApp</a>}
+                              {x.email && <span className="text-gray-500 truncate max-w-[14rem]">{x.email}</span>}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">O que o gateway diz · por situação</p>
+                    {porSituacao.length ? <BarrasHorizontais itens={porSituacao} total={totalSituacao} /> : <p className="text-sm text-gray-500">Nada conferido ainda. Toque em "Conferir agora".</p>}
+                  </div>
+                  <div data-teste="conciliacao-webhook">
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">Avisos do gateway (webhook)</p>
+                    <p className="text-sm text-gray-200"><span className="font-bold text-white">{conc?.eventos?.ultimas_24h || 0}</span> nas últimas 24 h{conc?.eventos?.ultimo ? ` · último às ${hora(conc.eventos.ultimo)}` : ' · nenhum registrado ainda'}</p>
+                    <ul className="mt-1.5 space-y-1 text-xs text-gray-400">
+                      {(conc?.eventos?.ultimos || []).slice(0, 6).map((e, i) => (
+                        <li key={`${e.quando}-${i}`} className="flex items-center justify-between gap-2"><span className="truncate">{hora(e.quando)} · {e.topico || 'aviso'} · {SITUACAO[e.situacao]?.rotulo || e.status || '—'}</span><span className={`shrink-0 ${e.resultado === 'bloqueado' ? 'text-red-300 font-bold' : 'text-gray-500'}`}>{e.resultado || ''}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </Secao>
 
             <div className="grid lg:grid-cols-2 gap-5">
               {/* Entrada por área */}
