@@ -39,6 +39,7 @@
 //   único jeito de isto funcionar para cliente comum.
 
 import { exigirSessao } from '../_lib/sessao.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,6 +62,8 @@ const MEUS_CAMPOS = [
   'display_first_name', 'display_last_name',
   'address_street', 'address_number', 'address_complement',
   'address_neighborhood', 'address_city', 'address_state', 'address_zip_code',
+  // 🎂 03/10/2026 (DIR-194) — data de nascimento, opcional; a pessoa pode preencher ou apagar quando quiser.
+  'birth_date',
 ];
 
 export default async function handler(req, res) {
@@ -112,6 +115,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: 'nada_para_salvar', campos_recusados: recusados });
     }
 
+    // 🎂 Data de nascimento: só entra o que é data de verdade ('AAAA-MM-DD'); o resto
+    // vira null (limpa o campo) — nunca recusa o salvamento por causa dela.
+    if ('birth_date' in mudancas) mudancas.birth_date = nascimentoISO(mudancas.birth_date);
     // CEP sempre só dígitos — é assim que o resto do sistema lê.
     if (typeof mudancas.address_zip_code === 'string') {
       mudancas.address_zip_code = mudancas.address_zip_code.replace(/\D/g, '');

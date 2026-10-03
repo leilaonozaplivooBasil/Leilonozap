@@ -15,6 +15,7 @@ import { useSectionTracking, trackLead } from '@/lib/tracking';
 import { PIXEL_LEILOES } from '@/lib/metaPixel';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 import { telefoneValido } from '@/lib/telefoneBR';
+import { mascaraData, nascimentoISO } from '@/lib/dataDeNascimento';
 import { garantirScriptGoogle } from '@/lib/googleLogin';
 
 const AppUser = plataforma.entities.AppUser;
@@ -25,6 +26,7 @@ export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [nascimento, setNascimento] = useState(''); // 🎂 DIR-194 — opcional
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [addressStreet, setAddressStreet] = useState('');
@@ -317,6 +319,7 @@ export default function Register() {
         display_last_name: lastName || null,
         email: normalizedEmail,
         phone: phoneDigits,
+        birth_date: nascimentoISO(nascimento), // opcional: inválido vira null, nunca trava
         cpf: cpfDigits,
         password: password,
         address_street: addressStreet,
@@ -444,6 +447,19 @@ export default function Register() {
                   {dup.phone && (
                     <p className="mt-1 text-xs text-red-400">{dupMsg.phone || 'Telefone já cadastrado'}</p>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="nascimento" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Data de nascimento <span className="opacity-60 font-normal">(opcional)</span></Label>
+                  <Input
+                    id="nascimento"
+                    inputMode="numeric"
+                    value={nascimento}
+                    onChange={(e) => setNascimento(mascaraData(e.target.value))}
+                    placeholder="dd/mm/aaaa"
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
                 </div>
 
                 <div>

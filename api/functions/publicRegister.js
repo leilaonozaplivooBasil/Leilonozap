@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { emitirSessao } from '../_lib/sessao.js';
 import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
 import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
 import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -115,6 +116,8 @@ export default async function handler(req, res) {
       referred_by_id, referral_code, terms_accepted: true,
       // 📣 25/09 — de onde a pessoa veio (utm/fbclid), pra medir o Meta Ads
       origem_trafego: sanearOrigem(body?.origem_trafego),
+      // 🎂 03/10 (DIR-194) — data de nascimento OPCIONAL: o que não é data vira null e o cadastro segue.
+      birth_date: nascimentoISO(body?.birth_date),
       created_date: now, updated_date: now,
       address_street: extra.address_street, address_number: extra.address_number,
       address_complement: extra.address_complement, address_neighborhood: extra.address_neighborhood,

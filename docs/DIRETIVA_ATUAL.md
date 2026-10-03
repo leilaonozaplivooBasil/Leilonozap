@@ -1,3 +1,16 @@
+## 🎂 DIR-194 — Data de nascimento no cadastro, opcional e leve (03/10/2026)
+
+**Dono:** "pode colocar a data de nascimento no cadastro, mas sem ferir, sem restringir e sem criar ainda mais bloqueio na entrada — isso precisa ser bem leve."
+
+**O que muda:**
+
+- **Campo opcional "Data de nascimento (dd/mm/aaaa)"** nos três cadastros (`Cadastro.jsx` da rede, `Register.jsx`, modal de visitante) e no Perfil (editar e ver). Máscara enquanto digita, teclado numérico no celular, nenhuma validação que trave: incompleto ou inválido vai como vazio e o cadastro segue igual.
+- **Régua única** `src/lib/dataDeNascimento.js` (`mascaraData`, `nascimentoISO`, `nascimentoBR`, `idadeDe`): aceita dd/mm/aaaa, ddmmaaaa e aaaa-mm-dd; só vira data o que é data do calendário, não futura, até 120 anos. Nunca lança erro.
+- **Servidor grava** (`publicRegister`, `registerNetworkUser`, `atualizarMeuCadastro`, `adminUpdateUser`), sempre pela régua. Coluna `app_users.birth_date date` nula, sem check (migração `20261003180000`, aplicada em produção). **Fora da lista pública de colunas**: dado pessoal; a própria pessoa recebe a dela do servidor (login/cadastro/salvar) e o Perfil lê do cache.
+- **Painel do Investidor:** a fatia "Faixa etária" acende com o que foi informado (até 17, 18–24, 25–34, 35–44, 45–54, 55–64, 65+), com "N informaram · M sem data". Enquanto ninguém informou, explica que o campo é opcional. Nada se estima.
+
+**Prova:** `tests/dataDeNascimento.test.mjs` (9), `tests/painelInvestidor.test.mjs` ajustado, suíte completa, lint 0 erros, build.
+
 ## 📅 DIR-193 — Painel do Investidor: "Hoje" é desde a meia-noite, não janela móvel (30/09/2026)
 
 **Dono, com o print às 18:37:** "o Hoje estava em 600, depois 550, agora 50 — o que está acontecendo? Precisamos ver os depósitos e vendas."

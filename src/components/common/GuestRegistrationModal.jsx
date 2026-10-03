@@ -11,6 +11,7 @@ import { User as UserIcon, Sparkles, X, CheckCircle, AlertCircle } from 'lucide-
 import { getReferral } from '@/lib/referral';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 import { telefoneValido } from '@/lib/telefoneBR';
+import { mascaraData, nascimentoISO } from '@/lib/dataDeNascimento';
 // 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
 // na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
 
@@ -24,6 +25,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState(''); // CONFIRMAÇÃO
   const [phone, setPhone] = useState('');
+  const [nascimento, setNascimento] = useState(''); // 🎂 DIR-194 — opcional
   const [isRegistering, setIsRegistering] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -147,6 +149,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
           email: normalizedEmail,
           password,
           phone: phoneDigits,
+          birth_date: nascimentoISO(nascimento), // opcional: inválido vira null, nunca trava
           ref_code: referralCode || '',
           display_first_name: firstName || null,
           display_last_name: lastName || null,
@@ -278,6 +281,18 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
             value={phone} 
             onChange={(e) => setPhone(e.target.value)} 
             placeholder="(11) 99999-9999" 
+            className="bg-gray-700 border-gray-600 text-white"
+            disabled={isRegistering}
+          />
+        </div>
+        <div>
+          <Label htmlFor="nascimento" className="text-gray-300">Data de nascimento <span className="text-gray-500 font-normal">(opcional)</span></Label>
+          <Input
+            id="nascimento"
+            inputMode="numeric"
+            value={nascimento}
+            onChange={(e) => setNascimento(mascaraData(e.target.value))}
+            placeholder="dd/mm/aaaa"
             className="bg-gray-700 border-gray-600 text-white"
             disabled={isRegistering}
           />

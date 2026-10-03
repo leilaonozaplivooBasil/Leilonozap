@@ -5,7 +5,7 @@ import { plataforma } from '@/api/plataformaClient';
 import { toast } from 'sonner';
 import {
   Loader2, Check, ArrowRight, Package, Users, TrendingUp, ShieldCheck,
-  Gavel, Copy, CheckCircle2, Mail, Lock, User as UserIcon, Phone, Hash, ArrowLeft
+  Gavel, Copy, CheckCircle2, Mail, Lock, User as UserIcon, Phone, Hash, ArrowLeft, Cake
 } from 'lucide-react';
 import { useCopiarPix } from '@/hooks/useCopiarPix';
 import TermoAdesaoModal from '@/components/legal/TermoAdesaoModal';
@@ -13,6 +13,7 @@ import { saveSession } from '@/lib/session';
 import { getReferral, saveReferral } from '@/lib/referral';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 import { telefoneValido } from '@/lib/telefoneBR';
+import { mascaraData, nascimentoISO } from '@/lib/dataDeNascimento';
 
 const money = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0 });
 const LABEL = { usuario: 'Usuário', influenciador: 'Influenciador', vendedor: 'Vendedor', licenciado: 'Licenciado', parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
@@ -52,7 +53,7 @@ export default function Cadastro() {
 
   // funil: landing → form → code → checkout → pix → done
   const [step, setStep] = useState('landing');
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', cpf: '', password: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', cpf: '', nascimento: '', password: '' });
   const [code, setCode] = useState('');
   const [sending, setSending] = useState(false);
   const [gateway, setGateway] = useState('pix');
@@ -125,6 +126,8 @@ export default function Cadastro() {
         password: form.password,
         phone: onlyDigits(form.phone),
         cpf: onlyDigits(form.cpf),
+        // 🎂 DIR-194 — opcional: incompleto ou inválido vai como null, nunca trava o cadastro
+        birth_date: nascimentoISO(form.nascimento),
         code: code.trim(),
         ref_code: refCode,
         as_level: cargo,
@@ -240,6 +243,7 @@ export default function Cadastro() {
                 <Field icon={Phone} placeholder="WhatsApp (obrigatório)" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
                 <Field icon={Hash} placeholder="CPF" value={form.cpf} onChange={(v) => setForm({ ...form, cpf: v })} />
               </div>
+              <Field icon={Cake} placeholder="Nascimento (opcional) dd/mm/aaaa" inputMode="numeric" value={form.nascimento} onChange={(v) => setForm({ ...form, nascimento: mascaraData(v) })} />
               <Field icon={Lock} placeholder="Crie uma senha" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
               <button onClick={sendCode} disabled={sending} className="w-full py-3.5 rounded-xl bg-green-600 hover:bg-green-700 font-bold flex items-center justify-center gap-2">
                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />} Receber código por e-mail
@@ -330,12 +334,13 @@ function Benefit({ icon: Icon, text }) {
   );
 }
 
-function Field({ icon: Icon, placeholder, value, onChange, type = 'text' }) {
+function Field({ icon: Icon, placeholder, value, onChange, type = 'text', inputMode }) {
   return (
     <div className="flex items-center gap-2 bg-gray-950 border border-gray-700 rounded-xl px-3 focus-within:border-green-500">
       <Icon className="w-4 h-4 text-gray-500 flex-shrink-0" />
       <input
         type={type}
+        inputMode={inputMode}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
