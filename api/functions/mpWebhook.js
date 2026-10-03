@@ -13,6 +13,7 @@ import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
+import { resumoDoPagamento, resolverPagamentoDoAviso, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -368,7 +369,75 @@ function conferirAssinatura(req, payId, idUrl = '', legado = false) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// 🏦 DIR-195 (03/10/2026) — TODO AVISO FICA REGISTRADO, E O DINHEIRO QUE SAI
+//    NÃO FICA INVISÍVEL.
+// ══════════════════════════════════════════════════════════════════════════
+// Caso Diogo, 02/10: 4 PIX aprovados à tarde, os 4 com "cancelamento de
+// liberação de dinheiro" no extrato às 18h21. O Mercado Pago avisou 4 vezes;
+// este webhook consultou, viu "approved", respondeu already_paid e seguiu. O
+// dinheiro saiu da conta da empresa e os R$ 3.300 continuaram na carteira dele.
+//
+// Agora: (1) cada aviso vira uma linha em gateway_eventos, com o que foi feito;
+// (2) o pagamento conferido vira catalog_sales.gateway (régua única em
+// api/_lib/conferenciaMercadoPago.js); (3) se o gateway diz que o dinheiro de
+// um DEPÓSITO pago saiu (retido/devolvido/chargeback/disputa), o saldo daquele
+// depósito é bloqueado na carteira na hora; (4) aviso de chargeback/reclamação
+// (que vem com outro id) é resolvido até o pagamento em vez de ser descartado.
 export default async function handler(req, res) {
+  const evento = { recebido_em: new Date().toISOString(), topico: null, acao: null, recurso_id: null, payment_id: null, sale_id: null, formato: null, assinatura: null, status: null, situacao: null, resultado: null, corpo: null };
+  const jsonOriginal = res.json.bind(res);
+  res.json = (payload) => {
+    try {
+      if (!evento.resultado && payload && typeof payload === 'object') {
+        const chave = ['bloqueado', 'estornado', 'credited', 'creditado', 'already_paid', 'em_disputa', 'notfound', 'sale_notfound', 'ignored', 'nao_processado', 'estorno_falhou', 'cancelada_com_estorno', 'sem_referencia', 'error'].find((k) => payload[k]);
+        evento.resultado = chave || (payload.ok ? `ok:${payload.status || 'processado'}` : 'erro');
+        if (payload.status && !evento.status) evento.status = String(payload.status);
+      }
+    } catch (_) { /* o registro nunca derruba a resposta */ }
+    return jsonOriginal(payload);
+  };
+  try {
+    return await processar(req, res, evento);
+  } finally {
+    registrarEvento(evento).catch((e) => console.error('[MP] falha ao registrar o aviso:', e?.message || e));
+  }
+}
+
+async function registrarEvento(evento) {
+  if (!SUPABASE_URL || !SR) return;
+  await sb('gateway_eventos', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(evento) });
+}
+
+// Guarda em catalog_sales.gateway o que o Mercado Pago diz e, se o dinheiro de um
+// depósito pago saiu, bloqueia o saldo. Devolve o resumo. Nunca lança.
+async function conferirEGuardar(pay, sale, evento) {
+  try {
+    const resumo = resumoDoPagamento(pay, 'webhook');
+    evento.status = resumo.status; evento.situacao = resumo.situacao;
+    if (!sale) return resumo;
+    evento.sale_id = sale.id;
+    const pagoAqui = ['paid', 'pago', 'entregue', 'shipped', 'delivered', 'preparando', 'saiu_entrega', 'confirmado', 'concluido'].includes(String(sale.status));
+    if (SITUACOES_DINHEIRO_SAIU.includes(resumo.situacao) && pagoAqui && sale.kind === 'wallet_deposit') {
+      const rb = await sb('rpc/bloquear_saldo_contestado', { method: 'POST', body: JSON.stringify({ _sale_id: sale.id, _motivo: `Mercado Pago: ${resumo.situacao} (pagamento ${pay.id}); saldo bloqueado até a resolução`, _origem: 'webhook' }) });
+      const b = await rb.json().catch(() => null);
+      resumo.bloqueio = b ? { success: !!b.success, bloqueado: b.bloqueado ?? 0, nao_recuperado: b.nao_recuperado ?? 0, ja_bloqueado: !!b.ja_bloqueado, error: b.error || null, em: new Date().toISOString() } : null;
+      if (b?.success && !b.ja_bloqueado) {
+        evento.resultado = 'bloqueado';
+        console.error(`[MP] DINHEIRO SAIU — ${resumo.situacao} no pagamento ${pay.id} (venda ${sale.id}, ${sale.buyer_name}, R$ ${resumo.valor}). Bloqueado R$ ${b.bloqueado} na carteira; não recuperado R$ ${b.nao_recuperado}.`);
+      }
+    } else if (sale.gateway?.bloqueio) {
+      resumo.bloqueio = sale.gateway.bloqueio;
+    }
+    await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ gateway: resumo }) });
+    return resumo;
+  } catch (e) {
+    console.error('[MP] falha ao guardar a conferência do gateway:', e?.message || e);
+    return null;
+  }
+}
+
+async function processar(req, res, evento) {
   // 🔴 PONTO 121: guarda o id da venda que ESTA execução marcou como paga. O
   // catch lá embaixo precisa saber disso pra devolver ao estado anterior — se
   // ficar dentro do try, ele não enxerga.
@@ -381,8 +450,17 @@ export default async function handler(req, res) {
     let body = req.body; if (typeof body === 'string') { try { body = JSON.parse(body); } catch { body = {}; } }
     // o id do pagamento vem em data.id (body) ou ?data.id / ?id (query)
     const url = new URL(req.url, 'http://x');
-    const payId = body?.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || body?.id;
-    if (!payId) return res.status(200).json({ ok: true, ignored: true });
+    const recursoId = body?.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || body?.id;
+    const topico = String(body?.type || body?.topic || url.searchParams.get('type') || url.searchParams.get('topic') || '').toLowerCase();
+    evento.topico = topico || null; evento.acao = body?.action || null; evento.recurso_id = recursoId ? String(recursoId) : null;
+    evento.corpo = body && typeof body === 'object' ? body : { query: url.search };
+    if (!recursoId) return res.status(200).json({ ok: true, ignored: true });
+    // 🏦 DIR-195 — aviso de chargeback/reclamação vem com o id do chargeback/reclamação, não do pagamento
+    const resolvido = await resolverPagamentoDoAviso({ topico, recursoId, token: MP_TOKEN });
+    if (resolvido.detalhe) evento.corpo = { ...evento.corpo, resolvido: resolvido.detalhe };
+    const payId = resolvido.paymentId;
+    if (!payId) return res.status(200).json({ ok: true, ignored: true, topico: topico || null });
+    evento.payment_id = String(payId);
 
     // 🔒 PONTO 122 (risco #27) — só depois de saber o payId dá pra montar o
     // manifesto que o Mercado Pago assina. Assinatura errada é 401 e para aqui:
@@ -399,9 +477,11 @@ export default async function handler(req, res) {
     // Formato antigo = veio `topic` e NÃO veio `data.id`. É a assinatura do IPN
     // "Feed v2.0" — ver o comentário dentro de conferirAssinatura.
     const formatoAntigo = !url.searchParams.get('data.id') && !!url.searchParams.get('topic');
+    evento.formato = formatoAntigo ? 'ipn_feed_v2' : 'webhook_v1';
     const assinatura = conferirAssinatura(
       req, payId, url.searchParams.get('data.id') || url.searchParams.get('id') || '', formatoAntigo
     );
+    evento.assinatura = assinatura.ok ? (assinatura.verificado ? 'conferida' : 'nao_conferida') : 'invalida';
     if (!assinatura.ok) {
       console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
       return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
@@ -411,6 +491,12 @@ export default async function handler(req, res) {
     const r = await fetch(`https://api.mercadopago.com/v1/payments/${payId}`, { headers: { Authorization: `Bearer ${MP_TOKEN}` } });
     const pay = await r.json();
     if (!r.ok || !pay?.id) return res.status(200).json({ ok: true, notfound: true });
+    // 🏦 DIR-195 — o que o gateway diz fica guardado SEMPRE, antes de qualquer decisão.
+    {
+      const refId = pay.external_reference ? String(pay.external_reference) : '';
+      const achadas = await (await sb(`catalog_sales?select=id,status,kind,buyer_id,buyer_name,gateway&or=(${refId ? `id.eq.${encodeURIComponent(refId)},` : ''}mp_payment_id.eq.${encodeURIComponent(String(pay.id))})&limit=1`)).json().catch(() => []);
+      await conferirEGuardar(pay, Array.isArray(achadas) ? achadas[0] : null, evento);
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     // 🔴 PONTO 102 (21/08/2026) — CHARGEBACK ERA DESCARTADO EM SILÊNCIO

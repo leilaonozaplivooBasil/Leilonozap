@@ -27,14 +27,17 @@ export default async function handler(req, res) {
     const ator = (await (await sb(`app_users?select=id,role&id=eq.${encodeURIComponent(userId)}&limit=1`)).json())[0];
     if (!ator || !['admin', 'super_admin'].includes(ator.role)) return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
 
-    const [r, rp] = await Promise.all([
+    const [r, rp, rc] = await Promise.all([
       sb('rpc/painel_investidor', { method: 'POST', body: JSON.stringify({ _dias: dias }) }),
       sb('rpc/painel_investidor_perfil', { method: 'POST', body: JSON.stringify({ _dias: dias }) }),
+      // 🏦 DIR-195 — conciliação com o Mercado Pago (o que bate, o que não bate, quem ligar)
+      sb('rpc/painel_conciliacao', { method: 'POST', body: '{}' }),
     ]);
     if (!r.ok) return res.status(200).json({ success: false, error: 'Falha ao calcular', detail: (await r.text()).slice(0, 200) });
     const painel = await r.json();
     // 👥 perfil (sexo estimado pelo nome, canais de origem) — best-effort: se falhar, o resto da tela vive
     painel.perfil = rp.ok ? await rp.json().catch(() => null) : null;
+    painel.conciliacao = rc.ok ? await rc.json().catch(() => null) : null;
     return res.status(200).json({ success: true, painel });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e).slice(0, 200) });
