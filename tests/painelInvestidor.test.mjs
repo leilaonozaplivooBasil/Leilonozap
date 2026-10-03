@@ -38,7 +38,8 @@ test('a página é só de admin, tem período, KPIs, entrada por área, fluxo do
   assert.ok(/"PainelInvestidor": \(\) => \(\s*<RequireRole allowedRoles=\{\['admin', 'super_admin'\]\} fallbackRoute="Home">\s*<PainelInvestidor \/>/.test(C));
   const P = ler('../src/pages/PainelInvestidor.jsx');
   assert.ok(P.includes("useSecureRole(ADMIN_ROLES, 'Home')"));
-  assert.ok(P.includes("plataforma.functions.invoke('painelInvestidor', { user_id: user.id, dias })"));
+  // 🧾 DIR-196 — a chamada passou a pedir os depósitos só quando o modal está aberto
+  assert.ok(P.includes("plataforma.functions.invoke('painelInvestidor', { user_id: user.id, dias, depositos: !!modalDepositos })"));
   for (const m of ['investidor-periodos', 'investidor-kpis', 'investidor-entrada', 'investidor-fluxo', 'investidor-funil', 'investidor-compras', 'investidor-leilao', 'investidor-mapa', 'investidor-cadastros', 'investidor-ultimos']) {
     assert.ok(P.includes(`teste="${m}"`), `falta ${m}`);
   }

@@ -22,7 +22,7 @@
 // O que NUNCA faz: mudar status de venda, creditar carteira, devolver dinheiro.
 // Isso continua sendo decisão humana (ou do webhook, no fluxo normal de pagamento).
 import { exigirSessao } from '../_lib/sessao.js';
-import { buscarPagamento, resumoDoPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
+import { buscarPagamento, resumoDoPagamento, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
 
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,6 +48,11 @@ export async function conferirVenda(sale, { fonte = 'conciliacao', origem = 'con
     return { sale_id: sale.id, payment_id: sale.mp_payment_id, situacao: 'desconhecido', http: r.http, consultado: r.http === 404 };
   }
   const resumo = resumoDoPagamento(r.pay, fonte);
+  // 🔎 dinheiro saiu ou o gateway mexeu sem dizer o quê: procura a contestação nos outros recursos
+  if (SITUACOES_DINHEIRO_SAIU.includes(resumo.situacao)) {
+    resumo.investigacao = await investigarPagamento(sale.mp_payment_id, MP_TOKEN);
+    if (resumo.investigacao?.situacao) { resumo.situacao_bruta = resumo.situacao; resumo.situacao = resumo.investigacao.situacao; }
+  }
   const anterior = sale.gateway?.situacao || null;
   const pagoAqui = PAGOS.includes(String(sale.status));
   const saiu = SITUACOES_DINHEIRO_SAIU.includes(resumo.situacao);

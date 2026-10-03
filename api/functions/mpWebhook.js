@@ -13,7 +13,7 @@ import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
-import { resumoDoPagamento, resolverPagamentoDoAviso, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
+import { resumoDoPagamento, resolverPagamentoDoAviso, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -414,6 +414,10 @@ async function registrarEvento(evento) {
 async function conferirEGuardar(pay, sale, evento) {
   try {
     const resumo = resumoDoPagamento(pay, 'webhook');
+    if (SITUACOES_DINHEIRO_SAIU.includes(resumo.situacao)) {
+      resumo.investigacao = await investigarPagamento(pay.id, MP_TOKEN);
+      if (resumo.investigacao?.situacao) { resumo.situacao_bruta = resumo.situacao; resumo.situacao = resumo.investigacao.situacao; }
+    }
     evento.status = resumo.status; evento.situacao = resumo.situacao;
     if (!sale) return resumo;
     evento.sale_id = sale.id;

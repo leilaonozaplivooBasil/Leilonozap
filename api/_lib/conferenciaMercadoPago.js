@@ -22,11 +22,19 @@
 //   disputa           mediação aberta; dinheiro ainda não voltou
 //   cancelado         cancelado, recusado ou expirado — nunca entrou
 //   pendente          aguardando pagamento ou análise
+//   alterado          PIX aprovado e liberado que o gateway MEXEU depois (sem dizer o quê).
+//                     Foi exatamente a marca dos 4 PIX do Diogo: date_last_updated às 18h21,
+//                     status "approved", liberação "released", devolução zero — e o extrato
+//                     mostrando "cancelamento de liberação". Trata-se como dinheiro que saiu
+//                     até prova em contrário, e a investigação (abaixo) procura a contestação.
 //   desconhecido      o gateway respondeu algo que esta régua não conhece
 
 const MP = 'https://api.mercadopago.com';
 
-export const SITUACOES_DINHEIRO_SAIU = ['retido', 'devolvido', 'devolvido_parcial', 'chargeback', 'disputa'];
+export const SITUACOES_DINHEIRO_SAIU = ['retido', 'devolvido', 'devolvido_parcial', 'chargeback', 'disputa', 'alterado'];
+// PIX libera na hora: qualquer atualização mais de 10 min depois da aprovação é sinal. Cartão
+// NÃO entra (o gateway atualiza o pagamento quando libera o dinheiro em D+N, e isso é normal).
+const ALTERACAO_MIN = 10;
 
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(n * 100) / 100 : 0; };
 
@@ -47,7 +55,13 @@ export function situacaoDoPagamento(pay) {
     if (devolvido > 0) return 'devolvido_parcial';
     // 'released' = liberado; 'pending' = ainda vai liberar (cartão em D+N, normal);
     // qualquer outra coisa ('reverted', 'blocked', 'held'…) = o gateway SEGUROU o dinheiro.
-    if (!liberacao || liberacao === 'released' || liberacao === 'pending') return 'liberado';
+    if (!liberacao || liberacao === 'released' || liberacao === 'pending') {
+      const ehPix = String(pay.payment_type_id || '').toLowerCase() === 'bank_transfer' || String(pay.payment_method_id || '').toLowerCase() === 'pix';
+      const aprovado = Date.parse(pay.date_approved || '');
+      const atualizado = Date.parse(pay.date_last_updated || '');
+      if (ehPix && Number.isFinite(aprovado) && Number.isFinite(atualizado) && atualizado - aprovado > ALTERACAO_MIN * 60e3) return 'alterado';
+      return 'liberado';
+    }
     return 'retido';
   }
   return 'desconhecido';
@@ -78,6 +92,41 @@ export function resumoDoPagamento(pay, fonte = 'conciliacao') {
     conferido_em: new Date().toISOString(),
     fonte,
   };
+}
+
+/**
+ * Quando o gateway diz que o dinheiro saiu (ou mexeu no pagamento sem dizer o quê),
+ * procura a contestação nos outros recursos do Mercado Pago. Guarda o que cada um
+ * respondeu (status HTTP + começo do corpo) para a gente aprender o que o gateway
+ * expõe — e, se achar, apura a situação: chargeback > disputa > devolvido.
+ * Nunca lança.
+ */
+export async function investigarPagamento(paymentId, token) {
+  const id = encodeURIComponent(String(paymentId));
+  const alvos = [
+    ['refunds', `${MP}/v1/payments/${id}/refunds`],
+    ['chargebacks', `${MP}/v1/chargebacks/search?payment_id=${id}`],
+    ['claims', `${MP}/post-purchase/v1/claims/search?resource_id=${id}&resource=payment`],
+  ];
+  const tentativas = {};
+  let chargebacks = 0; let claims = 0; let devolvido = 0;
+  for (const [nome, url] of alvos) {
+    try {
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const texto = await r.text().catch(() => '');
+      let j = null; try { j = JSON.parse(texto); } catch { j = null; }
+      tentativas[nome] = { http: r.status, corpo: texto.slice(0, 800) };
+      if (!r.ok || !j) continue;
+      const lista = Array.isArray(j) ? j : (Array.isArray(j.results) ? j.results : (Array.isArray(j.data) ? j.data : []));
+      if (nome === 'refunds') devolvido = lista.reduce((s, x) => s + num(x?.amount), 0);
+      if (nome === 'chargebacks') chargebacks = lista.length;
+      if (nome === 'claims') claims = lista.filter((c) => !['closed', 'cancelled', 'canceled'].includes(String(c?.status || '').toLowerCase())).length;
+    } catch (e) {
+      tentativas[nome] = { http: 0, erro: String(e?.message || e).slice(0, 200) };
+    }
+  }
+  const situacao = chargebacks > 0 ? 'chargeback' : claims > 0 ? 'disputa' : devolvido > 0 ? 'devolvido' : null;
+  return { em: new Date().toISOString(), chargebacks, claims, devolvido: Math.round(devolvido * 100) / 100, situacao, tentativas };
 }
 
 /** Busca o pagamento no Mercado Pago. Devolve { ok, pay, http } — nunca lança. */

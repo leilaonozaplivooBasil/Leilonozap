@@ -1,3 +1,20 @@
+## 🧾 DIR-196 — Depósitos e carteiras um por um, o momento do dinheiro, e o PIX "alterado" no gateway (03/10/2026)
+
+**Dono, com a conciliação na tela:** "preciso de um modal para ver todos os depósitos e entender tudo que a plataforma está falando: qual o momento do dinheiro, a lista de depósitos e, principalmente, quanto de carteira dentro da operação está parado para compra, para eu virar em produto."
+
+**A lição do dia:** a primeira conferência (18h22) trouxe os 4 PIX do Diogo como "liberado". O Mercado Pago mantém `status approved`, `money_release_status released` e devolução zero, mas carimbou `date_last_updated` às 18h21, a hora exata do "cancelamento de liberação" no extrato. Entre 173 pagamentos liberados, só esses 4 foram alterados depois de aprovados.
+
+**O que muda:**
+
+- **Régua:** PIX aprovado e liberado que o gateway alterou mais de 10 min depois da aprovação vira `alterado` e conta como dinheiro que saiu (bloqueio automático de depósito, pendência no painel). Cartão fica de fora: o gateway atualiza quando libera em D+N, e isso é normal.
+- **Investigação:** quando o dinheiro saiu ou alterou, a conciliação e o webhook consultam devoluções, chargebacks e reclamações do pagamento, guardam o que cada recurso respondeu (`gateway.investigacao`) e apuram a situação (chargeback > disputa > devolvido). É assim que a gente aprende o que o Mercado Pago expõe nesses casos.
+- **Modal "Depósitos e carteiras"** (`ModalDepositos.jsx`), aberto pelos KPIs "Depositado nas carteiras" e "Parado nas carteiras": totais (depositado, virou compra, reservado em lances, **parado para virar produto** em destaque, bloqueado); aba **Carteiras** pessoa a pessoa (depositou, virou compra, reservado, parado, bloqueado, último depósito, último acesso, ligar e WhatsApp), ordenada por quem tem mais parado; aba **Depósitos** um por um, com o momento do dinheiro (aguardando pagamento → pago no gateway → liberado → conferido → na carteira; bloqueado por contestação; dinheiro saiu e segue na carteira; creditado sem conferência; cancelado), filtro por momento e busca.
+- **Banco (migração `20261003223000`, aplicada em produção):** `painel_depositos()`; `painel_conciliacao()` com `alterado` em dinheiro_saiu e pendências por gravidade. A rota do painel só traz os depósitos quando o modal pede.
+
+**Números de hoje (18h40):** depositado R$ 53.818 (41 pessoas), virou compra R$ 20.733, reservado R$ 281, **parado R$ 29.036 (39 pessoas)**, bloqueado R$ 3.300. Maiores saldos parados: Virgilio R$ 4.477, Herbert R$ 3.700, Lilian R$ 3.150, Gabrielle R$ 2.600, Rosenberg R$ 2.220, Ângela R$ 1.941.
+
+**Prova:** `tests/depositosECarteiras.test.mjs` (5), `tests/conciliacaoMercadoPago.test.mjs` ajustado, suíte completa, lint 0 erros, build.
+
 ## 🏦 DIR-195 — Conciliação com o Mercado Pago: dinheiro que entra, sai e fica, com quem ligar (03/10/2026)
 
 **Dono, com o extrato do Mercado Pago na mão:** "tem cliente que depositou e depois veio 'cancelamento de liberação de dinheiro'. Preciso de uma auditoria muito grave: o dinheiro que entra, sai e fica tem que bater real, em tempo real, webhook, com a lista dos clientes que pediram chargeback para a gente entrar em contato. Preciso ser uma extensão do Mercado Pago com uma comunicação mais clara." E: "quero seguir suas decisões de forma sênior."

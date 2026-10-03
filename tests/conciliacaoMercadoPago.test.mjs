@@ -35,7 +35,7 @@ test('devolução, chargeback, disputa, cancelado, pendente e o que a régua nã
   for (const s of ['pending', 'in_process', 'authorized']) assert.equal(situacaoDoPagamento({ status: s }), 'pendente', s);
   assert.equal(situacaoDoPagamento({ status: 'xpto' }), 'desconhecido');
   assert.equal(situacaoDoPagamento(null), 'desconhecido');
-  assert.deepEqual(SITUACOES_DINHEIRO_SAIU, ['retido', 'devolvido', 'devolvido_parcial', 'chargeback', 'disputa']);
+  assert.deepEqual(SITUACOES_DINHEIRO_SAIU, ['retido', 'devolvido', 'devolvido_parcial', 'chargeback', 'disputa', 'alterado']);
 });
 
 test('o resumo guardado tem o que a conciliação precisa e nunca o pagamento inteiro', () => {
@@ -66,7 +66,7 @@ test('o banco: coluna gateway, tabela de eventos só do servidor, bloqueio/liber
 
 test('o webhook registra TODO aviso, guarda o que o gateway diz antes de decidir e bloqueia depósito cujo dinheiro saiu', () => {
   const W = ler('../api/functions/mpWebhook.js');
-  assert.ok(W.includes("import { resumoDoPagamento, resolverPagamentoDoAviso, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';"));
+  assert.ok(W.includes("import { resumoDoPagamento, resolverPagamentoDoAviso, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';"));
   assert.ok(W.includes('return await processar(req, res, evento);') && W.includes('registrarEvento(evento).catch('), 'todo aviso vira linha em gateway_eventos, mesmo quando a rota falha');
   assert.ok(W.includes("await sb('gateway_eventos', { method: 'POST'"));
   assert.ok(W.includes('const resolvido = await resolverPagamentoDoAviso({ topico, recursoId, token: MP_TOKEN });'), 'chargeback/reclamação é resolvido até o pagamento');
