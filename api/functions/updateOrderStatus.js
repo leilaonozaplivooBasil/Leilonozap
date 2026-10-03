@@ -155,7 +155,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: false, error: 'Falha ao estornar o cancelamento', details: t.slice(0, 200) });
       }
       const estorno = await rpc.json().catch(() => null);
-      // A própria cancelar_venda() já gravou status='cancelado' — não precisa do PATCH.
+      // A própria cancelar_venda() já gravou status='cancelado' — não precisa do PATCH de status.
+      // 🧾 DIR-197 (03/10/2026) — quem cancelou e por quê ficam na venda (a hora é carimbada por trigger).
+      await sb(`catalog_sales?id=eq.${encodeURIComponent(saleId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cancelado_por: actorId || null, cancelamento_motivo: String(body?.motivo || ('Cancelado por ' + (isAdmin ? 'admin' : 'vendedor'))).slice(0, 300) }) }).catch(() => {});
       return res.status(200).json({ success: true, status: 'cancelado', estorno });
     }
 

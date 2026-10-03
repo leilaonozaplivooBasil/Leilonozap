@@ -64,7 +64,8 @@ export default async function handler(req, res) {
       const c = await sb(`catalog_sales?id=eq.${encodeURIComponent(saleId)}`, {
         method: 'PATCH',
         headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({ status: 'canceled' }),
+        // 🧾 DIR-197 — quem cancelou fica registrado (a hora é carimbada por trigger)
+        body: JSON.stringify({ status: 'canceled', cancelado_por: userId, cancelamento_motivo: 'Excluído pelo comprador na tela de pedidos' }),
       });
       if (!c.ok) {
         const t = await c.text();
