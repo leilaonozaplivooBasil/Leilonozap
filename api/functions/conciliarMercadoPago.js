@@ -23,6 +23,7 @@
 // Isso continua sendo decisão humana (ou do webhook, no fluxo normal de pagamento).
 import { exigirSessao } from '../_lib/sessao.js';
 import { buscarPagamento, resumoDoPagamento, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
+import { executarAcoesPendentes } from '../_lib/gatewayAcoes.js';
 
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -102,6 +103,9 @@ export default async function handler(req, res) {
       if (!ator || !['admin', 'super_admin'].includes(ator.role)) return res.status(403).json({ success: false, error: 'Acesso restrito a administradores' });
     }
 
+    // 🧾 DIR-198 — a fila de ações (devolver pelo gateway / marcar resolvida) roda primeiro no cron:
+    // o que o painel ou a auditoria pediu e ainda não aconteceu, acontece aqui, com rastro.
+    const acoes = ehCron ? await executarAcoesPendentes({ limite: 20 }) : null;
     const lote = Math.max(1, Math.min(200, parseInt(body?.lote, 10) || (ehCron ? 150 : 25)));
     const tudo = body?.tudo === true; // admin: reconferir tudo, mesmo o já conferido hoje
     const sales_ids = Array.isArray(body?.sale_ids) ? body.sale_ids.map(String).slice(0, 60) : null;
@@ -135,8 +139,8 @@ export default async function handler(req, res) {
       const cr = cab.headers.get('content-range') || '';
       restantes = parseInt(cr.split('/')[1], 10) || 0;
     }
-    if (ehCron) console.log(`[CONCILIAÇÃO] cron: ${conferidos} conferidos, ${resultados.length} com divergência, ${restantes} restantes.`);
-    return res.status(200).json({ success: true, conferidos, restantes, divergencias: resultados, duracao_ms: Date.now() - inicio });
+    if (ehCron) console.log(`[CONCILIAÇÃO] cron: ${conferidos} conferidos, ${resultados.length} com divergência, ${restantes} restantes; ações: ${JSON.stringify(acoes)}.`);
+    return res.status(200).json({ success: true, conferidos, restantes, divergencias: resultados, acoes, duracao_ms: Date.now() - inicio });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e).slice(0, 200) });
   }
