@@ -58,6 +58,9 @@ const CANAIS = {
   Instagram: '#E1306C', Facebook: '#1877F2', WhatsApp: '#25D366', Google: '#FBBC05', TikTok: '#69C9D0', YouTube: '#FF0000',
   'Indicação de membro': '#34D399', Direto: '#F5C451', 'Outros sites': '#A78BFA', 'Sem registro': '#4B5563',
 };
+// 🎂 DIR-194 — faixas etárias (idade em anos completos hoje), na ordem do banco.
+const FAIXAS = { ate_17: 'até 17', '18_24': '18 a 24', '25_34': '25 a 34', '35_44': '35 a 44', '45_54': '45 a 54', '55_64': '55 a 64', '65_mais': '65 ou mais' };
+const CORES_FAIXAS = { ate_17: '#A78BFA', '18_24': '#38BDF8', '25_34': '#34D399', '35_44': '#FBBF24', '45_54': '#FB923C', '55_64': '#F87171', '65_mais': '#E879F9' };
 // ⏱️ DIR-192 (30/09/2026) — dono: "os números precisam atualizar em tempo real e o
 // botão de atualizar precisa funcionar". O botão funcionava, mas em silêncio: nada
 // girava, nada avisava. Agora: recálculo a cada 20 s, contagem regressiva visível,
@@ -227,6 +230,11 @@ export default function PainelInvestidor() {
   const totalGenero = fatiasGenero.reduce((s, f) => s + f.valor, 0);
   const canais = (perfil?.canais?.lista || []).map((c) => ({ nome: c.canal, valor: dias === 0 ? c.n : c.periodo, total: c.n, cor: CANAIS[c.canal] || '#9CA3AF' })).filter((c) => c.valor > 0).sort((a, b) => b.valor - a.valor);
   const totalCanais = canais.reduce((s, c) => s + c.valor, 0);
+  // 🎂 DIR-194 — faixa etária só com data INFORMADA (campo opcional no cadastro e no perfil). Nada se estima.
+  const idade = perfil?.idade || null;
+  const fatiasIdade = (idade?.faixas || []).map((f) => ({ nome: FAIXAS[f.faixa] || f.faixa, valor: dias === 0 ? f.n : f.periodo, cor: CORES_FAIXAS[f.faixa] || '#9CA3AF' })).filter((f) => f.valor > 0);
+  const totalIdade = fatiasIdade.reduce((s, f) => s + f.valor, 0);
+  const semData = idade ? (dias === 0 ? idade.sem_data : idade.sem_data_periodo) || 0 : 0;
 
   if (authStatus === 'checking') {
     return <div className="min-h-[60vh] grid place-items-center text-gray-400"><Loader2 className="w-8 h-8 animate-spin text-emerald-400" /></div>;
@@ -429,11 +437,34 @@ export default function PainelInvestidor() {
                   <p className="mt-3 text-xs text-gray-500">Antes de {perfil.canais?.registro_desde ? new Date(perfil.canais.registro_desde).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '25/09'} o cadastro não guardava a origem: quem entrou por link de membro aparece como indicação.</p>
                 </Secao>
 
-                <Secao icon={Cake} titulo="Faixa etária" teste="investidor-idade">
-                  <div className="rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-sm text-gray-300">
-                    <p className="font-bold text-white">Ainda não coletamos data de nascimento.</p>
-                    <p className="mt-1">Nenhum cadastro tem esse dado hoje, e a idade não pode ser estimada com honestidade. Para esta fatia acender: um campo opcional de data de nascimento no cadastro e no perfil, e a leitura pelo KYC de quem já validou o CPF.</p>
-                  </div>
+                <Secao icon={Cake} titulo="Faixa etária" sub={totalIdade > 0 ? `${rotuloPeriodo} · ${totalIdade} informaram · ${semData} sem data` : undefined} teste="investidor-idade">
+                  {totalIdade > 0 ? (
+                    <div className="flex items-center gap-4">
+                      <div className="h-40 w-40 shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={fatiasIdade} dataKey="valor" nameKey="nome" innerRadius={44} outerRadius={70} paddingAngle={2} stroke="none">
+                              {fatiasIdade.map((f) => <Cell key={f.nome} fill={f.cor} />)}
+                            </Pie>
+                            <Tooltip content={<TooltipEscuro formatador={(v) => `${v} pessoas`} />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <ul className="flex-1 space-y-1.5">
+                        {fatiasIdade.map((f) => (
+                          <li key={f.nome} className="flex items-baseline justify-between text-sm">
+                            <span className="flex items-center gap-2 text-gray-200"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: f.cor }} /> {f.nome}</span>
+                            <span className="tabular-nums font-bold text-white">{f.valor} <span className="text-xs font-medium text-gray-500">· {pct(f.valor, totalIdade)}%</span></span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-white/15 bg-white/5 p-4 text-sm text-gray-300">
+                      <p className="font-bold text-white">Ninguém informou a data de nascimento ainda.</p>
+                      <p className="mt-1">O campo é opcional no cadastro e no perfil desde 03/10. A fatia acende sozinha conforme as pessoas preencherem; a idade não é estimada pelo nome nem pelo CPF.</p>
+                    </div>
+                  )}
                 </Secao>
               </div>
             )}

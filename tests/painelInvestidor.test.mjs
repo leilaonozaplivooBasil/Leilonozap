@@ -87,11 +87,12 @@ test('perfil: sexo estimado pelo nome e canal de origem calculados no banco, só
   assert.ok(F.includes('painel.perfil = rp.ok ? await rp.json().catch(() => null) : null;'), 'perfil é best-effort');
 });
 
-test('a página mostra as pizzas de sexo e de canal, explica a idade em aberto e dá ao mapa 3/5 da largura no desktop', () => {
+test('a página mostra as pizzas de sexo, de canal e de idade (só com data informada) e dá ao mapa 3/5 da largura no desktop', () => {
   const Pg = ler('../src/pages/PainelInvestidor.jsx');
   for (const m of ['investidor-perfil', 'investidor-genero', 'investidor-canais', 'investidor-idade']) assert.ok(Pg.includes(`teste="${m}"`), `falta ${m}`);
   assert.ok(Pg.includes('<PieChart>') && Pg.includes('<Pie data={fatiasGenero}') && Pg.includes('<Pie data={canais}'));
-  assert.ok(Pg.includes('Ainda não coletamos data de nascimento.'));
+  // 🎂 DIR-194 — a fatia acende com a data informada; sem ninguém, explica que o campo é opcional (nunca estima)
+  assert.ok(Pg.includes('<Pie data={fatiasIdade}') && Pg.includes('Ninguém informou a data de nascimento ainda.'));
   assert.ok(Pg.includes('<div className="lg:col-span-3">\n              <Secao icon={MapPin}'), 'o mapa ocupava 1/5 da largura no desktop');
   assert.ok(Pg.includes('<div className="grid sm:grid-cols-3 gap-4">\n                  <div className="sm:col-span-2">'), 'o mapa ocupa 2/3 da seção');
 });

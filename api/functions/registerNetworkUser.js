@@ -9,6 +9,7 @@ import bcrypt from 'bcryptjs';
 import { emitirSessao, exigirSessao } from '../_lib/sessao.js';
 import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
 import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
 import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -164,6 +165,8 @@ export default async function handler(req, res) {
       role: 'user', career_levels: [level], primary_career_level: level,
       referred_by_id, referral_code, terms_accepted: true,
       origem_trafego: sanearOrigem(body?.origem_trafego),
+      // 🎂 03/10 (DIR-194) — data de nascimento OPCIONAL: o que não é data vira null e o cadastro segue.
+      birth_date: nascimentoISO(body?.birth_date),
       is_seller: ['vendedor'].includes(level) ? true : null,
       created_date: now, updated_date: now,
       ...extra,

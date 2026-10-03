@@ -50,6 +50,7 @@ import { toast } from '@/components/ui/use-toast';
 import { Wallet, Filter, ChevronDown } from 'lucide-react';
 import DigitalWalletBalance from '../components/wallet/DigitalWalletBalance';
 import { useSectionTracking } from '@/lib/tracking';
+import { mascaraData, nascimentoISO, nascimentoBR } from '@/lib/dataDeNascimento';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -222,7 +223,9 @@ export default function Profile() {
             if (localUser?.id) {
               const usersInDB = await AppUser.filter({ id: localUser.id });
               if (usersInDB && usersInDB.length > 0) {
-                  user = usersInDB[0];
+                  // 🎂 DIR-194 — a data de nascimento NÃO está na lista pública de colunas
+                  // (dado pessoal): vem do servidor no login/cadastro/salvar e fica no cache.
+                  user = { ...usersInDB[0], birth_date: usersInDB[0].birth_date ?? localUser.birth_date ?? null };
                   userType = 'appUser';
               }
             }
@@ -248,6 +251,7 @@ export default function Profile() {
           const initialData = {
               nickname: user.nickname || user.full_name || "",
               phone: user.phone || "",
+              birth_date: nascimentoBR(user.birth_date), // 🎂 opcional, mostrado como dd/mm/aaaa
               avatar_color: user.avatar_color || "#25D366",
               avatar_url: user.avatar_url || null,
               address_street: user.address_street || "",
@@ -447,6 +451,8 @@ export default function Profile() {
         }
       }
       delete finalData.uploadedFile;
+      // 🎂 DIR-194 — vai pro banco como 'AAAA-MM-DD'; vazio ou inválido limpa o campo, nunca trava o salvar.
+      if ('birth_date' in finalData) finalData.birth_date = nascimentoISO(finalData.birth_date);
       
       // Troca de senha: vai pela rota própria (valida a senha atual e grava o
       // hash). Se falhar, avisa e não continua — o usuário precisa saber.
@@ -797,12 +803,24 @@ export default function Profile() {
                         className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nascimento" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Data de nascimento <span className="opacity-60 font-normal">(opcional)</span></Label>
+                      <Input
+                        id="nascimento"
+                        inputMode="numeric"
+                        value={editData.birth_date}
+                        onChange={(e) => setEditData({ ...editData, birth_date: mascaraData(e.target.value) })}
+                        placeholder="dd/mm/aaaa"
+                        className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <InfoTile icon={UserIcon} label="Apelido" value={currentUser.nickname || currentUser.full_name} />
                     <InfoTile icon={Mail} label="Email" value={currentUser.email} />
                     <InfoTile icon={Phone} label="Telefone/WhatsApp" value={currentUser.phone} />
+                    <InfoTile icon={CalendarDays} label="Data de nascimento" value={nascimentoBR(currentUser.birth_date) || 'Não informada'} />
                     <InfoTile icon={BadgeCheck} label="Função" value={getRoleDisplayName(currentUser)} />
                   </div>
                 )}
