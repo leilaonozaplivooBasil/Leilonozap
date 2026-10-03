@@ -7,6 +7,7 @@ import { useSecureRole } from '@/components/hooks/useSecureRole';
 import { ADMIN_ROLES } from '@/lib/roles';
 import PortalPageHeader from '@/components/common/PortalPageHeader';
 import MapaBrasil, { nomeDoEstado } from '@/components/investidor/MapaBrasil';
+import ModalDepositos from '@/components/investidor/ModalDepositos';
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie,
 } from 'recharts';
@@ -65,6 +66,7 @@ const SITUACAO = {
   liberado: { rotulo: 'Liberado', cor: '#34D399' }, retido: { rotulo: 'Retido pelo gateway', cor: '#F87171' },
   devolvido: { rotulo: 'Devolvido ao pagador', cor: '#F87171' }, devolvido_parcial: { rotulo: 'Devolvido em parte', cor: '#FB923C' },
   chargeback: { rotulo: 'Contestado (chargeback)', cor: '#F87171' }, disputa: { rotulo: 'Em disputa', cor: '#FBBF24' },
+  alterado: { rotulo: 'Alterado pelo gateway após aprovação (possível contestação)', cor: '#F87171' },
   cancelado: { rotulo: 'Cancelado no gateway', cor: '#6B7280' }, pendente: { rotulo: 'Pendente no gateway', cor: '#9CA3AF' },
   desconhecido: { rotulo: 'Não reconhecido', cor: '#6B7280' }, nao_conferido: { rotulo: 'Ainda não conferido', cor: '#4B5563' },
 };
@@ -88,15 +90,17 @@ const hora = (iso) => (iso ? new Date(iso).toLocaleTimeString('pt-BR', { hour: '
 const diaCurto = (iso) => { const d = new Date(iso); return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
 const mesCurto = (m) => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][Number(String(m).slice(5, 7)) - 1] || m;
 
-function Kpi({ icon: Icon, rotulo, valor, detalhe, cor = 'text-white', teste }) {
+function Kpi({ icon: Icon, rotulo, valor, detalhe, cor = 'text-white', teste, onClick, acao }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div className={`${GLASS} p-4 sm:p-5`} data-teste={teste}>
+    <Tag type={onClick ? 'button' : undefined} onClick={onClick} className={`${GLASS} p-4 sm:p-5 text-left ${onClick ? 'cursor-pointer hover:border-amber-400/40 hover:bg-white/[0.06] transition' : ''}`} data-teste={teste}>
       <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
         <Icon className="w-3.5 h-3.5" /> {rotulo}
       </div>
       <div className={`mt-2 text-2xl sm:text-3xl font-black tabular-nums ${cor}`}>{valor}</div>
       {detalhe && <div className="mt-1 text-xs text-gray-400">{detalhe}</div>}
-    </div>
+      {acao && <div className="mt-2 text-[11px] font-bold text-amber-300/90">{acao} →</div>}
+    </Tag>
   );
 }
 
@@ -154,6 +158,7 @@ export default function PainelInvestidor() {
   const [ufSelecionada, setUfSelecionada] = useState(null);
   const [campoMapa, setCampoMapa] = useState('n');
   const [conferindo, setConferindo] = useState(null); // 🏦 DIR-195 — progresso da conferência no gateway
+  const [modalDepositos, setModalDepositos] = useState(null); // 🧾 DIR-196 — null | 'carteiras' | 'depositos'
   const timer = useRef(null);
 
   const carregar = useCallback(async (silencioso = false, manual = false) => {
@@ -163,7 +168,7 @@ export default function PainelInvestidor() {
     if (!silencioso) setCarregando(true);
     setAtualizando(true);
     try {
-      const r = await plataforma.functions.invoke('painelInvestidor', { user_id: user.id, dias });
+      const r = await plataforma.functions.invoke('painelInvestidor', { user_id: user.id, dias, depositos: !!modalDepositos });
       const data = r?.data || r;
       if (data?.success && data.painel) {
         setPainel(data.painel); setErro(''); setFalhas(0); setUltimaEm(Date.now());
@@ -181,7 +186,10 @@ export default function PainelInvestidor() {
       setCarregando(false);
       setAtualizando(false);
     }
-  }, [dias, painel]);
+  }, [dias, painel, modalDepositos]);
+
+  // 🧾 DIR-196 — ao abrir o modal, busca a lista inteira na hora (o ciclo de 20 s continua trazendo)
+  useEffect(() => { if (modalDepositos) carregar(true); }, [modalDepositos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 🏦 DIR-195 — "Conferir agora": consulta o Mercado Pago pagamento por pagamento, em lotes, até acabar.
   const conferirAgora = useCallback(async () => {
@@ -345,14 +353,16 @@ export default function PainelInvestidor() {
           <div className="grid place-items-center py-20 text-gray-400"><Loader2 className="w-8 h-8 animate-spin text-amber-400" /></div>
         )}
 
+        <ModalDepositos aberto={!!modalDepositos} aba={modalDepositos || 'carteiras'} onAba={setModalDepositos} onFechar={() => setModalDepositos(null)} dados={p?.depositos || null} carregando={!!modalDepositos && !p?.depositos} />
+
         {p && (
           <>
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-teste="investidor-kpis">
               <Kpi icon={Landmark} rotulo={`Entrou pelo gateway · ${rotuloPeriodo}`} valor={moeda(p.entrada?.periodo?.valor)} detalhe={`${p.entrada?.periodo?.n || 0} pagamentos · desde sempre ${moeda(p.entrada?.total?.valor)}`} cor="text-amber-300" teste="kpi-entrada" />
               <Kpi icon={Users} rotulo="Pessoas na base" valor={(p.pessoas?.total || 0).toLocaleString('pt-BR')} detalhe={`+${p.pessoas?.hoje || 0} hoje · +${p.pessoas?.d7 || 0} em 7 dias · +${p.pessoas?.d30 || 0} em 30 dias`} cor="text-emerald-300" teste="kpi-pessoas" />
-              <Kpi icon={Wallet} rotulo="Depositado nas carteiras" valor={moeda(fluxo.depositado)} detalhe={`${fluxo.depositantes || 0} pessoas depositaram · tudo pago no gateway`} teste="kpi-depositado" />
-              <Kpi icon={PiggyBank} rotulo="Parado nas carteiras" valor={moeda(fluxo.parado)} detalhe={`${pct(fluxo.parado, fluxo.depositado)}% do depositado, esperando produto`} cor="text-yellow-200" teste="kpi-parado" />
+              <Kpi icon={Wallet} rotulo="Depositado nas carteiras" valor={moeda(fluxo.depositado)} detalhe={`${fluxo.depositantes || 0} pessoas depositaram · tudo pago no gateway`} teste="kpi-depositado" onClick={() => setModalDepositos('depositos')} acao="Ver todos os depósitos" />
+              <Kpi icon={PiggyBank} rotulo="Parado nas carteiras" valor={moeda(fluxo.parado)} detalhe={`${pct(fluxo.parado, fluxo.depositado)}% do depositado, esperando produto`} cor="text-yellow-200" teste="kpi-parado" onClick={() => setModalDepositos('carteiras')} acao="Ver quem tem dinheiro parado" />
             </div>
 
             {/* 🏦 DIR-195 — Conciliação com o Mercado Pago */}
