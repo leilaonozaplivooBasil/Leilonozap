@@ -359,7 +359,7 @@ export default function PainelInvestidor() {
           <>
             {/* KPIs */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-teste="investidor-kpis">
-              <Kpi icon={Landmark} rotulo={`Entrou pelo gateway · ${rotuloPeriodo}`} valor={moeda(p.entrada?.periodo?.valor)} detalhe={`${p.entrada?.periodo?.n || 0} pagamentos · desde sempre ${moeda(p.entrada?.total?.valor)}`} cor="text-amber-300" teste="kpi-entrada" />
+              <Kpi icon={Landmark} rotulo={`Entrou pelo gateway · ${rotuloPeriodo}`} valor={moeda(p.entrada?.periodo?.valor)} detalhe={`${p.entrada?.periodo?.n || 0} pagamentos · líquido ${moeda(p.entrada?.periodo?.liquido)} · taxas ${moeda(p.entrada?.periodo?.taxa)} · desde sempre ${moeda(p.entrada?.total?.valor)}`} cor="text-amber-300" teste="kpi-entrada" />
               <Kpi icon={Users} rotulo="Pessoas na base" valor={(p.pessoas?.total || 0).toLocaleString('pt-BR')} detalhe={`+${p.pessoas?.hoje || 0} hoje · +${p.pessoas?.d7 || 0} em 7 dias · +${p.pessoas?.d30 || 0} em 30 dias`} cor="text-emerald-300" teste="kpi-pessoas" />
               <Kpi icon={Wallet} rotulo="Depositado nas carteiras" valor={moeda(fluxo.depositado)} detalhe={`${fluxo.depositantes || 0} pessoas depositaram · tudo pago no gateway`} teste="kpi-depositado" onClick={() => setModalDepositos('depositos')} acao="Ver todos os depósitos" />
               <Kpi icon={PiggyBank} rotulo="Parado nas carteiras" valor={moeda(fluxo.parado)} detalhe={`${pct(fluxo.parado, fluxo.depositado)}% do depositado, esperando produto`} cor="text-yellow-200" teste="kpi-parado" onClick={() => setModalDepositos('carteiras')} acao="Ver quem tem dinheiro parado" />

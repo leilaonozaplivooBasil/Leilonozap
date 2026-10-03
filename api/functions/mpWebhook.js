@@ -560,6 +560,8 @@ async function processar(req, res, evento) {
       }
       const estorno = await rpc.json().catch(() => null);
       console.error(`[MP] Estorno aplicado na venda ${idVenda}: ${JSON.stringify(estorno)}`);
+      // 🧾 DIR-197 — o gateway cancelou: fica registrado quem e por quê
+      await sb(`catalog_sales?id=eq.${encodeURIComponent(String(idVenda))}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cancelado_por: 'mercado_pago', cancelamento_motivo: `Mercado Pago: ${pay.status} (pagamento ${pay.id})` }) }).catch(() => {});
       return res.status(200).json({ ok: true, status: pay.status, estornado: true, estorno });
     }
     if (String(pay.status) === 'in_mediation') {

@@ -1,3 +1,21 @@
+## 🧾 DIR-197 — Auditoria caso a caso: cancelamento com rastro, painel pelo valor do gateway, conferência sem mexer na data (03/10/2026)
+
+**Dono:** "confere, não podemos ter nenhum achismo, quero entender tudo" e, depois do relatório, "pode fazer tudo que precisa fazer".
+
+**Os cinco "pago no gateway, cancelado aqui" (conferidos um a um, banco + gateway):** Gabriel 2× R$ 2 (26/07, nunca enviados, nada devolvido, comissões seguiam pagas); Luiz R$ 47,62 e Sophia R$ 30,48 (01/08 e 04/08, produto + frete, cancelados, nada devolvido, comissões estornadas; compras do dono e da filha); Ronilson R$ 86,54 (19/08, "produto indisponível", devolvido em crédito na carteira em 20/08, resolvido). Quem cancelou e quando: não existia registro; e a conferência de 03/10 sobrescreveu a `updated_at` das 285 vendas.
+
+**Feito em produção (fora de migração):** `cancelar_venda` nas duas vendas do Gabriel (comissões R$ 0,58 + R$ 0,60 estornadas; um registro de R$ 0,02 já estava pago e ficou); duas linhas de −R$ 0,60 em `financial_income` anulando a receita de comissão de 30/08.
+
+**Migração `20261003233000` (aplicada em produção):**
+
+- `catalog_sales_set_updated_at`: se só a coluna `gateway` mudou, `updated_at` fica como estava.
+- `cancelado_em` (trigger na transição de status), `cancelado_por` e `cancelamento_motivo` (gravados por `updateOrderStatus`, `excluirMeuPedido` e `mpWebhook`). A assinatura de `cancelar_venda` não muda.
+- `painel_investidor`: "Entrou pelo gateway" passa a usar o valor que o gateway cobrou (`gateway.valor`) quando a venda já foi conferida, com líquido, taxa e quantos conferidos; `fluxo_deposito.bloqueado`. O KPI mostra líquido e taxas.
+
+**Por que os totais não batiam centavo a centavo:** loja virtual R$ 350,36 de frete cobrado pelo gateway e fora do nosso campo de valor; depósitos no cartão R$ 379,24 de taxa (4,99%) paga pelo cliente. Nada perdido. Pagamentos liberados: cobrado R$ 61.850,87, taxas R$ 1.790,41, líquido R$ 60.826,91.
+
+**Prova:** `tests/cancelamentoComRastro.test.mjs` (3), suíte completa, lint 0 erros, build.
+
 ## 🧾 DIR-196 — Depósitos e carteiras um por um, o momento do dinheiro, e o PIX "alterado" no gateway (03/10/2026)
 
 **Dono, com a conciliação na tela:** "preciso de um modal para ver todos os depósitos e entender tudo que a plataforma está falando: qual o momento do dinheiro, a lista de depósitos e, principalmente, quanto de carteira dentro da operação está parado para compra, para eu virar em produto."
