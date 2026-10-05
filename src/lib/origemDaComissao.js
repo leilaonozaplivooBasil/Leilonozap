@@ -37,6 +37,8 @@ export const PAPEIS = Object.freeze({
   leilao_indicador: { rotulo: 'Indicador do arremate', origem: 'leilao', bloco: 'indicacao', pct: '5%' },
   leilao_executivo: { rotulo: 'Executivo do arremate', origem: 'leilao', bloco: 'estrutura', pct: '10%' },
   leilao_retido: { rotulo: 'Retido pela empresa (leilão)', origem: 'leilao', bloco: 'empresa', pct: 'resto dos 30%' },
+  // DIR-201: linha NEGATIVA — comissão usada para pagar compra na loja (não se paga, só abate)
+  compra_com_saldo: { rotulo: 'Usado em compra na loja', origem: 'loja', bloco: 'uso', pct: '—' },
 });
 
 /** 'leilao_indicador' → 'leilao'. Papel desconhecido com prefixo leilao_ é leilão; o resto é loja. */
@@ -74,6 +76,11 @@ export function resumirPorOrigem(commissions = [], emEspera = []) {
     o.em_espera = cent(o.em_espera + (Number(l?.amount) || 0));
   }
   return ['deposito', 'leilao', 'loja'].map((k) => out[k]).filter(Boolean);
+}
+
+/** Linha de uso (compra paga com comissão): negativa, nunca pagável. */
+export function ehLinhaDeUso(c) {
+  return !!c && (String(c.role || '') === 'compra_com_saldo' || Number(c.amount) < 0);
 }
 
 /** A conta oficial da empresa não é "pessoa a receber": é destino contábil. */

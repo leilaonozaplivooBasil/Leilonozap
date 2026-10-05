@@ -113,9 +113,9 @@ Ela reescreve o saldo como "soma das linhas Geradas". Rodar hoje **criaria R$ 14
 - Tela `/PagamentosComissoes`: bloco **"Relatório por origem e licença"** (depósito 10% · leilão 5%/10% · loja por cargo, com em espera / a receber / pago / estornado e próximas liberações), **"Saldos fora do extrato"** (auditoria viva do item 4.1), empresa separada das pessoas (4.8), e no cartão de cada pessoa o resumo por origem e o nome do cargo em português.
 - Testes `tests/auditoriaComissoes.test.mjs`.
 
-## 6. Decisões que ficam com o dono (nenhuma mexe em saldo sem o "sim")
-1. 4.1 — marcar as linhas usadas em compra (Luiz 105,09 · Beatriz 20,58 · Luciano 14,59)?
-2. 4.5 — leilão: continuar pagando no martelo ou só quando o arrematante pagar?
-3. 4.7 — gerar retroativo das 16 vendas Nexus de agosto (R$ 1.014,42)?
-4. 4.9 — tirar a conta oficial da regra dos 10%?
-5. 4.10 — tirar os cargos de quem foi zerado em 28/09?
+## 6. Decisões — tomadas em 05/10/2026 (DIR-201), por delegação do dono ("quero que você decida isso")
+1. **4.1 / 4.2** — Feito: linha negativa "Usado em compra na loja" nas 3 contas (saldo intocado; extrato = saldo) e `comprar_com_saldo` passa a gravar essa linha sozinha.
+2. **4.5** — Mantido: leilão paga no martelo (o lance reserva o saldo; o martelo é o pagamento).
+3. **4.7** — Sem retroativo: a regra Nexus começou em 15/08 e as pessoas foram zeradas em 28/09 por ordem do dono.
+4. **4.9** — Feito: a conta oficial sai da regra dos 10% (gatilho) e os R$ 507,70 existentes foram estornados.
+5. **4.10** — Mantido: zerar saldo não tira cargo; ninguém sai da rede sem ordem do dono.

@@ -1,3 +1,17 @@
+## 🧾 DIR-201 — As decisões da auditoria das comissões (05/10/2026)
+
+**Dono, sobre as 5 decisões do DIR-200:** "QUERO QUE VOCÊ DECIDA ISSO." Decidido e executado (nada aqui muda saldo de ninguém da rede):
+
+1. **Saldo × extrato (R$ 140,26 de 3 contas internas):** o dinheiro foi gasto em compras pagas com saldo de comissão; a linha "Gerada" ficou aberta. Entrou uma linha **negativa** `compra_com_saldo` em cada conta (Luiz −105,09 · Beatriz −20,58 · Luciano −14,59), sale_type `ajuste`. Extrato = saldo, saldo intocado. **Daqui para a frente** `comprar_com_saldo` grava essa linha sozinha (+ `wallet_ledger` `compra_com_comissao`). A tela mostra "Usado em compra"; a linha nunca é pagável (tela e servidor recusam).
+2. **Leilão paga no martelo (mantido):** o lance reserva o saldo, então o martelo já é o pagamento, como está documentado. O único caso em aberto (R$ 73,80) é da conta oficial.
+3. **16 vendas Nexus de 03–15/08 sem comissão (R$ 1.014,42): sem retroativo.** A regra de comissionar venda Nexus começou em 15/08, e as pessoas envolvidas tiveram a comissão zerada por ordem do dono em 28/09.
+4. **A empresa fora dos 10% de indicação:** cliente de cadastro direto aponta para a conta oficial; esses 10% eram "comissão" da empresa para a empresa. `trg_deposito_paga_indicador` agora pula a conta oficial. Passado estornado pela função de estorno: R$ 505 em espera cancelados (6 depósitos) e R$ 2,70 já liberados saíram do saldo da conta oficial e a linha virou "Estornado".
+5. **Cargos de quem foi zerado em 28/09 (Ribeiro, Iara, Elenice): ficam.** Zerar saldo acertou o passado; tirar cargo é tirar da rede, e isso o dono não pediu.
+
+**Migração `20261005230000_decisoes_da_auditoria.sql`** (aplicada em produção e registrada): `trg_deposito_paga_indicador` v2 e `comprar_com_saldo` v2. `src/lib/origemDaComissao.js` ganha `compra_com_saldo` e `ehLinhaDeUso`; `linhaPagavel` exige valor > 0; `payCommissionManually` recusa linha ≤ 0.
+
+**Prova:** `tests/decisoesDaAuditoria.test.mjs` (4), suíte completa, lint 0 erros, build; `relatorio_comissoes()` em produção: "saldos fora do extrato" vazio e indicação da empresa zerada.
+
 ## 🧾 DIR-200 — Auditoria financeira das comissões: relatório por origem e licença, liberação dos 7 dias com segurança (05/10/2026)
 
 **Dono:** "auditoria financeira extremamente diligente; atualize os pagamentos após os 7 dias; relatório destrinchando os 10% dos depósitos, os 5% do leilão e a venda da loja por licença (Influenciador, Vendedor, Parceiro etc.); analise todo o sistema financeiro, traga erros e bugs e como funcionam os pagamentos hoje." Depois do "entendi": "PODE FAZER".

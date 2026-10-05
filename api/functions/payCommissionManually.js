@@ -71,6 +71,10 @@ export default async function handler(req, res) {
       if (estadoAntes.some((l) => !['pending', 'confirmed'].includes(l.status))) {
         return res.status(200).json({ success: false, error: 'Alguma comissão selecionada já foi paga ou estornada. Recarregue a tela.' });
       }
+      // DIR-201: linha negativa (comissão usada em compra na loja) não se paga
+      if (estadoAntes.some((l) => !(Number(l.amount) > 0))) {
+        return res.status(400).json({ success: false, error: 'Linha de uso em compra não é pagável.' });
+      }
       const soma = round2(estadoAntes.reduce((s, l) => s + (Number(l.amount) || 0), 0));
       // a tela mostrou um total; se o banco diz outro, a tela está velha
       if (Number(valor) > 0 && Math.abs(round2(Number(valor)) - soma) >= 0.01) {

@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Banknote, Check } from 'lucide-react';
 import { etapaDoKyc, proximoPasso } from '@/lib/comissaoSoConsulta';
 import { historicoOrdenado, linhaPagavel, podeMarcarPagas, MOTIVOS_LINHAS } from '@/lib/pagamentoManualDeComissao';
 import PagarComissaoManualModal from './PagarComissaoManualModal';
-import { resumirPorOrigem, rotuloDoPapel, ORIGENS } from '@/lib/origemDaComissao';
+import { resumirPorOrigem, rotuloDoPapel, ORIGENS, ehLinhaDeUso } from '@/lib/origemDaComissao';
 
 // 🏦 Cartão de uma pessoa no extrato de comissões: quanto ela tem a receber, em
 // que pé está o KYC dela, e o botão "Pagar manualmente" (24/09/2026, pedido da
@@ -149,6 +149,8 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
                         <span className="text-green-400 text-xs font-bold bg-green-400/10 px-2 py-1 rounded">Pago</span>
                       ) : c.status === 'canceled' || c.status === 'reversed' ? (
                         <span className="text-gray-500 text-xs font-bold bg-gray-500/10 px-2 py-1 rounded">{c.status === 'reversed' ? 'Estornado' : 'Cancelado'}</span>
+                      ) : ehLinhaDeUso(c) ? (
+                        <span className="text-sky-300 text-xs font-bold bg-sky-500/10 px-2 py-1 rounded whitespace-nowrap" data-teste="status-usado-em-compra">Usado em compra</span>
                       ) : marcadas.has(String(c.id)) ? (
                         <button type="button" onClick={() => alternar(c.id)} aria-pressed="true"
                           className="inline-flex items-center gap-1 text-green-300 text-xs font-bold bg-green-500/20 border border-green-500/60 px-2 py-1 rounded whitespace-nowrap"
