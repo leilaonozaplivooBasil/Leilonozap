@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, Banknote, Check } from 'lucide-react';
 import { etapaDoKyc, proximoPasso } from '@/lib/comissaoSoConsulta';
 import { historicoOrdenado, linhaPagavel, podeMarcarPagas, MOTIVOS_LINHAS } from '@/lib/pagamentoManualDeComissao';
 import PagarComissaoManualModal from './PagarComissaoManualModal';
+import { resumirPorOrigem, rotuloDoPapel, ORIGENS } from '@/lib/origemDaComissao';
 
 // 🏦 Cartão de uma pessoa no extrato de comissões: quanto ela tem a receber, em
 // que pé está o KYC dela, e o botão "Pagar manualmente" (24/09/2026, pedido da
@@ -38,6 +39,8 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
   const marcarTodas = () => setMarcadas(todasMarcadas ? new Set() : new Set(pagaveis.map((c) => String(c.id))));
   const kyc = etapaDoKyc(grupo.kyc_status);
   const pagamentosManuais = historicoOrdenado(grupo.pagamentosManuais || []);
+  // 🧾 DIR-200 (05/10/2026): de onde veio o dinheiro desta pessoa — depósito 10%, leilão, loja
+  const porOrigem = resumirPorOrigem(grupo.commissions, grupo.emEspera);
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
@@ -46,9 +49,21 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
           <div className="font-semibold text-white">{grupo.user_name || 'Sem nome'}</div>
           <div className="text-xs text-gray-500">{grupo.user_id}</div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
+            {grupo.empresa && <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-gray-700 text-gray-200" data-teste="etiqueta-empresa">Conta da empresa</span>}
             <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${kyc.tom}`} data-teste="etapa-kyc">{kyc.rotulo}</span>
             <span className="text-xs text-gray-400">{proximoPasso(grupo.kyc_status, grupo.totalPendente)}</span>
           </div>
+          {porOrigem.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5" data-teste="resumo-por-origem">
+              {porOrigem.map((o) => (
+                <span key={o.origem} className={`text-[11px] rounded-full border border-gray-700 bg-gray-800/70 px-2 py-0.5 ${ORIGENS[o.origem]?.tom || 'text-gray-300'}`}>
+                  {o.rotulo}: <b>R$ {fmtBR(o.a_receber)}</b>
+                  {o.em_espera > 0 ? ` · espera R$ ${fmtBR(o.em_espera)}` : ''}
+                  {o.pago > 0 ? ` · pago R$ ${fmtBR(o.pago)}` : ''}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 👀 28/09/2026 — vídeo da Beatriz: "a gente tinha que marcar aqui já como
@@ -125,7 +140,7 @@ export default function ComissaoUsuarioCard({ grupo, admin, onPago }) {
               <tbody>
                 {grupo.commissions.map((c) => (
                   <tr key={c.id} className="border-t border-gray-800">
-                    <td className="px-3 py-2 text-gray-300">{c.role}</td>
+                    <td className="px-3 py-2 text-gray-300">{rotuloDoPapel(c.role)}</td>
                     <td className="px-3 py-2 text-gray-400">{c.product_title || c.sale_id?.slice(0, 8) || '—'}</td>
                     <td className="px-3 py-2 text-right text-gray-400">{c.percent}%</td>
                     <td className="px-3 py-2 text-right font-bold text-white">R$ {fmtBR(c.amount)}</td>

@@ -1,3 +1,18 @@
+## 🧾 DIR-200 — Auditoria financeira das comissões: relatório por origem e licença, liberação dos 7 dias com segurança (05/10/2026)
+
+**Dono:** "auditoria financeira extremamente diligente; atualize os pagamentos após os 7 dias; relatório destrinchando os 10% dos depósitos, os 5% do leilão e a venda da loja por licença (Influenciador, Vendedor, Parceiro etc.); analise todo o sistema financeiro, traga erros e bugs e como funcionam os pagamentos hoje." Depois do "entendi": "PODE FAZER".
+
+**Relatório completo:** `docs/AUDITORIA_COMISSOES_2026-10-05.md` (régua inteira de cada origem, números do dia, o que bate, o que não bate, decisões que ficam com o dono). **Nenhum saldo foi alterado.**
+
+**O que bate:** liberação dos 7 dias (17 liberadas, todas em até 58 min do vencimento; nenhuma vencida parada); 10% exatos em todas as 37 comissões de depósito; nenhum depósito na regra sem comissão; 47 vendas da loja desde 01/08 somam 30% certinho; 52 leilões somam 30%; 14 pagamentos manuais batem; nenhuma duplicata; 20 de 23 saldos iguais ao extrato.
+
+**Achados:** (4.1) saldo menor que o extrato em 3 contas internas, R$ 140,26 (Luiz 105,09 · Beatriz 20,58 · Luciano 14,59) por compras pagas com saldo de comissão — dinheiro gasto, linha "Gerada" ficou aberta; (4.2) compra com saldo não deixa rastro na linha; (4.3) liberação dos 7 dias não olhava se o depósito continuava de pé; (4.4) estorno do depósito não estornava a linha "Gerada"; (4.5) 5%/10% do leilão pagos no martelo antes do arrematante pagar (1 caso, R$ 73,80, conta oficial); (4.6) R$ 125 do Luciano liberados 5 dias antes em 28/09, fora do robô; (4.7) 16 vendas Nexus de 03–15/08 sem comissão (R$ 1.014,42); (4.8) a conta oficial entrava no "total das pessoas"; (4.9) a empresa recebe 10% dos depósitos de clientes que ela mesma indicou (R$ 505 em espera); (4.10) quem foi zerado em 28/09 segue nos pools; (4.11) `recalculateCommissionBalances` criaria R$ 140,26 se rodasse.
+
+**Feito (migração `20261005200000`, aplicada em produção):** `liberar_saldos_maturados` só libera depósito ainda pago e sem devolução/chargeback (vira `cancelado` se o dinheiro saiu; retido/disputa/alterado não tratado fica em espera); `estornar_comissoes_do_deposito` marca a linha `indicacao_deposito` como estornada e devolve `ja_pagas`; nova `relatorio_comissoes()` (só servidor). Rota `relatorioComissoes` (admin, crachá). Tela: bloco "Relatório por origem e licença" (em espera · a receber · pago · estornado por origem; tabela por cargo; empresa à parte; próximas liberações; alerta se o robô atrasar), "Auditoria viva · saldo × extrato", empresa fora do total das pessoas, resumo por origem e cargo em português em cada cartão. `src/lib/origemDaComissao.js` é a tabela única papel → origem/rótulo.
+
+**Fica com o dono (nada mexe em saldo sem o "sim"):** marcar as linhas usadas em compra (4.1); leilão pagar no martelo ou no pagamento (4.5); retroativo das 16 vendas Nexus (4.7); tirar a conta oficial dos 10% (4.9); tirar os cargos de quem foi zerado (4.10).
+
+**Prova:** `tests/auditoriaComissoes.test.mjs` (6), suíte completa, lint 0 erros, build; `select relatorio_comissoes()` em produção.
 ## 👔 DIR-185 — O elenco sumia no celular (05/10/2026)
 
 **Dono, com um print do iPhone e outro do MacBook lado a lado:** "na Jornada os
