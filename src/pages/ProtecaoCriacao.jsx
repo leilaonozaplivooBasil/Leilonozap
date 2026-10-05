@@ -78,8 +78,8 @@ export default function ProtecaoCriacao() {
         name: backupName.trim(),
         timestamp: new Date().toISOString(),
         data: {
-          auctions: await Auction.list("-created_date", 1000),
-          users: await AppUser.list("-created_date", 1000),
+          auctions: await Auction.listAll("-created_date"),
+          users: await AppUser.listAll("-created_date"),
           messages: await AuctionMessage.list("-created_date", 5000)
         }
       };
@@ -124,8 +124,8 @@ export default function ProtecaoCriacao() {
     
     try {
       // Carrega dados do sistema
-      const auctions = await Auction.list("-created_date", 1000);
-      const users = await AppUser.list("-created_date", 1000);
+      const auctions = await Auction.listAll("-created_date");
+      const users = await AppUser.listAll("-created_date");
       const messages = await AuctionMessage.list("-created_date", 5000);
       
       const currentDate = new Date().toLocaleString('pt-BR');
@@ -955,7 +955,7 @@ export default function Home() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
             {filteredAuctions.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} isAdmin={currentUser?.role === 'admin'} />
             ))}

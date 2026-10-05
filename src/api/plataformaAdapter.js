@@ -34,10 +34,14 @@
  *
  * Functions: redirecionadas para /api/functions/<name> (Vercel) ou Edge Functions.
  */
+import { tudoEmPaginas, precisaPaginar } from '@/lib/paginacao';
+import { normalizarEventoRealtime } from '@/lib/eventoRealtime';
 import { supabase } from './supabaseClient';
 import { caminhoSeguro } from '@/lib/caminhoDeProva';
 
 import { lerCracha, guardarCracha, cabecalhosSessao } from '@/lib/sessaoCliente';
+import { colunasPublicasDe, ehTabelaProtegida, podeVerSensiveis, filtroUsaCampoSensivel, juntarCampos } from '@/lib/camposSensiveis';
+import { CAMPOS_SENSIVEIS as CAMPOS_SENSIVEIS_USUARIO } from '@/lib/dadosSensiveisDoUsuario';
 // Mapa Entidade → tabela (snake_case plural)
 const TABLE_MAP = {
   AppUser: 'app_users',
@@ -57,6 +61,10 @@ const TABLE_MAP = {
   CatalogVisit: 'catalog_visits',
   Category: 'categories',
   CommissionRecord: 'commission_records',
+  // 💸 24/09/2026 — só LEITURA pelo cliente (o histórico da tela). A escrita é
+  // exclusiva de api/functions/payCommissionManually.js, com a chave de
+  // serviço — ver o comentário na migração da tabela.
+  ComissaoPagamentoManual: 'comissao_pagamentos_manuais',
   ComparaiLog: 'comparai_logs',
   CaptacaoOportunidade: 'captacao_oportunidades',
   MetodoPerfil: 'metodo_perfil', // 📖 DIR-43 — sonhos, rotina, script, apresentação
@@ -123,6 +131,8 @@ function mapToDB(entity, data) {
   }
   return out;
 }
+
+let _canaisAbertos = 0;
 
 function mapFromDB(entity, row) {
   if (!row || typeof row !== 'object') return row;
@@ -303,8 +313,44 @@ async function _avisaRajada(actorId) {
 // ao alcance da chave publicável. No banco, anon/authenticated só enxergam as
 // colunas abaixo (migração auditoria_app_users_colunas_publicas); aqui a lista é
 // a mesma, pra que `select('*')` nunca vire "permission denied" na tela.
-const COLUNAS_PUBLICAS_APP_USERS = 'id,base44_id,active_partner_plan,address_city,address_complement,address_neighborhood,address_number,address_state,address_street,address_zip_code,arrematante_commission_percentage,arrematante_context,arrematante_responsavel_id,avatar_color,avatar_url,career_levels,catalog_commission_balance,catalog_total_commissions_generated,commission_balance,cpf,created_by,created_by_id,created_date,display_first_name,display_last_name,email,enabled_panels,full_name,indicated_clients_count,is_sample,is_seller,licenciado_context,network_bids_count,nickname,partner_plan_activated_at,partner_plan_amount,phone,points,primary_career_level,profile_photo_url,recruited_by_id,referral_code,referred_by_id,role,saldo_alocado,saldo_disponivel,store_name,terms_accepted,total_bids,total_commissions_generated,total_operation_fee_percentage,updated_date,won_auctions,created_at,updated_at,needs_password_reset,kyc_status,is_pdv_operator,employer_id,active,store_slug,livoo_kyc_status,livoo_provisioned_at,saldo_reservado,terms_accepted_at,terms_version,passaporte_terms_accepted_at,passaporte_terms_version,seller_credit_balance,test_wallet_balance,credito_estoque,saldo_operacao,divida_consignado,last_login,pix_key,pix_key_type';
-const colunasDe = (table) => (table === 'app_users' ? COLUNAS_PUBLICAS_APP_USERS : '*');
+// 🔐 26/09/2026 — cpf, pix_key e pix_key_type SAÍRAM da leitura pública (migração
+// seguranca_pacote_1): 971 CPFs estavam ao alcance de qualquer um com a chave
+// publicável. O próprio usuário continua vendo os seus: vêm do login (servidor) e
+// são preservados a cada atualização do cadastro (src/lib/dadosSensiveisDoUsuario.js).
+const COLUNAS_PUBLICAS_APP_USERS = 'id,base44_id,active_partner_plan,address_city,address_complement,address_neighborhood,address_number,address_state,address_street,address_zip_code,arrematante_commission_percentage,arrematante_context,arrematante_responsavel_id,avatar_color,avatar_url,career_levels,catalog_commission_balance,catalog_total_commissions_generated,commission_balance,created_by,created_by_id,created_date,display_first_name,display_last_name,email,enabled_panels,full_name,indicated_clients_count,is_sample,is_seller,licenciado_context,network_bids_count,nickname,partner_plan_activated_at,partner_plan_amount,phone,points,primary_career_level,profile_photo_url,recruited_by_id,referral_code,referred_by_id,role,saldo_alocado,saldo_disponivel,store_name,terms_accepted,total_bids,total_commissions_generated,total_operation_fee_percentage,updated_date,won_auctions,created_at,updated_at,needs_password_reset,kyc_status,is_pdv_operator,employer_id,active,store_slug,livoo_kyc_status,livoo_provisioned_at,saldo_reservado,terms_accepted_at,terms_version,passaporte_terms_accepted_at,passaporte_terms_version,seller_credit_balance,test_wallet_balance,credito_estoque,saldo_operacao,divida_consignado,last_login';
+// 🔐 28/09/2026 — LGPD etapa 1: lojas, códigos da Collection, saques, despesas e
+// vendas também passaram a ter colunas guardadas (src/lib/camposSensiveis.js).
+const colunasDe = (table) => (table === 'app_users' ? COLUNAS_PUBLICAS_APP_USERS : colunasPublicasDe(table));
+
+// Quem está no navegador (só para decidir se VALE pedir; quem decide é o servidor).
+function _usuarioAtual() {
+  try { return typeof localStorage === 'undefined' ? null : JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; }
+}
+
+async function _pedirCamposSensiveis(corpo) {
+  const resp = await fetch('/api/functions/lerCamposSensiveis', {
+    method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }), body: JSON.stringify(corpo),
+  });
+  const j = await resp.json().catch(() => null);
+  if (!resp.ok || !j?.success) throw new Error(j?.error || `http_${resp.status}`);
+  return j.rows || [];
+}
+
+// Admin: completa as linhas já lidas com os campos guardados (chave PIX do saque,
+// código da Collection…). Falhou? A tela segue com o que já tinha — nunca quebra.
+async function _comCamposSensiveis(table, rows) {
+  if (!ehTabelaProtegida(table) || !Array.isArray(rows) || rows.length === 0) return rows;
+  if (!podeVerSensiveis(_usuarioAtual())) return rows;
+  try {
+    const ids = rows.map((r) => r?.id).filter(Boolean);
+    const extras = [];
+    for (let i = 0; i < ids.length; i += 500) extras.push(...await _pedirCamposSensiveis({ table, ids: ids.slice(i, i + 500) }));
+    return juntarCampos(rows, extras);
+  } catch (e) {
+    console.warn(`[camposSensiveis] ${table}: sem os campos guardados (${e?.message || e}) — se for admin, entre de novo.`);
+    return rows;
+  }
+}
 
 async function _routeWrite(table, action, id, payload) {
   const op = _operatorActor();
@@ -464,31 +510,91 @@ function entityProxy(entity) {
     return null;
   }
 
+  // 📚 SEM TETO DE MIL (30/09/2026, src/lib/paginacao.js) — o Supabase corta em
+  // 1.000 linhas por chamada. Uma página de [offset, offset+tamanho).
+  const _pagina = async (filters, orderBy, offset, tamanho) => {
+    let q = supabase.from(table).select(colunasDe(table));
+    if (filters) q = applyFilters(q, entity, filters);
+    q = applyOrderBy(q, orderBy, entity);
+    q = q.range(offset, offset + tamanho - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  };
+  // A lista inteira (ou até `limite`), página a página, na mesma ordem estável
+  // (applyOrderBy desempata por id — nenhuma linha some entre páginas).
+  const _tudo = async (filters, orderBy, limite) => {
+    const rows = await tudoEmPaginas((offset, tamanho) => _pagina(filters, orderBy, offset, tamanho), { limite });
+    return (await _comCamposSensiveis(table, rows)).map((r) => mapFromDB(entity, r));
+  };
+
   return {
     async list(orderBy, limit) {
       let q = supabase.from(table).select(colunasDe(table));
+      // Limite acima de 1.000: pagina — antes a chamada pedia 5.000 e recebia
+      // 1.000 sem aviso (comissões: 1.573 linhas). Sem limite segue uma chamada.
+      if (precisaPaginar(limit)) return _tudo(null, orderBy, limit);
       q = applyOrderBy(q, orderBy, entity);
       if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
-      return data.map((r) => mapFromDB(entity, r));
+      return (await _comCamposSensiveis(table, data)).map((r) => mapFromDB(entity, r));
+    },
+
+    /** TODAS as linhas, em páginas de 1.000. Use quando a tela precisa da base inteira. */
+    async listAll(orderBy) {
+      return _tudo(null, orderBy, undefined);
+    },
+
+    /** TODAS as linhas que passam no filtro, em páginas de 1.000. */
+    async filterAll(filters, orderBy) {
+      if (table === 'app_users' && filters && typeof filters === 'object'
+        && Object.keys(mapToDB(entity, filters)).some((k) => CAMPOS_SENSIVEIS_USUARIO.includes(k))) {
+        return [];
+      }
+      if (filtroUsaCampoSensivel(table, mapToDB(entity, filters))) {
+        return this.filter(filters, orderBy);
+      }
+      return _tudo(filters, orderBy, undefined);
     },
 
     async filter(filters, orderBy, limit, offset) {
+      // 🚨 28/09/2026 — "Erro ao criar conta: permission denied for table app_users"
+      // (print do dono, cliente tentando se cadastrar). Desde o pacote 1 (27/09)
+      // o navegador não lê — nem COMPARA — cpf/pix_key de app_users. Várias telas
+      // de cadastro ainda conferiam "esse CPF já existe?" com AppUser.filter({cpf}),
+      // e a recusa do banco derrubava o cadastro inteiro. Quem garante CPF único é
+      // o servidor (publicRegister confere e-mail, telefone e CPF). Aqui a
+      // resposta do navegador é "não achei" — nunca erro.
+      if (table === 'app_users' && filters && typeof filters === 'object'
+        && Object.keys(mapToDB(entity, filters)).some((k) => CAMPOS_SENSIVEIS_USUARIO.includes(k))) {
+        return [];
+      }
+      // 🔐 Filtrar por coluna guardada ("esse código já existe?") só pelo servidor:
+      // o banco não deixa nem comparar o que não deixa ler.
+      if (filtroUsaCampoSensivel(table, mapToDB(entity, filters))) {
+        if (!podeVerSensiveis(_usuarioAtual())) return [];
+        const rows = await _pedirCamposSensiveis({ table, filtro: mapToDB(entity, filters) });
+        return rows.map((r) => mapFromDB(entity, r));
+      }
       let q = supabase.from(table).select(colunasDe(table));
+      // Sem offset e com limite acima de 1.000: pagina.
+      if (offset == null && precisaPaginar(limit)) return _tudo(filters, orderBy, limit);
       q = applyFilters(q, entity, filters);
       q = applyOrderBy(q, orderBy, entity);
       if (offset != null && limit) q = q.range(offset, offset + limit - 1);
       else if (limit) q = q.limit(limit);
       const { data, error } = await q;
       if (error) throw error;
-      return data.map((r) => mapFromDB(entity, r));
+      return (await _comCamposSensiveis(table, data)).map((r) => mapFromDB(entity, r));
     },
 
     async get(id) {
       const { data, error } = await supabase.from(table).select(colunasDe(table)).eq('id', id).maybeSingle();
       if (error) throw error;
-      return data ? mapFromDB(entity, data) : null;
+      if (!data) return null;
+      const [linha] = await _comCamposSensiveis(table, [data]);
+      return mapFromDB(entity, linha);
     },
 
     async create(data) {
@@ -501,7 +607,7 @@ function entityProxy(entity) {
       const { data: row, error } = await supabase
         .from(table)
         .insert(payload)
-        .select()
+        .select(colunasDe(table))
         .single();
       if (error) throw error;
       return mapFromDB(entity, row);
@@ -521,7 +627,7 @@ function entityProxy(entity) {
         .from(table)
         .update(payload)
         .eq('id', id)
-        .select()
+        .select(colunasDe(table))
         .single();
       if (error) throw error;
       return mapFromDB(entity, row);
@@ -542,16 +648,27 @@ function entityProxy(entity) {
       const payload = (rows || []).map((r) => mapToDB(entity, r));
       const w = await _routeWrite(table, 'bulkCreate', null, payload);
       if (!w._skip && w.success && Array.isArray(w.rows)) return w.rows.map((r) => mapFromDB(entity, r));
-      const { data, error } = await supabase.from(table).insert(payload).select();
+      const { data, error } = await supabase.from(table).insert(payload).select(colunasDe(table));
       if (error) throw error;
       return data.map((r) => mapFromDB(entity, r));
     },
 
-    subscribe(callback) {
+    // 📡 01/10/2026 — assina mudanças da tabela no Supabase Realtime.
+    //   - `opts.event`: 'INSERT' | 'UPDATE' | 'DELETE' | '*' (padrão)
+    //   - `opts.filter`: ex. 'id=eq.<id>' — filtra NO SERVIDOR; a sala do leilão
+    //     assina só a linha do leilão aberto, não a tabela inteira.
+    // Cada assinatura ganha um canal próprio: duas telas assinando a mesma tabela
+    // com o mesmo nome de canal brigavam pelo mesmo tópico.
+    // O evento chega normalizado (src/lib/eventoRealtime.js): `type`/`data`/`id`
+    // para quem lê no formato antigo e `new`/`old`/`eventType` para quem lê o do
+    // Supabase — as duas leituras coexistem no código.
+    subscribe(callback, opts = {}) {
+      if (typeof callback !== 'function') return () => {};
+      const { event = '*', filter } = opts || {};
       const channel = supabase
-        .channel(`realtime:${table}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-          callback(payload);
+        .channel(`realtime:${table}:${++_canaisAbertos}`)
+        .on('postgres_changes', { event, schema: 'public', table, ...(filter ? { filter } : {}) }, (payload) => {
+          callback(normalizarEventoRealtime(payload, (linha) => mapFromDB(entity, linha)));
         })
         .subscribe();
       return () => supabase.removeChannel(channel);

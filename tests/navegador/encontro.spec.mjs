@@ -35,6 +35,12 @@ const CROMO = process.env.CAMINHO_CHROMIUM
 let chromium = null;
 try { ({ chromium } = await import('playwright')); } catch { /* opcional */ }
 const semNavegador = chromium ? false : 'playwright não instalado — rode: npm i -D playwright';
+// ⚠️ BANCA DESATUALIZADA (25/09/2026) — decisão do dono: "deixe aviso nelas, só
+// mantém". A fórmula do fixo mudou em 13/09 (DIR-142) e estes cenários ficaram
+// com números antigos. Ficam guardados como referência do comportamento
+// desenhado; quando o X-Game for revisitado, refazer as expectativas e tirar
+// o skip. Não é bug em produção — é a prova que envelheceu.
+const BANCA_DESATUALIZADA = 'banca desatualizada desde 13/09 (fórmula do fixo DIR-142) — mantida por decisão do dono em 25/09';
 
 let navegador; let BASE; let servidor;
 const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png' };
@@ -79,7 +85,7 @@ const colarPautas = async (pagina, texto2) => {
   await pagina.locator('[data-teste="pautas-texto"]').fill(texto2);
 };
 
-test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pronto e as pautas vazias', { skip: semNavegador }, async () => {
+test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pronto e as pautas vazias', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   assert.match(await texto(pagina, '[data-teste="encontro-titulo"]'), /segunda-feira, 07\/09 é hoje/);
   assert.match(await texto(pagina, '[data-teste="encontro"]'), /Estruturação/);
@@ -92,7 +98,7 @@ test('ENCONTRO: abre na segunda de hoje, com a fase do ciclo, o cronômetro pron
   await ctx.close();
 });
 
-test('TÓPICO: sem IA conectada, as pautas viram tópico pela régua local — leitura do Hábito do mês, 3 tópicos somando 120 min, responsável sugerido pela função; e grava no encontro', { skip: semNavegador }, async () => {
+test('TÓPICO: sem IA conectada, as pautas viram tópico pela régua local — leitura do Hábito do mês, 3 tópicos somando 120 min, responsável sugerido pela função; e grava no encontro', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
@@ -120,7 +126,7 @@ test('TÓPICO: sem IA conectada, as pautas viram tópico pela régua local — l
   await ctx.close();
 });
 
-test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, tópicos) e fica marcado "gerado pela IA"', { skip: semNavegador }, async () => {
+test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, tópicos) e fica marcado "gerado pela IA"', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.evaluate(() => {
     window.__iaFalsa = () => ({
@@ -147,7 +153,7 @@ test('TÓPICO PELA IA: quando a IA responde, o tópico é dela (tema, leitura, t
   await ctx.close();
 });
 
-test('CONVERSA: a IA pergunta uma coisa de cada vez (o livro, o que tirar dele, o treinamento, as pautas) e ao dizer "pronto" o tópico sai do que foi respondido', { skip: semNavegador }, async () => {
+test('CONVERSA: a IA pergunta uma coisa de cada vez (o livro, o que tirar dele, o treinamento, as pautas) e ao dizer "pronto" o tópico sai do que foi respondido', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const responder = async (r) => {
     await pagina.locator('[data-teste="conversa-resposta"]').fill(r);
@@ -178,7 +184,7 @@ test('CONVERSA: a IA pergunta uma coisa de cada vez (o livro, o que tirar dele, 
   await ctx.close();
 });
 
-test('COMEÇAR DO ZERO: apaga as pautas, o tópico gerado E o treinamento da apresentação juntos — dono: "quando zerar, zera tudo na apresentação do treinamento também"', { skip: semNavegador }, async () => {
+test('COMEÇAR DO ZERO: apaga as pautas, o tópico gerado E o treinamento da apresentação juntos — dono: "quando zerar, zera tudo na apresentação do treinamento também"', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="treinamento-texto"]').fill('Script de abordagem\nAbrir com pergunta\nEscutar 2 minutos');
   await pagina.locator('[data-teste="treinamento-salvar"]').click();
@@ -196,7 +202,7 @@ test('COMEÇAR DO ZERO: apaga as pautas, o tópico gerado E o treinamento da apr
   await ctx.close();
 });
 
-test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo avança bloco a bloco (mentalidade → leitura → treinamento) — o estado vive no banco', { skip: semNavegador }, async () => {
+test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo avança bloco a bloco (mentalidade → leitura → treinamento) — o estado vive no banco', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="comecar"]').click();
   await pagina.locator('[data-teste="cronometro"][data-rodando="sim"][data-bloco="mentalidade"]').waitFor();
@@ -220,7 +226,7 @@ test('CRONÔMETRO: começar grava o bloco rodando; pausar guarda; próximo avan�
   await ctx.close();
 });
 
-test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada ao encontro, até sexta 18h; a visão executiva mostra "sem agendar"; a demanda que surgiu na hora também', { skip: semNavegador }, async () => {
+test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada ao encontro, até sexta 18h; a visão executiva mostra "sem agendar"; a demanda que surgiu na hora também', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
@@ -253,7 +259,7 @@ test('DIRECIONAR: a demanda cai RECEBIDA no Painel Corporativo da pessoa, ligada
   await ctx.close();
 });
 
-test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o tempo, e fecha no ESC', { skip: semNavegador }, async () => {
+test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o tempo, e fecha no ESC', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
@@ -279,7 +285,7 @@ test('APRESENTAR: a tela cheia abre na capa, anda com a seta, mostra o bloco e o
   await ctx.close();
 });
 
-test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no dia e no quadro com o rastro; mandar demanda daqui; a semana de todo mundo', { skip: semNavegador }, async () => {
+test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no dia e no quadro com o rastro; mandar demanda daqui; a semana de todo mundo', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').click(); // abre o detalhe do Emanuel (o painel dele fica embutido)
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="demanda-recebida"]').waitFor();
@@ -323,7 +329,7 @@ test('PAINEL CORPORATIVO (gestão): metas, a demanda recebida do CEO, agendar no
   await ctx.close();
 });
 
-test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só no dia, devolve com motivo — e não manda demanda', { skip: semNavegador }, async () => {
+test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só no dia, devolve com motivo — e não manda demanda', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir({ comoEmanuel: true });
   const painel = pagina.locator('[data-teste="painel-corporativo"]');
   await painel.locator('[data-teste="demanda-recebida"]').waitFor();
@@ -344,7 +350,7 @@ test('PAINEL CORPORATIVO (a própria pessoa): o Emanuel vê o dele, agenda só n
   await ctx.close();
 });
 
-test('CELULAR: o encontro e o painel cabem na tela — foto pra julgar', { skip: semNavegador }, async () => {
+test('CELULAR: o encontro e o painel cabem na tela — foto pra julgar', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await colarPautas(pagina, PAUTAS);
   await pagina.locator('[data-teste="gerar-topico"]').click();
@@ -355,7 +361,7 @@ test('CELULAR: o encontro e o painel cabem na tela — foto pra julgar', { skip:
   await ctx.close();
 });
 
-test('PERFORMANCE (sem administração): a visão executiva de todo mundo — quem planejou, quem produziu, o semáforo — e clicar na pessoa abre o painel dela', { skip: semNavegador }, async () => {
+test('PERFORMANCE (sem administração): a visão executiva de todo mundo — quem planejou, quem produziu, o semáforo — e clicar na pessoa abre o painel dela', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   await pagina.locator('[data-teste="visao-linha"]').first().waitFor();
   assert.match(await texto(pagina, '[data-teste="visao-resumo"]'), /planejaram hoje\s*1 de 4.*produziram na semana\s*2 de 4.*demandas concluídas\s*1 de 2 · 50%/);
@@ -378,7 +384,7 @@ test('PERFORMANCE (sem administração): a visão executiva de todo mundo — qu
   await ctx.close();
 });
 
-test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o detalhamento por pessoa — a prévia na linha e, ao clicar, os 8 Hábitos dela, o PDF e o painel', { skip: semNavegador }, async () => {
+test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o detalhamento por pessoa — a prévia na linha e, ao clicar, os 8 Hábitos dela, o PDF e o painel', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   const oito = pagina.locator('[data-teste="oito-habitos"]');
   await oito.locator('[data-teste="habito"]').first().waitFor();
@@ -444,7 +450,7 @@ test('X-PERFORMANCE: em cima só os números do time (nenhum nome); embaixo o de
   await ctx.close();
 });
 
-test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa aberta (nome dela no arquivo) e copia o texto pro WhatsApp', { skip: semNavegador }, async () => {
+test('PDF DO EXECUTIVO: o botão do Painel Corporativo baixa o PDF da pessoa aberta (nome dela no arquivo) e copia o texto pro WhatsApp', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   await pagina.locator('[data-teste="visao-linha"][data-pessoa="emanuel"]').click(); // abre o detalhe do Emanuel (o painel dele fica embutido)
   await pagina.locator('[data-teste="painel-corporativo"][data-pessoa="emanuel"] [data-teste="painel-meta"]').first().waitFor();

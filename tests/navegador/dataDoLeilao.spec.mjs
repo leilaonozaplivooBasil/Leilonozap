@@ -66,22 +66,21 @@ async function abrir(busca = '') {
   return { ctx, pagina };
 }
 
-test('🔴 com 12 dias pela frente o contador diz "1 semana" — e a data aparece do lado', { skip: semNavegador }, async () => {
+test('🔴 com 12 dias pela frente o card diz a DATA ("até dd/mm"), não "1 semana"', { skip: semNavegador }, async () => {
+  // 🃏 25/09/2026 — padrão dos cards (opção A): o bloco "Termina · 1 semana ·
+  // data" saiu. Em semanas, o prazo curto ao lado de "Lance atual" É a data.
   const { ctx, pagina } = await abrir();
   try {
     const corpo = await pagina.textContent('body');
-    // primeiro a prova de que o problema é real: o contador MESMO diz "1 semana"
-    assert.match(corpo, /1 semana/,
-      'se o contador deixou de dizer "1 semana" aos 12 dias, este teste perdeu o sentido — revisar');
+    assert.ok(!/1 semana/.test(corpo), 'o card voltou a dizer "1 semana" — é o que fazia o cliente achar o leilão travado');
 
     const linha = pagina.locator('[data-teste="data-de-termino"]');
     assert.equal(await linha.count(), 1, 'a data não foi desenhada no card');
     const data = (await linha.textContent()).trim();
-    assert.match(data, /^\d{2}\/\d{2}( às | )\d{2}:\d{2}$/,
-      `a data saiu fora do formato dd/mm às hh:mm: ${JSON.stringify(data)}`);
-
-    // e ela tem que estar VISÍVEL, não escondida atrás de algum overflow
+    assert.match(data, /^até \d{2}\/\d{2}$/, `a data saiu fora do formato "até dd/mm": ${JSON.stringify(data)}`);
     assert.ok(await linha.isVisible(), 'a data está no DOM mas não na tela');
+    // a data completa (com hora) fica no title
+    assert.match(await linha.getAttribute('title'), /^Termina \d{2}\/\d{2} às \d{2}:\d{2}$/);
   } finally { await ctx.close(); }
 });
 
@@ -91,11 +90,9 @@ test('a data confere com o end_time do leilão — 12 dias à frente', { skip: s
     const data = (await pagina.textContent('[data-teste="data-de-termino"]')).trim();
     const esperado = await pagina.evaluate(() => {
       const d = new Date(Date.now() + 12 * 24 * 60 * 60 * 1000);
-      const dia = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
-      return dia;
+      return d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' });
     });
-    assert.ok(data.startsWith(esperado),
-      `a data mostrada (${data}) não bate com o fim do leilão (${esperado})`);
+    assert.equal(data, `até ${esperado}`, `a data mostrada (${data}) não bate com o fim do leilão (${esperado})`);
   } finally { await ctx.close(); }
 });
 
@@ -113,7 +110,7 @@ test('leilão sem end_time não inventa data — nada de 31/12 às 21:00', { ski
   try {
     const corpo = await pagina.textContent('body');
     assert.ok(!/31\/12 às 21:00/.test(corpo), 'apareceu a Época de 1970 disfarçada de data');
-    assert.ok(!/\d{2}\/\d{2} às \d{2}:\d{2}/.test(corpo), `apareceu uma data onde não há data: ${corpo.slice(0, 200)}`);
+    assert.ok(!/\d{2}\/\d{2}( às \d{2}:\d{2})?/.test(corpo.replace(/R\$\s[\d.,]+/g, '')), `apareceu uma data onde não há data: ${corpo.slice(0, 200)}`);
   } finally { await ctx.close(); }
 });
 
@@ -195,10 +192,12 @@ test('🔇 o vídeo toca mudo, sozinho, sem loop, e com a foto de cartaz', { ski
 test('⏸️ o rodízio SEGURA enquanto o vídeo toca, e SOLTA quando acaba', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrir('?video=1');
   try {
-    // o evento é disparado no elemento real; quem reage é o React real
+    // o evento é disparado no elemento real; quem reage é o React real.
+    // 28/09/2026: `playing`, não `play` — `play` dispara antes de haver imagem, e
+    // um vídeo que nunca carrega prenderia o card para sempre (ver "nunca começa").
     await pagina.evaluate(() => {
       document.querySelector('[data-teste="video-do-destaque"]')
-        .dispatchEvent(new Event('play'));
+        .dispatchEvent(new Event('playing'));
     });
     // o carrossel troca a cada 2,5s — três segundos parado prova que segurou
     await pagina.waitForTimeout(3200);
@@ -364,5 +363,71 @@ test('🔇 mas SEM som: nem botão, nem áudio no primeiro clique', { skip: semN
     await pagina.waitForTimeout(800);
     assert.equal(await estaMudo(pagina), true,
       '🔴 o clique ligou o som num card que não é o primeiro — dois áudios ao mesmo tempo');
+  } finally { await ctx.close(); }
+});
+
+// ─────────────── ⏳ "CARDS DE LEILÕES SEGUEM SEM VÍDEO" (28/09/2026) ───────────────
+//
+// Print do dono: iPhone 17 e Harley nos Destaques, só com as fotos. Duas causas:
+//   1. o `memo` do card nunca olhou `video` — e na Home o vídeo chega DEPOIS do
+//      card (2ª consulta). O card não redesenhava: ficava sem vídeo para sempre.
+//   2. o rodízio só segurava o vídeo depois que ele TOCAVA. Vídeo lento (os dois
+//      tinham o índice no fim do arquivo) perdia o slide em 2,5s e depois tocava
+//      escondido atrás da foto.
+
+test('🔴 vídeo que chega DEPOIS do card (como na Home) aparece e abre o card', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=prova&videoDepois=400&fotos=3');
+  try {
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 5000 });
+    // o rodízio pode estar em qualquer foto quando o vídeo chega; numa volta completa ele passa pelo vídeo
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && getComputedStyle(v).opacity === '1';
+    }, null, { timeout: 12000 });
+  } finally { await ctx.close(); }
+});
+
+test('🔴 vídeo LENTO para começar: o slide espera, não vai para as fotos em 2,5s', { skip: semNavegador }, async () => {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1200, height: 900 } });
+  // o vídeo demora 5s para responder — o índice no fim do arquivo faz isso na vida real
+  await ctx.route('**/*.webm', async (r) => { await new Promise((ok) => setTimeout(ok, 5000)); await r.continue(); });
+  const pagina = await ctx.newPage();
+  try {
+    await pagina.goto(`${BASE}?video=prova&fotos=3`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 20000 });
+    await pagina.waitForTimeout(4000);
+    assert.equal(await slideVisivelAgora(pagina), 'video', 'aos 4s o card já tinha trocado o vídeo pelas fotos');
+    // e quando o vídeo chega, toca NA TELA
+    await pagina.waitForFunction(() => {
+      const v = document.querySelector('[data-teste="video-do-destaque"]');
+      return v && !v.paused && v.currentTime > 0 && getComputedStyle(v).opacity === '1';
+    }, null, { timeout: 15000 });
+  } finally { await ctx.close(); }
+});
+
+test('vídeo que nunca começa não prende o card: segue para as fotos', { skip: semNavegador }, async () => {
+  const nav = await garantirNavegador();
+  const ctx = await nav.newContext({ viewport: { width: 1200, height: 900 } });
+  await ctx.route('**/*.webm', () => { /* nunca responde */ });
+  const pagina = await ctx.newPage();
+  try {
+    await pagina.goto(`${BASE}?video=prova&fotos=3`, { waitUntil: 'domcontentloaded' });
+    await pagina.waitForSelector('[data-teste="video-do-destaque"]', { timeout: 20000 });
+    await pagina.waitForFunction(() => {
+      const fotos = [...document.querySelectorAll('img[alt*="imagem"]')];
+      return fotos.some((f) => getComputedStyle(f).opacity === '1');
+    }, null, { timeout: 16000 });
+  } finally { await ctx.close(); }
+});
+
+test('vídeo QUEBRADO não faz o card parar 10s na capa a cada volta', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?video=quebrado&fotos=2');
+  try {
+    // 3 slides (vídeo + 2 fotos) a 2,5s: em 12s o rodízio dá a volta e passa pelas fotos de novo
+    const vistos = new Set();
+    for (let i = 0; i < 24; i += 1) { vistos.add(await slideVisivelAgora(pagina)); await pagina.waitForTimeout(500); }
+    const fotosVistas = [...vistos].filter((x) => typeof x === 'number' && x >= 0);
+    assert.ok(fotosVistas.length >= 2, `o rodízio travou: viu ${[...vistos].join(',')}`);
   } finally { await ctx.close(); }
 });

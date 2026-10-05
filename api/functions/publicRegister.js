@@ -2,10 +2,15 @@
 // Sem OTP (mantém a UX atual da tela). Valida duplicados, gera referral_code, resolve o indicador
 // pelo ref_code (link de indicação) e grava a senha como bcrypt na tabela isolada app_users_auth.
 import crypto from 'crypto';
+import { telefoneBR } from '../../src/lib/telefoneBR.js';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
 import { emitirSessao } from '../_lib/sessao.js';
+import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
+import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -34,7 +39,10 @@ export default async function handler(req, res) {
     const full_name = String(body?.full_name || '').trim();
     const email = String(body?.email || '').trim().toLowerCase();
     const password = String(body?.password || '');
-    const phone = body?.phone ? String(body.phone).replace(/\D/g, '') : '';
+    // 📱 27/09/2026 — dono: "telefone WhatsApp é campo obrigatório no cadastro". Os
+    // formulários já exigiam; a rota não — 111 contas sem telefone entraram por aqui.
+    const tel = telefoneBR(body?.phone);
+    const phone = tel ? tel.nacional : '';
     const cpf = body?.cpf ? String(body.cpf).replace(/\D/g, '') : '';
     const ref_code = String(body?.ref_code || '').trim();
     const extra = {
@@ -50,6 +58,7 @@ export default async function handler(req, res) {
     };
 
     if (!full_name || !email || !password) return res.status(400).json({ success: false, error: 'Nome, e-mail e senha são obrigatórios' });
+    if (!phone) return res.status(400).json({ success: false, error: 'Telefone/WhatsApp é obrigatório: DDD + número, ex.: (21) 99999-9999', campo: 'phone' });
     if (password.length < 8) return res.status(400).json({ success: false, error: 'Senha deve ter ao menos 8 caracteres' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
@@ -100,11 +109,15 @@ export default async function handler(req, res) {
     const nameParts = full_name.split(/\s+/).filter(Boolean);
     const payload = {
       id, base44_id: id, full_name, email, password: null,
-      phone: phone || null, cpf: cpf || null,
+      phone, cpf: cpf || null,
       display_first_name: extra.display_first_name || nameParts[0] || null,
       display_last_name: extra.display_last_name || (nameParts.length > 1 ? nameParts[nameParts.length - 1] : null),
       role: 'user', career_levels: ['usuario'], primary_career_level: 'usuario',
       referred_by_id, referral_code, terms_accepted: true,
+      // 📣 25/09 — de onde a pessoa veio (utm/fbclid), pra medir o Meta Ads
+      origem_trafego: sanearOrigem(body?.origem_trafego),
+      // 🎂 03/10 (DIR-194) — data de nascimento OPCIONAL: o que não é data vira null e o cadastro segue.
+      birth_date: nascimentoISO(body?.birth_date),
       created_date: now, updated_date: now,
       address_street: extra.address_street, address_number: extra.address_number,
       address_complement: extra.address_complement, address_neighborhood: extra.address_neighborhood,
@@ -118,6 +131,11 @@ export default async function handler(req, res) {
     }
     // senha em bcrypt na tabela isolada (só service_role lê); app_users.password fica null
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
+
+    // 🌳 25/09/2026 — o indicado vira contato na lista de quem indicou (só o
+    // indicador direto; conta do site não; sem sobrepor). Best-effort: o
+    // cadastro já aconteceu, isto é espelho — nunca atrasa nem derruba.
+    criarContatoDaIndicacao(rows[0]).catch(() => {});
 
     // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
     // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio. Fire-and-forget:
@@ -135,6 +153,9 @@ export default async function handler(req, res) {
 
     const u = { ...rows[0] };
     delete u.password;
+    // ✉️ boas-vindas (28/09/2026) — só o registerNetworkUser mandava; o cadastro
+    // pelo site (a porta da maioria) ficava sem. Best-effort, nunca segura o cadastro.
+    await enviarAviso({ tipo: 'cadastro', userId: id, chave: 'conta', dados: { nome: full_name } });
     // 🔐 CRACHÁ DE SESSÃO (21/08/2026) — ver api/_lib/sessao.js. É aqui, e só
     // aqui, que ele nasce: depois da senha (ou do Google) ter sido conferida.
     // O navegador guarda e manda em toda chamada seguinte, no cabeçalho x-sessao.

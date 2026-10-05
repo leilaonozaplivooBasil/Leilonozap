@@ -1,4 +1,5 @@
-import { itensDoPedido, dinheiroDoPedido, itensSemNome } from '@/lib/itensDoPedido';
+import { itensDoPedido, dinheiroDoPedido, itensSemNome, idsDosItens } from '@/lib/itensDoPedido';
+import { DEPOSITO_MINIMO } from '@/lib/depositoMinimo';
 import React, { useState, useEffect, useMemo } from 'react';
 import { fmtBR } from '@/lib/money';
 import { plataforma } from '@/api/plataformaClient';
@@ -7,11 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle, AlertTriangle, Printer } from 'lucide-react';
+import { Loader2, Search, Package, Truck, CheckCircle, Clock, X, RefreshCw, PartyPopper, XCircle, AlertTriangle, Printer, Store, FileCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import PageFullscreen from "@/components/admin/PageFullscreen";
 import OrderItemsChecklist from "@/components/catalog/OrderItemsChecklist";
 import OrderFulfillmentSteps from "@/components/catalog/OrderFulfillmentSteps";
+import RegistrarRetiradaModal from "@/components/retirada/RegistrarRetiradaModal";
+import ComprovanteRetiradaModal from "@/components/retirada/ComprovanteRetiradaModal";
+import { ehRetirada, vendaPodeSerRetirada, numeroDoPedidoTela, quandoRetirou } from "@/lib/retirada";
 
 // ✅ PONTO 112 (21/08/2026) — mesma conta do checkout (src/pages/Cart.jsx) e do
 // servidor (api/functions/atualizarCpfComprador.js). As três precisam concordar:
@@ -42,7 +46,8 @@ const KINDS_DIGITAIS = new Set([
 // Passaporte (creditarBonusPassaporte em mpWebhook.js) — é o mesmo benefício pro cliente,
 // só o rótulo interno é diferente. Por isso conta como Passaporte aqui também, senão ficava
 // invisível na Gestão de Pedidos mesmo tendo o crédito automático igual.
-const isPassaporte = (o) => o?.kind === 'passaporte' || (o?.kind === 'wallet_deposit' && Number(o.total_amount || o.sale_price || 0) >= 100);
+// 27/09/2026 — o bônus de 10% vale a partir de R$ 27 (mesmo piso do depósito).
+const isPassaporte = (o) => o?.kind === 'passaporte' || (o?.kind === 'wallet_deposit' && Number(o.total_amount || o.sale_price || 0) >= DEPOSITO_MINIMO);
 const isPedidoFisico = (o) => !KINDS_DIGITAIS.has(o.kind) || isPassaporte(o);
 const STATUS_PAGO = new Set(['paid', 'preparando', 'shipped', 'saiu_entrega', 'delivered', 'entregue']);
 // 🎫 Passaporte é entrega automática: assim que o pagamento confirma, o crédito já cai na
@@ -130,22 +135,23 @@ const getItems = (order) => itensDoPedido(order);
 
 // 📦 Checklist SEMPRE mostra ao menos o produto principal como card clicável
 // (mesmo pedido de 1 item só) — não fica só em texto/descrição.
-// 🖼️ Imagem real do produto — só existe hoje pro pedido de 1 item
-// (`order.product_image`, o mesmo campo que a lista já usa). Pedido com vários
-// itens (items_json/raw_base44.items) não grava imagem por item em lugar nenhum
-// do banco; sem inventar fonte nova, esse caso fica sem imagem e o
-// OrderItemsChecklist cai no ícone genérico.
-const getItemsForChecklist = (order, nomes = {}) => {
+// 🖼️ Imagem real do produto. Pedido de 1 item usa `order.product_image` (o
+// mesmo campo que a lista já usa). Pedido com vários itens não grava imagem por
+// item; a tela busca `products.image_urls` pelo id de cada um (01/10/2026 —
+// a operadora não identificava os nove produtos de um pedido só pelo nome).
+const getItemsForChecklist = (order, nomes = {}, imagens = {}) => {
   const bundle = getItems(order);
   // 🔴 22/09/2026 — os cinco "Item".
   // A loja da rede guarda só {product_id, qty}: sem nome, a conferência virava
   // "Item · Item · Item · Item · Item" e ninguém sabia o que separar. `nomes`
   // é o que a tela foi buscar em `products`; sem ele, o card diz em português
   // que o nome não veio no pedido — em vez de fingir que "Item" é um nome.
+  // 🖼️ 01/10/2026 — `imagens` vem da mesma busca: a foto do produto pelo id.
   if (bundle) {
     return bundle.map((it) => ({
       ...it,
       title: it.title || nomes[it.id] || (it.id ? 'Produto sem nome no pedido' : 'Item'),
+      image: it.image || imagens[it.id] || null,
     }));
   }
   return [{ title: order.product_title, qty: order.quantity || 1, image: order.product_image || null }];
@@ -251,28 +257,45 @@ export default function CatalogOrdersAdmin() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('paid');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  // 📦 30/09/2026 — retirada digital: quais pedidos já têm comprovante, e os dois modais
+  const [retiradas, setRetiradas] = useState({});
+  const [registrando, setRegistrando] = useState(null);
+  const [comprovanteDe, setComprovanteDe] = useState(null);
   // 📛 nome dos produtos que o pedido guardou só por id (loja da rede)
   const [nomesDosItens, setNomesDosItens] = useState({});
+  // 🖼️ foto de cada produto do pedido, pelo id (products.image_urls[0])
+  const [imagensDosItens, setImagensDosItens] = useState({});
 
   // 📛 22/09/2026 — busca o nome dos produtos que o pedido guardou só por id.
   // A loja da rede grava `items_json` com {product_id, qty} e mais nada; sem
   // isto a conferência lista "Item" cinco vezes e o operador não sabe o que
   // separar. Só busca o que falta, e uma vez por pedido aberto.
+  // 🖼️ 01/10/2026 — a mesma busca traz a foto. Pedido de vários itens não
+  // guarda imagem por item, e a conferência mostrava só o ícone de caixa: a
+  // operadora não conseguia identificar os produtos pelo nome.
   useEffect(() => {
-    const faltando = itensSemNome(selectedOrder).filter((id) => !nomesDosItens[id]);
+    const semNome = new Set(itensSemNome(selectedOrder));
+    const faltando = idsDosItens(selectedOrder).filter((id) => (semNome.has(id) && !nomesDosItens[id]) || !(id in imagensDosItens));
     if (!faltando.length) return;
     let vivo = true;
     (async () => {
       try {
         const achados = await plataforma.entities.Product.filter({ id: faltando });
         const lista = Array.isArray(achados) ? achados : [];
-        if (!vivo || !lista.length) return;
+        if (!vivo) return;
         setNomesDosItens((atual) => {
           const novo = { ...atual };
           for (const p of lista) if (p?.id && p?.description) novo[p.id] = p.description;
           return novo;
         });
-      } catch { /* sem nome a tela já diz que o nome não veio; não vale quebrar a conferência */ }
+        // guarda null para quem não tem foto, para não buscar de novo a cada abertura
+        setImagensDosItens((atual) => {
+          const novo = { ...atual };
+          for (const id of faltando) if (!(id in novo)) novo[id] = null;
+          for (const p of lista) if (p?.id) novo[p.id] = (Array.isArray(p.image_urls) && p.image_urls[0]) || p.image_url || null;
+          return novo;
+        });
+      } catch { /* sem nome a tela já diz que o nome não veio; sem foto fica o ícone; não vale quebrar a conferência */ }
     })();
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -323,6 +346,13 @@ export default function CatalogOrdersAdmin() {
       });
 
       setOrders(comVendedor);
+      // 📦 quais pedidos de retirada já têm comprovante (uma chamada só)
+      const idsRetirada = comVendedor.filter(ehRetirada).map((o) => o.id);
+      if (idsRetirada.length) {
+        plataforma.functions.invoke('retiradaNaLoja', { acao: 'listar', saleIds: idsRetirada })
+          .then((r) => { if (r?.success) setRetiradas(r.retiradas || {}); })
+          .catch(() => {});
+      }
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
       toast.error('Erro ao carregar pedidos');
@@ -733,6 +763,9 @@ export default function CatalogOrdersAdmin() {
                           {order.tracking_code && (
                             <span className="text-indigo-300 text-xs font-mono inline-flex items-center gap-1"><Package className="w-3 h-3" />{order.tracking_code}</span>
                           )}
+                          {ehRetirada(order) && (retiradas[order.id]
+                            ? <span data-teste="retirado-em" className="text-green-300 text-xs inline-flex items-center gap-1"><FileCheck className="w-3 h-3" />Retirado {quandoRetirou(retiradas[order.id].retiradoEm)} · {retiradas[order.id].local}</span>
+                            : <span className="text-sky-300 text-xs inline-flex items-center gap-1"><Store className="w-3 h-3" />Retirada na loja</span>)}
                           {(() => {
                             const itens = getItems(order);
                             if (!itens) return null;
@@ -788,6 +821,19 @@ export default function CatalogOrdersAdmin() {
                               : <><Printer className="w-3 h-3 mr-1" />Etiqueta</>}
                           </Button>
                         )}
+                        {ehRetirada(order) && retiradas[order.id] && (
+                          <Button size="sm" data-teste="ver-comprovante" onClick={() => setComprovanteDe(order.id)}
+                            className="bg-gray-700 hover:bg-gray-600 text-white text-xs h-8 px-2" title="Comprovante de retirada">
+                            <FileCheck className="w-3 h-3 mr-1" />Comprovante
+                          </Button>
+                        )}
+                        {ehRetirada(order) && !retiradas[order.id] && vendaPodeSerRetirada(order) && (
+                          <Button size="sm" data-teste="registrar-retirada-botao"
+                            onClick={() => setRegistrando({ id: order.id, numero: numeroDoPedidoTela(order), produto: getDisplayTitle(order), comprador: order.buyer_name })}
+                            className="bg-sky-600 hover:bg-sky-700 text-white text-xs h-8 px-2">
+                            <Store className="w-3 h-3 mr-1" />Registrar retirada
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           onClick={() => handleOpenOrder(order)}
@@ -804,6 +850,18 @@ export default function CatalogOrdersAdmin() {
           </div>
         )}
       </div>
+
+      {/* 📦 Retirada digital */}
+      {registrando && (
+        <RegistrarRetiradaModal pedido={registrando} onFechar={() => setRegistrando(null)}
+          onRegistrada={(r) => {
+            const id = registrando.id;
+            setRetiradas((m) => ({ ...m, [id]: { local: r.local, retiradoEm: r.retiradoEm } }));
+            setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: 'entregue', fulfillment_status: 'entregue' } : o)));
+            setRegistrando(null);
+          }} />
+      )}
+      {comprovanteDe && <ComprovanteRetiradaModal saleId={comprovanteDe} onFechar={() => setComprovanteDe(null)} />}
 
       {/* Modal de Gerenciamento */}
       {selectedOrder && (
@@ -984,7 +1042,7 @@ export default function CatalogOrdersAdmin() {
               {/* 📦 Itens do pedido em cards clicáveis — logística marca ao separar/embalar */}
               {!isPassaporte(selectedOrder) && (
                 <OrderItemsChecklist
-                  items={getItemsForChecklist(selectedOrder, nomesDosItens)}
+                  items={getItemsForChecklist(selectedOrder, nomesDosItens, imagensDosItens)}
                   packedIndices={getPackedItems(selectedOrder)}
                   onToggle={(idx) => handleTogglePacked(selectedOrder, idx)}
                 />

@@ -72,6 +72,7 @@ const MemoryBackup = React.lazy(() => import('./pages/MemoryBackup'));
 const MyCatalogOrders = React.lazy(() => import('./pages/MyCatalogOrders'));
 const MyWinnings = React.lazy(() => import('./pages/MyWinnings'));
 const NetworkOverview = React.lazy(() => import('./pages/NetworkOverview'));
+const PainelInvestidor = React.lazy(() => import('./pages/PainelInvestidor'));
 const OrderTracking = React.lazy(() => import('./pages/OrderTracking'));
 const PartnerPlanActivation = React.lazy(() => import('./pages/PartnerPlanActivation'));
 const Partners = React.lazy(() => import('./pages/Partners'));
@@ -190,6 +191,12 @@ export const PAGES = {
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
+    // 📈 DIR-190 — Painel do Investidor (dinheiro real por área, funil, mapa) — só admin.
+    "PainelInvestidor": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <PainelInvestidor />
+        </RequireRole>
+    ),
     "OrderTracking": OrderTracking,
     // 🔒 Ativação de plano de parceiro (mexe em dinheiro/plano) — só admin.
     "PartnerPlanActivation": () => (

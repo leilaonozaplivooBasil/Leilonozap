@@ -13,6 +13,10 @@ import { registrarAceiteTermo } from '@/lib/termoAdesao';
 import { clientIdEmCache, buscarClientId } from '@/lib/googleClientId';
 import { useSectionTracking, trackLead } from '@/lib/tracking';
 import { PIXEL_LEILOES } from '@/lib/metaPixel';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { telefoneValido } from '@/lib/telefoneBR';
+import { mascaraData, nascimentoISO } from '@/lib/dataDeNascimento';
+import { garantirScriptGoogle } from '@/lib/googleLogin';
 
 const AppUser = plataforma.entities.AppUser;
 
@@ -22,6 +26,7 @@ export default function Register() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [nascimento, setNascimento] = useState(''); // 🎂 DIR-194 — opcional
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
   const [addressStreet, setAddressStreet] = useState('');
@@ -80,7 +85,7 @@ export default function Register() {
     try {
       // Passa o código do link de indicação: sem ele o cadastro por Google caía
       // no Site Oficial e o indicador real perdia a pessoa da árvore.
-      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { origem_trafego: lerOrigemDoTrafego(), credential: response.credential, ref_code: getReferral() || getInfluencerCode() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível continuar com o Google.'));
         setIsGoogleLoading(false);
@@ -102,6 +107,7 @@ export default function Register() {
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    garantirScriptGoogle();
     const renderGoogleButton = (clientId) => {
       if (cancelled) return;
       if (window.google?.accounts?.id) {
@@ -110,8 +116,11 @@ export default function Register() {
         if (el) {
           window.google.accounts.id.renderButton(el, { theme: 'outline', size: 'large', width: 320, text: 'signup_with', locale: 'pt-BR' });
         }
-      } else if (attempts < 20) {
+      } else if (attempts < 60) {
+        // 27/09/2026 — o script do Google agora vem sob demanda (src/lib/googleLogin.js):
+        // pede e espera até 15 s, em vez de 5 s, para caber em internet lenta.
         attempts += 1;
+        garantirScriptGoogle();
         setTimeout(() => renderGoogleButton(clientId), 250);
       }
     };
@@ -226,6 +235,11 @@ export default function Register() {
       setErrorMessage("❌ Por favor, insira um E-mail válido.");
       return;
     }
+    // 📱 27/09/2026 — a MESMA régua do servidor (publicRegister)
+    if (!telefoneValido(phone)) {
+      setErrorMessage("❌ Telefone inválido. Use DDD + número, ex.: (21) 99999-9999");
+      return;
+    }
     if (!validateCPF(cpf)) {
       setErrorMessage("❌ CPF inválido. Verifique e tente novamente.");
       setDup((d) => ({ ...d, cpf: true }));
@@ -299,12 +313,13 @@ export default function Register() {
 
       // 🔒 Cadastro via backend service_role (anon não pode inserir em app_users por RLS).
       const refForBackend = getReferral() || getInfluencerCode() || '';
-      const reg = await plataforma.functions.invoke('publicRegister', {
+      const reg = await plataforma.functions.invoke('publicRegister', { origem_trafego: lerOrigemDoTrafego(),
         full_name: fullName.trim(),
         display_first_name: firstName || null,
         display_last_name: lastName || null,
         email: normalizedEmail,
         phone: phoneDigits,
+        birth_date: nascimentoISO(nascimento), // opcional: inválido vira null, nunca trava
         cpf: cpfDigits,
         password: password,
         address_street: addressStreet,
@@ -432,6 +447,19 @@ export default function Register() {
                   {dup.phone && (
                     <p className="mt-1 text-xs text-red-400">{dupMsg.phone || 'Telefone já cadastrado'}</p>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="nascimento" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Data de nascimento <span className="opacity-60 font-normal">(opcional)</span></Label>
+                  <Input
+                    id="nascimento"
+                    inputMode="numeric"
+                    value={nascimento}
+                    onChange={(e) => setNascimento(mascaraData(e.target.value))}
+                    placeholder="dd/mm/aaaa"
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
                 </div>
 
                 <div>

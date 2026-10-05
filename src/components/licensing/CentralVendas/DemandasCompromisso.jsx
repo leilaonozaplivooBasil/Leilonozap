@@ -57,6 +57,11 @@ export default function DemandasCompromisso({ uid, hojeISO, nome = null, onMudou
   }, [uid]);
 
   useEffect(() => { carregar(); }, [carregar]);
+  // 📝 24/09/2026 — anotação do bloco (botão "D") entra na caixa na hora.
+  useEffect(() => {
+    window.addEventListener('demandaAnotada', carregar);
+    return () => window.removeEventListener('demandaAnotada', carregar);
+  }, [carregar]);
 
   const grupos = useMemo(() => porDiaDeAnotacao(linhas), [linhas]);
   const esperando = useMemo(() => caixaDeEntrada(linhas).length, [linhas]);

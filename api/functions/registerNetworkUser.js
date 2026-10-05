@@ -2,10 +2,14 @@
 // Gera referral_code próprio, resolve o indicador, e valida "quem cadastra quem" lendo das tabelas FASE 0.
 // Sem link mágico: exige o código de 6 dígitos (purpose 'signup') que foi enviado por e-mail.
 import crypto from 'crypto';
+import { telefoneBR } from '../../src/lib/telefoneBR.js';
 import { oid } from '../_lib/oid.js';
 import bcrypt from 'bcryptjs';
 
 import { emitirSessao, exigirSessao } from '../_lib/sessao.js';
+import { criarContatoDaIndicacao } from '../_lib/contatoDaIndicacao.js';
+import { sanearOrigem } from '../_lib/origemDoTrafego.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
 import { enviarAviso } from '../_lib/avisosPorEmail.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -56,7 +60,9 @@ export default async function handler(req, res) {
     const full_name = String(body?.full_name || '').trim();
     const email = String(body?.email || '').trim().toLowerCase();
     const password = String(body?.password || '');
-    const phone = String(body?.phone || '').trim();
+    // 📱 27/09/2026 — telefone WhatsApp obrigatório e válido (mesma régua do publicRegister)
+    const tel = telefoneBR(body?.phone);
+    const phone = tel ? tel.nacional : '';
     const code = String(body?.code || '').trim();
     const ref_code = String(body?.ref_code || '').trim();   // código do indicador (link)
     const as_level = String(body?.as_level || '').trim();   // categoria alvo (quando cadastrado por alguém acima)
@@ -78,6 +84,7 @@ export default async function handler(req, res) {
     };
 
     if (!full_name || !email || !password) return res.status(400).json({ success: false, error: 'Nome, e-mail e senha são obrigatórios' });
+    if (!phone) return res.status(400).json({ success: false, error: 'Telefone/WhatsApp é obrigatório: DDD + número, ex.: (21) 99999-9999', campo: 'phone' });
     if (password.length < 6) return res.status(400).json({ success: false, error: 'Senha deve ter ao menos 6 caracteres' });
     if (!code) return res.status(400).json({ success: false, error: 'Código de verificação obrigatório' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
@@ -154,9 +161,12 @@ export default async function handler(req, res) {
     const now = new Date().toISOString();
     const hash = bcrypt.hashSync(password, bcrypt.genSaltSync(10));
     const payload = {
-      id, base44_id: id, full_name, email, password: null, phone: phone || null,
+      id, base44_id: id, full_name, email, password: null, phone,
       role: 'user', career_levels: [level], primary_career_level: level,
       referred_by_id, referral_code, terms_accepted: true,
+      origem_trafego: sanearOrigem(body?.origem_trafego),
+      // 🎂 03/10 (DIR-194) — data de nascimento OPCIONAL: o que não é data vira null e o cadastro segue.
+      birth_date: nascimentoISO(body?.birth_date),
       is_seller: ['vendedor'].includes(level) ? true : null,
       created_date: now, updated_date: now,
       ...extra,
@@ -170,6 +180,11 @@ export default async function handler(req, res) {
     }
     // grava o hash na tabela isolada (só service_role lê) — coluna app_users.password fica vazia
     await sb('app_users_auth', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify({ user_id: id, password_hash: hash }) });
+
+    // 🌳 25/09/2026 — o indicado vira contato na lista de quem indicou (só o
+    // indicador direto; conta do site não; sem sobrepor). Best-effort: o
+    // cadastro já aconteceu, isto é espelho — nunca atrasa nem derruba.
+    criarContatoDaIndicacao(rows[0]).catch(() => {});
     // 🕵️ AUDITORIA (12/08/2026): todo cadastro que cair no Site Oficial fica registrado
     // com o motivo — nunca mais "ninguém sabe de onde veio" em silêncio.
     if (fallback_motivo) {

@@ -36,12 +36,27 @@ const MODAL = leia('src/components/auction/WinnerModal.jsx');
 const ARREMATES = leia('src/pages/MyWinnings.jsx');
 
 // ───────── regra 1 e 3: o caminho do lance não foi tocado ─────────
+//
+// 🤝 24/09/2026 — UMA exceção, decidida pelo dono (caso Harley 117, o lote que
+// nenhuma transportadora aceita pelo volume): o lance passa a LER
+// `auctions.permite_retirada` — só para aceitar o selo 'a_combinar' de frete
+// ZERO que o próprio servidor emitiu (api/_lib/freteACombinar.js). O CEP
+// continua obrigatório (o selo carrega o CEP do cadastro e o B15 confere), o
+// pedido de retirada NUNCA vem do corpo, e fora desse selo zero continua
+// recusado. A escolha "receber ou retirar" continua sendo só do vencedor.
 
-test('🔴 o LANCE não conhece retirada — CEP e frete continuam obrigatórios', () => {
-  assert.ok(!/retirada/i.test(LANCE), 'o caminho do lance não pode ter nenhuma noção de retirada');
-  // a trava absoluta contra frete zero continua absoluta
-  assert.match(LANCE, /if \(!\(freteValor > 0\)\)/);
+test('🔴 o LANCE só conhece retirada para aceitar o selo a_combinar — nunca pelo corpo', () => {
+  // o único lugar que fala em retirada é a leitura da coluna, junto do selo
+  const mencoes = LANCE.match(/retirada/gi) || [];
+  const legitimas = LANCE.match(/auction\.permite_retirada === true|product_id,permite_retirada`/g) || [];
+  assert.equal(mencoes.length, legitimas.length, `menções a retirada fora do selo a_combinar: ${mencoes.length} vs ${legitimas.length}`);
+  assert.ok(!/body\?\.(retirada|entrega_tipo|permite_retirada)/.test(LANCE), 'o corpo do lance não pede retirada');
+  // a trava contra frete zero continua — a exceção exige selo íntegro E banco
+  assert.match(LANCE, /const _freteACombinar = _freteOk && String\(_frete\.id \|\| ''\) === 'a_combinar' && auction\.permite_retirada === true;/);
+  assert.match(LANCE, /if \(!\(freteValor > 0\) && !_freteACombinar\)/);
   assert.match(LANCE, /sem_frete: true, motivo: 'frete_zero'/);
+  // o CEP do cadastro continua obrigatório no lance (B15)
+  assert.match(LANCE, /_freteMotivo = cepAtual \? 'selo_de_outro_cep' : 'cadastro_sem_cep'/);
 });
 
 test('🔴 o ARREMATE NA HORA também não conhece retirada', () => {
@@ -52,8 +67,14 @@ test('🔴 o ARREMATE NA HORA também não conhece retirada', () => {
 });
 
 test('🔴 o motor de frete não ganhou porta de saída sem CEP', () => {
-  assert.ok(!/retirada/i.test(FRETE), 'freteLeilao não pode ter ramo de retirada');
-  assert.match(FRETE, /motivo: 'sem_cep'/);
+  // o único ramo que olha retirada é o do frete a combinar — e ele vem DEPOIS
+  // da exigência de CEP (o CEP do cadastro entra no selo)
+  const iCep = FRETE.indexOf("motivo: 'sem_cep'"); const iRet = FRETE.indexOf('cabeFreteACombinar(');
+  assert.ok(iCep > -1 && iRet > iCep, 'o CEP é exigido antes de qualquer ramo de retirada');
+  const mencoes = FRETE.match(/retirada/gi) || [];
+  const legitimas = FRETE.match(/permite_retirada|permiteRetirada/g) || [];
+  assert.equal(mencoes.length, legitimas.length, 'freteLeilao só conhece a coluna permite_retirada, para o frete a combinar');
+  assert.ok(!/cep: null|sem_cep.*a_combinar/.test(FRETE.slice(iRet)), 'o frete a combinar não dispensa CEP');
 });
 
 test('🔴 o martelo continua gravando só o frete — a escolha vem depois dele', () => {

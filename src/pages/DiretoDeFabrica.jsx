@@ -113,7 +113,7 @@ export default function DiretoDeFabrica() {
             <p className="text-gray-500">Volte mais tarde, novos lotes chegam sempre.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 auto-rows-fr">
             {sorted.map((auction) => (
               <AuctionCard key={auction.id} auction={auction} isAdmin={isAdmin} showFavoriteButton={false} />
             ))}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { X, Package } from 'lucide-react';
 import { fmtBR } from '@/lib/money';
-import { statusConfig } from '@/components/catalog/CatalogOrderCard';
+import { configDaEntrega } from '@/components/catalog/CatalogOrderCard';
+import { ehCodigoInterno, numeroInternoDoPedido, linksDeRastreio } from '@/lib/rastreio';
 import LinhaDetalhe from '@/components/catalog/LinhaDetalhe';
 
 // 📄 Detalhamento completo do pedido da Loja Virtual (SOMENTE LEITURA).
@@ -42,7 +43,11 @@ function parseItens(order) {
 export default function DetalhesPedidoModal({ order, onClose }) {
   if (!order) return null;
 
-  const cfg = statusConfig[order.status] || statusConfig.pending_payment;
+  // 📦 DIR-187: o selo é da ENTREGA (com prova), não do status de pagamento
+  const cfg = configDaEntrega(order);
+  const codigoRastreio = ehCodigoInterno(order.tracking_code) ? '' : (order.tracking_code || '');
+  const linksRastreio = linksDeRastreio({ codigo: codigoRastreio, transportadora: order.carrier });
+  const linkRastreio = linksRastreio.correios || linksRastreio.transportadora || linksRastreio.melhorRastreio || null;
   const itens = parseItens(order);
   const total = order.total_amount || order.sale_price || 0;
   const endereco = [order.buyer_address, order.buyer_cep].filter(Boolean).join(' · ');
@@ -62,7 +67,7 @@ export default function DetalhesPedidoModal({ order, onClose }) {
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-base font-bold text-white">Detalhes do pedido</h2>
             <p className="truncate font-mono text-[11px] text-gray-500">
-              {order.tracking_code || order.id}
+              {numeroInternoDoPedido(order.id)} · {order.id}
             </p>
           </div>
           <button
@@ -129,7 +134,16 @@ export default function DetalhesPedidoModal({ order, onClose }) {
                 <LinhaDetalhe label="Situação" value={ENTREGA[order.fulfillment_status] || order.fulfillment_status} />
                 <LinhaDetalhe label="Endereço" value={endereco} />
                 <LinhaDetalhe label="Transportadora" value={order.carrier} />
-                <LinhaDetalhe label="Rastreio" value={order.tracking_code} mono />
+                <LinhaDetalhe label="Nº do pedido" value={numeroInternoDoPedido(order.id)} mono />
+                <LinhaDetalhe label="Rastreio" value={codigoRastreio} mono />
+                <LinhaDetalhe
+                  label="Rastrear"
+                  value={linkRastreio ? (
+                    <a href={linkRastreio} target="_blank" rel="noopener noreferrer" className="text-yellow-300 underline underline-offset-2" data-teste="detalhes-link-rastreio">
+                      {linksRastreio.correios ? 'Site dos Correios' : linksRastreio.transportadora ? `Site da ${order.carrier}` : 'Melhor Rastreio'}
+                    </a>
+                  ) : null}
+                />
                 <LinhaDetalhe label="Enviado em" value={dataHora(order.shipped_at)} />
                 <LinhaDetalhe label="Entregue em" value={dataHora(order.delivered_at)} />
               </div>

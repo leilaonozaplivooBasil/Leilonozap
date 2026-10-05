@@ -24,19 +24,20 @@ test('DistribuirTarefa.jsx: distribuir() sempre insere em metodo_tarefas, sem co
   const inicio = ARQ.indexOf('const distribuir = async ()');
   const fimMentoria = ARQ.indexOf('const conteudo =');
   const corpo = ARQ.slice(inicio, fimMentoria);
-  assert.match(corpo, /supabase\.from\('metodo_tarefas'\)\.insert\(linhas\)\.select\(\)/);
+  // 👥 24/09/2026 — em lote: uma cópia por pessoa (uma só no modo de sempre)
+  assert.match(corpo, /supabase\.from\('metodo_tarefas'\)\.insert\(linhasParaVarios\(base, ids\)\)\.select\(\)/);
   assert.ok(!/if \(destino === 'quadro'\)/.test(corpo), 'ainda existe o atalho "só quadro, sem tarefa do dia"');
   assert.ok(!/if \(destino === 'ambos'\)/.test(corpo), 'o card do quadro ainda está condicionado a "ambos"');
 });
 
-test('DistribuirTarefa.jsx: criarQuadroEAviso() sempre cria o card do quadro (ligado à tarefa) e o aviso (xgame_mensagens, tipo demanda)', () => {
-  const inicio = ARQ.indexOf('const criarQuadroEAviso = async');
+test('DistribuirTarefa.jsx: criarQuadrosEAvisos() sempre cria o card do quadro (ligado à tarefa) e o aviso (xgame_mensagens, tipo demanda) — um de cada por pessoa', () => {
+  const inicio = ARQ.indexOf('const criarQuadrosEAvisos = async');
   const fim = ARQ.indexOf('\n  };', inicio);
   const corpo = ARQ.slice(inicio, fim);
-  assert.match(corpo, /supabase\.from\('metodo_quadro'\)\.insert\(cardDaDemanda\(tarefaId \|\| null\)\)/);
-  assert.match(corpo, /supabase\.from\('xgame_mensagens'\)\.insert\(\{/);
+  assert.match(corpo, /supabase\.from\('metodo_quadro'\)\.insert\(pares\.map\(\(x\) => cardDaDemanda\(x\.tarefaId \|\| null, x\.destino\)\)\)/);
+  assert.match(corpo, /supabase\.from\('xgame_mensagens'\)\.insert\(pares\.map\(/);
   assert.match(corpo, /tipo:\s*'demanda'/);
-  assert.match(corpo, /destino_tipo:\s*'pessoa',\s*destino_id:\s*pessoa/);
+  assert.match(corpo, /destino_tipo:\s*'pessoa',\s*destino_id:\s*x\.destino/);
 });
 
 // 🐛 09/09/2026 — achado na auditoria noturna (revisão adversarial do
@@ -44,11 +45,11 @@ test('DistribuirTarefa.jsx: criarQuadroEAviso() sempre cria o card do quadro (li
 // tinha um `return` antes de chegar no código que cria o card do quadro e
 // o aviso — só a Jornada nascia, quebrando a promessa "sempre os três
 // lugares" bem no caminho que o dono mais valoriza (a mentoria).
-test('DistribuirTarefa.jsx: o caminho da MENTORIA COMPLETA também chama criarQuadroEAviso — não só a linha normal', () => {
+test('DistribuirTarefa.jsx: o caminho da MENTORIA COMPLETA também chama criarQuadrosEAvisos — não só a linha normal', () => {
   const inicioMentoria = ARQ.indexOf('if (blocosMentoria) {');
   const fimMentoria = ARQ.indexOf('\n    }', inicioMentoria);
   const corpoMentoria = ARQ.slice(inicioMentoria, fimMentoria);
-  assert.match(corpoMentoria, /criarQuadroEAviso\(/, 'a mentoria completa também precisa criar o card do quadro e o aviso — não só a Jornada');
+  assert.match(corpoMentoria, /criarQuadrosEAvisos\(/, 'a mentoria completa também precisa criar o card do quadro e o aviso — não só a Jornada');
 });
 
 test('DistribuirTarefa.jsx: o horário vira opcional/flexível, não "começar às" obrigatório', () => {

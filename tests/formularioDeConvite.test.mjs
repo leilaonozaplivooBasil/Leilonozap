@@ -20,15 +20,17 @@ import { semComentarios } from './_ajuda.mjs';
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 const VISITA_QUE_ABRIA = { carregando: false, logado: false, ref: 'TOPTECH', dispensado: false, caminho: '/' };
 
-test('🔴 o interruptor está DESLIGADO — até segunda ordem do dono', () => {
-  assert.equal(FORMULARIO_DE_CONVITE_LIGADO, false);
+// ✅ 28/09/2026 — a "segunda ordem" chegou: dono, "devemos voltar com o popup de
+// cadastro assim que o user entra na plataforma, como era".
+test('✅ o interruptor está LIGADO de novo (28/09/2026)', () => {
+  assert.equal(FORMULARIO_DE_CONVITE_LIGADO, true);
 });
 
-test('desligado, a visita que antes abria o popup não abre mais', () => {
-  assert.equal(abreFormularioDeConvite(VISITA_QUE_ABRIA), false);
-  // e o padrão (sem passar `ligado`) é o interruptor do dono
-  assert.equal(abreFormularioDeConvite({ ...VISITA_QUE_ABRIA, ligado: undefined }), false);
-  assert.equal(abreFormularioDeConvite(), false);
+test('ligado, a visita de convite abre o popup — e desligado não abre', () => {
+  assert.equal(abreFormularioDeConvite(VISITA_QUE_ABRIA), true);
+  assert.equal(abreFormularioDeConvite({ ...VISITA_QUE_ABRIA, ligado: undefined }), true, 'o padrão é o interruptor do dono');
+  assert.equal(abreFormularioDeConvite({ ...VISITA_QUE_ABRIA, ligado: false }), false, 'a chave continua funcionando para desligar');
+  assert.equal(abreFormularioDeConvite(), false, 'sem ?ref= não abre');
 });
 
 test('a regra antiga continua inteira debaixo do interruptor (religar é uma linha)', () => {

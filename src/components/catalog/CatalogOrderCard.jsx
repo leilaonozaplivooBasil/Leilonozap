@@ -2,11 +2,14 @@ import React from 'react';
 import { fmtBR } from '@/lib/money';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText } from 'lucide-react';
+import { Clock, CheckCircle, Package, Truck, Eye, Trash2, Star, FileText, AlertTriangle } from 'lucide-react';
+import { situacaoDaEntrega, rotuloDaEntrega } from '@/lib/rastreio';
 import { Stars } from '@/components/loja/StarRating';
 import { imagemPedido, imagemFallback } from '@/lib/imagemPedido';
 import { itensDoPedido, quantosItens } from '@/lib/itensDoPedido';
 import PagarNovamenteBotao from '@/components/catalog/PagarNovamenteBotao';
+import CodigoDeRetirada from '@/components/retirada/CodigoDeRetirada';
+import { ehRetirada } from '@/lib/retirada';
 
 // 🧩 Card de pedido da Loja Virtual — COMPARTILHADO entre MyCatalogOrders e a aba
 // "Meus Pedidos" do Profile (extraído em 25/07 pra acabar com a versão pobre do
@@ -26,12 +29,38 @@ export const statusConfig = {
   cancelado: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 };
 
+// 📦 DIR-187 (30/09/2026) — "ENTREGUE" SÓ COM PROVA. `status = 'entregue'` é "venda
+// paga" (herança do Base44), não "pedido entregue": 44 pedidos pagos apareciam como
+// entregues sem nunca terem chegado. O selo do card agora vem da situação da ENTREGA
+// (delivered_at, fulfillment_status, shipped_at — src/lib/rastreio.js). Aguardando
+// pagamento e cancelado continuam pelo status, que aí é a verdade mesmo.
+const ICONE_ETAPA = {
+  entregue: CheckCircle, saiu_entrega: Truck, em_transito: Truck, postado: Truck, problema: AlertTriangle,
+  preparando: Package, aguardando_pagamento: Clock, cancelado: Package,
+};
+const COR_ETAPA = {
+  entregue: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  saiu_entrega: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  em_transito: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+  postado: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+  problema: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
+  preparando: 'bg-green-500/20 text-green-400 border-green-500/30',
+  aguardando_pagamento: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  cancelado: 'bg-red-500/20 text-red-400 border-red-500/30',
+};
+export function configDaEntrega(order) {
+  const base = statusConfig[order?.status] || statusConfig.pending_payment;
+  if (['pending_payment', 'canceled', 'cancelado'].includes(order?.status)) return { ...base, etapa: order.status === 'pending_payment' ? 'aguardando_pagamento' : 'cancelado' };
+  const sit = situacaoDaEntrega(order || {});
+  return { text: rotuloDaEntrega(sit), icon: ICONE_ETAPA[sit.etapa] || Package, color: COR_ETAPA[sit.etapa] || base.color, etapa: sit.etapa };
+}
+
 export const RATEABLE = ['paid', 'preparando', 'saiu_entrega', 'entregue'];
 // estados em que o comprador já pode confirmar o recebimento (libera o saldo do vendedor)
 export const CONFIRMABLE = ['paid', 'preparando', 'saiu_entrega', 'shipped', 'entregue', 'delivered'];
 
 export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, onDeleteClick, onRateClick, onConfirmReceipt, confirmado, confirmando }) {
-  const config = statusConfig[order.status] || statusConfig.pending_payment;
+  const config = configDaEntrega(order);
   // PONTO 79 — produto digital (adesão/licença/plano) usa a arte da página Lucre
   const mainImage = imagemPedido(order);
   const podeAvaliar = onRateClick && RATEABLE.includes(order.status) && order.seller_id;
@@ -116,6 +145,8 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
         {/* STATUS */}
         <div className="px-4 pb-3">
           <Badge
+            data-teste="pedido-situacao"
+            data-etapa={config.etapa}
             className={`flex items-center gap-1.5 text-xs font-semibold ${config.color} border w-full justify-center py-1.5`}
             /* 🔥 Cancelado no laranja fogo da marca (era vermelho apagado) */
             style={['canceled', 'cancelado'].includes(order.status)
@@ -202,6 +233,9 @@ export default function CatalogOrderCard({ order, onTrackClick, onDetailsClick, 
             Excluir Pedido
           </button>
         )}
+
+        {/* 📦 30/09/2026 — retirada: o código pra falar no balcão, ou o comprovante */}
+        {ehRetirada(order) && <div className="px-4 pb-3"><CodigoDeRetirada saleId={order.id} /></div>}
 
         {/* RASTREIO (se houver) */}
         {order.tracking_code && (

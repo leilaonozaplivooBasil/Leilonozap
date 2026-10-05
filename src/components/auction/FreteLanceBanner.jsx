@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check } from "lucide-react";
+import { Loader2, Truck, MapPin, Search, LogIn, Pencil, Check, Handshake, PackageX } from "lucide-react";
 import { fmtBR } from "@/lib/money";
+import { MENSAGEM_PRODUTO_GRANDE, MENSAGEM_A_COMBINAR } from "@/lib/freteDoLance";
+// 🔑 sessão vencida → login na mesma tela (26/09/2026)
+import { pedirNovoLogin } from '@/lib/sessaoCliente';
 
 /**
  * PONTO 82 — CEP em UMA linha: input + botão + resultado.
@@ -38,6 +41,32 @@ export default function FreteLanceBanner({
     );
   }
 
+  // 🤝 24/09/2026 — lote grande com retirada ligada: nada de frete no lance.
+  if (status === "a_combinar") {
+    return (
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.25)' }}
+        data-teste="frete-a-combinar">
+        <Handshake className="h-4 w-4 shrink-0 text-emerald-400" />
+        <span className="min-w-0 flex-1 text-xs text-emerald-100">{MENSAGEM_A_COMBINAR}</span>
+        <span className="shrink-0 text-sm font-bold text-emerald-300">R$ 0,00</span>
+      </div>
+    );
+  }
+
+  // 📦 Transportadoras recusaram o VOLUME e o lote não permite retirada: o CEP
+  // está certo — não adianta pedir outro. A saída é falar com a equipe.
+  if (status === "produto_grande") {
+    return (
+      <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
+        style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.40)' }}
+        data-teste="frete-produto-grande">
+        <PackageX className="h-4 w-4 shrink-0 text-amber-400" />
+        <span className="min-w-0 flex-1 text-xs text-amber-100">{MENSAGEM_PRODUTO_GRANDE}</span>
+      </div>
+    );
+  }
+
   if (status === "loading") {
     return (
       <div className="mx-auto mt-3 flex max-w-lg items-center gap-2 rounded-xl px-3 py-2"
@@ -57,8 +86,19 @@ export default function FreteLanceBanner({
         style={{ background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.40)' }}>
         <LogIn className="h-4 w-4 shrink-0 text-amber-400" />
         <span className="min-w-0 flex-1 text-xs text-amber-100">
-          Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.
+          Sua sessão expirou. Entre de novo para calcular o frete e dar o lance.
         </span>
+        {/* 🔴 26/09/2026 — antes só dizia "saia e entre de novo", sem botão: a Lilian
+            (chamado do Paim) ficou presa na sala. Agora abre o login AQUI, e ao
+            entrar a sala recarrega no mesmo leilão. */}
+        <button
+          type="button"
+          onClick={pedirNovoLogin}
+          data-teste="entrar-de-novo"
+          className="shrink-0 rounded-lg bg-amber-400 px-3 py-1.5 text-xs font-bold text-gray-900 hover:bg-amber-300 active:scale-95"
+        >
+          Entrar de novo
+        </button>
       </div>
     );
   }

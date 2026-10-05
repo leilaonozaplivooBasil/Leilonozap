@@ -52,6 +52,7 @@ import HeroTopCollege from '../components/licensing/HeroTopCollege';
 // repetidos) saiu de cena — o arquivo continua no projeto, só não é mais usado.
 import NavegacaoLateralGlobal from '@/components/common/NavegacaoLateralGlobal';
 import LicensingBanners from '../components/licensing/LicensingBanners';
+import CreditoProdutosCard from '../components/licensing/CreditoProdutosCard';
 import CrmClientesTab from '../components/licensing/CentralVendas/CrmClientesTab';
 import XPerformance from '../components/licensing/CentralVendas/XPerformance';
 import MentalidadePagina from '../components/licensing/CentralVendas/MentalidadePagina';
@@ -76,6 +77,7 @@ import SalesTrendChart from '../components/licensing/SalesTrendChart';
 import ActivityFeedCard from '../components/licensing/ActivityFeedCard';
 import { normalizeLevels, normalizeLevel } from '@/lib/careerLevels';
 import { useSectionTracking } from '@/lib/tracking';
+import { marcarTopCollege } from '@/lib/areaTopCollege';
 
 const Product = plataforma.entities.Product;
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => (
@@ -283,16 +285,16 @@ const DashboardContent = ({ user, isAdmin }) => {
   const userLevels = normalizeLevels(user.career_levels && user.career_levels.length ? user.career_levels : ['usuario']);
   const primaryLevel = normalizeLevel(user.primary_career_level) || userLevels[0] || 'usuario';
 
-  const careerLevelsMap = { 'usuario': 'Usuário', 'influenciador': 'Influencer', 'licenciado': 'Licenciado Loja Virtual', 'trainee_diretor': 'Trainee', 'executivo_conta': 'Sócio Executivo', 'distribuidor': 'Distribuidor', 'diretoria_operacao': 'Diretor Operacional', 'diretoria_executiva': 'Diretoria Executiva', 'ceo': 'CEO', 'conselheiro': 'Conselheiro', 'fundador': 'Fundador' };
+  const careerLevelsMap = { 'usuario': 'Usuário', 'influenciador': 'Influencer', 'vendedor': 'Vendedor', 'licenciado': 'Licenciado Loja Virtual', 'parceiro': 'Parceiro', 'ponto_retirada': 'Ponto de Retirada', 'loja_fisica': 'Loja Física', 'trainee_diretor': 'Trainee', 'executivo_conta': 'Sócio Executivo', 'distribuidor': 'Distribuidor', 'diretoria_operacao': 'Diretor Operacional', 'diretoria_executiva': 'Diretoria Executiva', 'ceo': 'CEO', 'conselheiro': 'Conselheiro', 'fundador': 'Fundador' };
 
-  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria_executiva', 'diretoria_operacao', 'executivo_conta', 'licenciado', 'influenciador', 'usuario'];
+  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria_executiva', 'diretoria_operacao', 'executivo_conta', 'distribuidor', 'loja_fisica', 'ponto_retirada', 'parceiro', 'licenciado', 'vendedor', 'influenciador', 'usuario'];
 
   const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
 
   // 🆕 Só existe UM link de indicação ativo por vez: quem já avançou para
   // Licenciado (ou além, na carreira) ganha pela Loja Virtual, não mais pelo App.
   const hasAdvancedBeyondInfluencer = userLevels.some((l) =>
-    ['licenciado', 'trainee_diretor', 'executivo_conta', 'distribuidor', 'diretoria_operacao', 'diretoria_executiva', 'ceo', 'conselheiro', 'fundador'].includes(l)
+    ['licenciado', 'parceiro', 'ponto_retirada', 'loja_fisica', 'trainee_diretor', 'executivo_conta', 'distribuidor', 'diretoria_operacao', 'diretoria_executiva', 'ceo', 'conselheiro', 'fundador'].includes(l)
   );
 
   const shortName = user.display_first_name && user.display_last_name ?
@@ -565,7 +567,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       await delay(1000); // Delay maior para admin
 
       const users = await fetchWithRetry(
-        () => AppUser.list("-updated_date", 1000)
+        () => AppUser.listAll("-updated_date")
       );
 
       setAllUsers(Array.isArray(users) ? users : []);
@@ -908,7 +910,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     setIsCleaningDuplicates(true);
     toast.info("Buscando duplicatas...");
     try {
-      const allUsersToProcess = await AppUser.list("-created_date", 1000);
+      const allUsersToProcess = await AppUser.listAll("-created_date");
       if (!Array.isArray(allUsersToProcess)) throw new Error("Falha ao buscar usuários.");
 
       const emailMap = {};
@@ -1113,6 +1115,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   // 🎓 DIR-62 — a pessoa está numa seção da Top College? É isso que liga a
   // faixa da academia (e o tema escuro do seletor logo abaixo dela).
   const naTopCollege = activeTab === 'catalogo' && SECOES_TOP_COLLEGE.some((s) => s.value === catalogSubTab);
+  // 🎓 24/09/2026 — o cabeçalho (fora desta árvore) precisa saber: o botão "D"
+  // só existe na Top College. Levanta a bandeira aqui, abaixa ao sair.
+  useEffect(() => {
+    marcarTopCollege(naTopCollege);
+    return () => marcarTopCollege(false);
+  }, [naTopCollege]);
   // 🎓 DIR-64 — UMA instância só do seletor. Na Top College ele é entregue pra
   // DENTRO da faixa preta (ordem do dono: "o botão tem que entrar no lugar
   // preto, e abrir num lugar preto"); fora dela fica onde sempre esteve.
@@ -1241,6 +1249,8 @@ const DashboardContent = ({ user, isAdmin }) => {
               onTransfer={() => navigate('/TransferirSaldo')}
               onViewCommissions={goToCommissions}
             />
+
+            <CreditoProdutosCard user={user} />
 
             <LicensingBanners
               onCopyLink={() => { navigator.clipboard.writeText(shareLink); toast.success('Link copiado!'); }}
@@ -1937,7 +1947,11 @@ export default function LicensingPage() {
     const labels = {
       'usuario': 'um Usuário',
       'influenciador': 'um Influencer',
+      'vendedor': 'um Vendedor',
       'licenciado': 'um Licenciado Loja Virtual',
+      'parceiro': 'um Parceiro',
+      'ponto_retirada': 'um Ponto de Retirada',
+      'loja_fisica': 'uma Loja Física',
       'trainee_diretor': 'um Trainee',
       'executivo_conta': 'um Sócio Executivo',
       'distribuidor': 'um Distribuidor',
@@ -1955,6 +1969,9 @@ export default function LicensingPage() {
     const messages = {
       'influenciador': 'Continue evoluindo! O próximo passo é se tornar Licenciado Loja Virtual e desbloquear ainda mais benefícios.',
       'licenciado': 'Você já tem acesso à loja virtual! Cresça sua árvore genealógica para alcançar os próximos níveis.',
+      'parceiro': 'Parceiro da estrutura: 15% na venda direta e rebate sobre toda a rede abaixo. Cadastre licenciados, vendedores e influenciadores.',
+      'ponto_retirada': 'Ponto de Retirada: 16% na venda direta. Cadastre parceiros e cresça a rede.',
+      'loja_fisica': 'Loja Física: 19% na venda direta. Cadastre pontos de retirada e cresça a rede.',
       'trainee_diretor': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
       'executivo_conta': 'Ótimo trabalho! Continue crescendo sua estrutura de negócio.',
       'distribuidor': 'Parabéns! Continue para alcançar a Diretoria e ingressar na liderança.',

@@ -91,3 +91,46 @@ export function espelhoDaTarefaNoCard(antes, depois) {
   if (eraFeito === ficouFeito) return null;
   return { tarefaId: depois.id || antes.id || null, feito: ficouFeito };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🪞 25/09/2026 — O ESPELHO COMPLETO (dono: "o que faço no quadro reflete lá?")
+//
+// Até aqui só o FEITO viajava. Título e horário mudavam num lado e o outro
+// ficava com o velho: o card dizia "na Jornada às 13:00" e a Jornada mostrava
+// 11:00. Mesma regra do feito: só grava o que MUDOU (é o que corta o laço), e
+// só quando existe o par (virou_tarefa_id).
+// ═══════════════════════════════════════════════════════════════════════════
+const CAMPOS_ESPELHADOS = ['titulo', 'hora', 'hora_fim'];
+const norm = (v) => (v === undefined || v === null || v === '' ? null : String(v));
+
+/** O card mudou título/horário e tem tarefa ligada? → o patch pra metodo_tarefas, ou null. */
+export function camposDoCardParaTarefa(antes, depois) {
+  if (!antes || !depois) return null;
+  if (antes.id && depois.id && antes.id !== depois.id) return null;
+  const tarefaId = depois.virou_tarefa_id || null;
+  if (!tarefaId) return null;
+  const campos = {};
+  for (const c of CAMPOS_ESPELHADOS) if (norm(antes[c]) !== norm(depois[c])) campos[c] = norm(depois[c]);
+  if (campos.titulo === null) delete campos.titulo; // título vazio não viaja
+  return Object.keys(campos).length ? { tarefaId, campos } : null;
+}
+
+/** A tarefa mudou título/horário? → o patch pro card ligado (por virou_tarefa_id), ou null. */
+export function camposDaTarefaParaCard(antes, depois) {
+  if (!antes || !depois) return null;
+  if (antes.id && depois.id && antes.id !== depois.id) return null;
+  const tarefaId = depois.id || antes.id || null;
+  if (!tarefaId) return null;
+  const campos = {};
+  for (const c of CAMPOS_ESPELHADOS) if (norm(antes[c]) !== norm(depois[c])) campos[c] = norm(depois[c]);
+  if (campos.titulo === null) delete campos.titulo;
+  return Object.keys(campos).length ? { tarefaId, campos } : null;
+}
+
+/**
+ * A tarefa foi apagada do dia: o card ligado NÃO some (é o backlog) — volta pro
+ * Aberto, sem vínculo, pronto pra ser levado pro dia de novo.
+ */
+export function cardSemTarefa() {
+  return { virou_tarefa_id: null, virou_tarefa_em: null, coluna: ESTADO_ABERTO, feito_em: null };
+}

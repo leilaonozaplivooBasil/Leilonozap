@@ -65,6 +65,18 @@ export function itensSemNome(pedido) {
 }
 
 /**
+ * Os ids de TODOS os itens que têm id, sem repetir.
+ *
+ * 🖼️ 01/10/2026 — a conferência mostrava um ícone de caixa em cada linha de um
+ * pedido de nove produtos, e a operadora não conseguia identificar o que
+ * separar. Nenhum dos dois formatos guarda a foto por item; a foto mora em
+ * `products.image_urls`. Quem desenha busca por estes ids, de uma vez só.
+ */
+export function idsDosItens(pedido) {
+  return [...new Set((itensDoPedido(pedido) || []).map((it) => it.id).filter(Boolean))];
+}
+
+/**
  * Quantas UNIDADES o pedido tem no total — somando as quantidades, não contando
  * as linhas. Dois do mesmo produto são dois itens para quem abre a caixa.
  *

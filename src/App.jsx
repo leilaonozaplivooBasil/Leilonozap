@@ -41,6 +41,10 @@ const XGame = React.lazy(() => import('@/pages/XGame'));
 // 🏆 RANKING X-GAME — o link compartilhável do pódio + tabela (DIR-138)
 const RankingXGame = React.lazy(() => import('@/pages/RankingXGame'));
 const Carteira = React.lazy(() => import('@/pages/Carteira'));
+// 🏪 30/09/2026 — balcão de retiradas (acesso decidido no servidor)
+const BalcaoRetiradas = React.lazy(() => import('@/pages/BalcaoRetiradas'));
+// 🐯 01/10/2026 — cópia da página de leilões, pra personalizar depois
+const TigrinhoNoLeilao = React.lazy(() => import('@/pages/TigrinhoNoLeilao'));
 const AdminFinanceiro = React.lazy(() => import('@/pages/AdminFinanceiro'));
 // 💰 Extrato de Aportes do Parceiro de Compra (leitura + conciliação com o Mercado Pago)
 const AportesParceiro = React.lazy(() => import('@/pages/AportesParceiro'));
@@ -123,6 +127,7 @@ const ROUTE_ALIASES = {
   'catalog': '/Loja-Virtual', 'produtos': '/Loja-Virtual',
   // Leilões
   'leiloes': '/leiloes', 'leilao': '/leiloes', 'auctions': '/leiloes',
+  'tigrinho': '/tigrinhonoleilao', 'tigrinho-no-leilao': '/tigrinhonoleilao',
   // Entrar / conta
   'entrar': '/Home', 'login': '/Home', 'signin': '/Home', 'conta': '/Carteira',
   'carteira': '/Carteira', 'wallet': '/Carteira', 'carrinho': '/Cart', 'cart': '/Cart',
@@ -227,6 +232,13 @@ const AuthenticatedApp = () => {
           <MainPage />
         </LayoutWrapper>
       } />
+      {/* 🐯 01/10/2026 — /tigrinhonoleilao: cópia da página de leilões (src/pages/TigrinhoNoLeilao.jsx).
+          Mesmo currentPageName da /leiloes, pra o cabeçalho e a barra do app ficarem iguais. */}
+      <Route path="/tigrinhonoleilao" element={
+        <LayoutWrapper currentPageName="Home">
+          <TigrinhoNoLeilao />
+        </LayoutWrapper>
+      } />
       {/* 🔒 Compatibilidade: /Home continua renderizando a Home de leilões */}
       <Route path="/Home" element={
         <LayoutWrapper currentPageName="Home">
@@ -256,6 +268,7 @@ const AuthenticatedApp = () => {
           lateral). Sem o botão Voltar, o usuário ficaria preso — agora entram
           no mesmo Layout das demais e recebem a navegação padrão. */}
       <Route path="/Carteira" element={<LayoutWrapper currentPageName="Carteira"><Carteira /></LayoutWrapper>} />
+      <Route path="/Retiradas" element={<LayoutWrapper currentPageName="BalcaoRetiradas"><BalcaoRetiradas /></LayoutWrapper>} />
       <Route path="/painel" element={<LayoutWrapper currentPageName="PainelDistribuidor"><PainelDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pedidos" element={<LayoutWrapper currentPageName="PedidosDistribuidor"><PedidosDistribuidor /></LayoutWrapper>} />
       <Route path="/painel/pdv" element={<LayoutWrapper currentPageName="TirarPedido"><TirarPedido /></LayoutWrapper>} />

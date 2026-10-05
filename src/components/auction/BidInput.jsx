@@ -31,10 +31,10 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
       return;
     }
 
-    // 🎯 PONTO 85 — o PRIMEIRO lance precisa ser EXATAMENTE o preço inicial (não
-    // "maior ou igual"). Espelha a mesma regra do backend (submitAtomicBid).
-    if (isFirstBid && money(finalAmount) !== money(minBid)) {
-      toast.error(`O primeiro lance precisa ser exatamente R$ ${fmtBR(minBid)}`);
+    // 🎯 27/09/2026 — o PRIMEIRO lance pode ser o preço inicial OU mais (abrir
+    // direto em R$ 50, 100, 500…). Espelha a regra do backend (submitAtomicBid).
+    if (isFirstBid && !gteMoney(finalAmount, minBid)) {
+      toast.error(`O primeiro lance precisa ser de pelo menos R$ ${fmtBR(minBid)}`);
       return;
     }
 
@@ -52,6 +52,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
         <div className="min-w-0 flex-1">
           <BidPopover
             minBid={minBid}
+            currentPrice={money(currentPrice)}
             increment={increment}
             freteValor={freteValor}
             isLoading={isLoading}

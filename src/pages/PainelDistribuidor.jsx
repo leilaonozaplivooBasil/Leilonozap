@@ -235,7 +235,7 @@ export default function PainelDistribuidor() {
   const MENU = isLoja ? [
     { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
-    { id: 'rede', label: 'Minha Árvore', icon: Network },
+    { id: 'rede', label: 'Organograma', icon: Network },
     /* 🧭 PDV e Estoque saíram DAQUI: já existem na lateral de ícones do sistema
        (mesma tela, dois caminhos = informação repetida). Continuam nos atalhos. */
     { id: 'pedidos', label: 'Todos os Pedidos (Loja + PDV)', icon: Truck, route: ROUTES.pedidos },
@@ -248,7 +248,7 @@ export default function PainelDistribuidor() {
   ] : [
     { id: 'visao', label: 'Visão da Operação', icon: LayoutDashboard },
     { id: 'cadastrar', label: 'Cadastrar & Vender', icon: Link2, star: true },
-    { id: 'rede', label: 'Minha Árvore', icon: Network },
+    { id: 'rede', label: 'Organograma', icon: Network },
     /* 🧭 PDV e Produtos & Estoque saíram DAQUI: já estão na lateral de ícones do
        sistema. Ficam acessíveis pelos atalhos e pelo botão "Tirar pedido". */
     { id: 'funcionarios', label: 'Funcionários (PDV)', icon: UserCog },
@@ -292,7 +292,21 @@ export default function PainelDistribuidor() {
             <span className="font-bold truncate">{currentLabel}</span>
           </button>
         </div>
-        <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* 🏢 30/09/2026 — Organograma: só o ícone (pedido do dono, "não pode
+              ficar um botão grande"). Ao tocar, abre a aba e o nome aparece na
+              barra, no lugar da seção atual. */}
+          <button
+            onClick={() => setTab('rede')}
+            aria-label="Organograma"
+            title="Organograma"
+            data-teste="painel-organograma"
+            className={`p-2 rounded-lg border shrink-0 ${tab === 'rede' ? 'border-green-500/60 text-green-300 bg-green-500/10' : 'border-gray-700 text-gray-300'}`}
+          >
+            <Network className="w-5 h-5" />
+          </button>
+          <button onClick={() => navigate(ROUTES.pdv)} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-bold flex items-center gap-1.5 shrink-0"><ShoppingCart className="w-4 h-4" /> Pedido</button>
+        </div>
       </div>
 
       {/* MENU ESCRITO DO PAINEL — mesmo componente usado em Pedidos & Envio e
@@ -348,11 +362,11 @@ export default function PainelDistribuidor() {
               <Stat icon={DollarSign} label="Valor em loja" value={money(lojaStats?.valor_loja || 0)} sub="estoque × preço" color="text-amber-400" />
               <Stat icon={Truck} label="Pedidos a despachar" value={lojaStats?.pedidos_abrir || 0} sub="aguardando" color={lojaStats?.pedidos_abrir > 0 ? 'text-orange-400' : 'text-white'} />
             </div>
-            <SectionLabel>💰 Vendas & Árvore</SectionLabel>
+            <SectionLabel>💰 Vendas & Organograma</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <Stat icon={ShoppingCart} label="Vendas" value={money(lojaStats?.vendas_valor || 0)} sub="online + PDV" color="text-green-400" />
               <Stat icon={TrendingUp} label="Comissões" value={money(lojaStats?.comissao || 0)} sub="acumuladas" color="text-yellow-400" />
-              <Stat icon={Users} label="Minha árvore" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
+              <Stat icon={Users} label="Organograma" value={lojaStats?.rede_total || 0} sub={`${lojaStats?.vendedores || 0} vendedores`} color="text-white" />
               {/* ITEM 1 DA AUDITORIA — aqui é a CARTEIRA DIGITAL, não comissão */}
               <Stat icon={Wallet} label="Saldo da carteira" value={money(lojaStats?.saldo || 0)} sub="disponível pra usar na plataforma" color="text-emerald-400" />
             </div>
@@ -433,9 +447,9 @@ export default function PainelDistribuidor() {
             </div>
 
             {/* REDE & EQUIPE */}
-            <SectionLabel>🌳 Árvore & Equipe</SectionLabel>
+            <SectionLabel>🏢 Organograma & Equipe</SectionLabel>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
-              <Stat icon={Users} label="Árvore total" value={stats.rede_total} sub="pessoas abaixo" color="text-white" />
+              <Stat icon={Users} label="Organograma" value={stats.rede_total} sub="pessoas abaixo" color="text-white" />
               <Stat icon={UserCog} label="Funcionários (PDV)" value={stats.funcionarios} sub="logins de balcão" color="text-cyan-400" />
               <Stat icon={Factory} label="Fornecedores" value={stats.fornecedores} sub="cadastrados" color="text-fuchsia-400" />
               <Stat icon={MousePointerClick} label="Cliques na loja" value={stats.cliques} sub="visitas" color="text-blue-400" />
@@ -453,7 +467,7 @@ export default function PainelDistribuidor() {
             <SectionLabel>⚡ Atalhos</SectionLabel>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Shortcut onClick={() => navigate(ROUTES.pdv)} icon={ShoppingCart} title="PDV · Tirar pedido" desc="Venda no balcão e baixe estoque." highlight />
-              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Links pra montar sua árvore." />
+              <Shortcut onClick={() => setTab('cadastrar')} icon={Link2} title="Cadastrar & Vender" desc="Links pra montar sua equipe." />
               <Shortcut onClick={() => navigate(ROUTES.pedidos)} icon={Truck} title="Pedidos & Envio" desc="Despache e acompanhe entregas." />
               <Shortcut onClick={() => navigate(createPageUrl('CatalogManagement'))} icon={Store} title="Editar loja / Importar" desc="Vitrine, banners e planilha." />
             </div>
@@ -477,7 +491,7 @@ export default function PainelDistribuidor() {
         {tab === 'cadastrar' && (
           <div>
             <h1 className="text-2xl font-black mb-1">Cadastrar & Vender</h1>
-            <p className="text-gray-400 text-sm mb-6">Compartilhe os links abaixo. Quem entrar por eles fica na <strong>sua árvore genealógica</strong>. Nos cargos pagos você ganha <strong className="text-yellow-400">20% da adesão</strong> (venda direta).</p>
+            <p className="text-gray-400 text-sm mb-6">Compartilhe os links abaixo. Quem entrar por eles entra no <strong>seu organograma</strong>. Nos cargos pagos você ganha <strong className="text-yellow-400">20% da adesão</strong> (venda direta).</p>
             <div className="grid md:grid-cols-2 gap-4">
               {perms.map((p) => {
                 const lvl = levels.find((l) => l.id === p.can_register_level);
@@ -511,11 +525,11 @@ export default function PainelDistribuidor() {
         {/* ───────────────────── MINHA REDE ───────────────────── */}
         {tab === 'rede' && (
           <div>
-            <h1 className="text-2xl font-black mb-1">Minha Árvore Genealógica</h1>
+            <h1 className="text-2xl font-black mb-1">Organograma</h1>
             {/* 🌳 08/08/2026 — é a MESMA árvore do Painel de Controle, replicada aqui
                 com a própria pessoa como raiz (bolinha única no topo). Admin/super
                 admin mexem igual lá; os demais cargos só acompanham. */}
-            <p className="text-gray-400 text-sm mb-4">Toda a sua rede, nível por nível, a partir de você.</p>
+            <p className="text-gray-400 text-sm mb-4">Sua operação, nível por nível, a partir de você.</p>
             <MinhaArvoreRede user={user} />
           </div>
         )}

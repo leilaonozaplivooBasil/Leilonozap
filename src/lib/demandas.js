@@ -123,6 +123,7 @@ export function rotuloDaOrigem(origem) {
     case 'ceo': return 'do CEO';
     case 'diretor': return 'de um diretor';
     case 'gestao': return 'da gestão';
+    case 'bloco': return 'do bloco de notas';
     default: return String(origem || 'anotada');
   }
 }

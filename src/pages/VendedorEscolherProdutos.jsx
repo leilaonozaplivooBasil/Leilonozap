@@ -207,7 +207,10 @@ export default function VendedorEscolherProdutos() {
 
       sessionStorage.removeItem("vendedorEscolherState");
       setDone(true);
-      toast.success(`Pedido confirmado! Você já é um ${cargoLabel}.`);
+      // 🎯 quem já é Parceiro (ou acima) escolhendo o crédito da adesão não "vira" Vendedor
+      const NOMES = { parceiro: 'Parceiro', ponto_retirada: 'Ponto de Retirada', loja_fisica: 'Loja Física', distribuidor: 'Distribuidor' };
+      const cargoAtual = NOMES[String(user.primary_career_level || '').toLowerCase()];
+      toast.success(cargoAtual ? `Pedido confirmado! Seus produtos entram no estoque da sua loja de ${cargoAtual}.` : `Pedido confirmado! Você já é um ${cargoLabel}.`);
       setTimeout(() => navigate("/Licensing", { replace: true }), 2000);
     } catch (e) {
       toast.error("Erro ao fechar o pedido. Tente novamente.");

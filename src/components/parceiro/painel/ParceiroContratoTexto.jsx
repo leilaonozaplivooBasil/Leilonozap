@@ -68,13 +68,13 @@ export default function ParceiroContratoTexto() {
       <p>7.4. A PLATAFORMA compromete-se a disponibilizar, por meio do painel digital exclusivo, a prestação de contas e o demonstrativo de resultados das operações comerciais realizadas.</p>
 
       <h5 className="text-green-400 font-bold mt-4">8. DA VIGÊNCIA E DO CICLO OPERACIONAL</h5>
-      <p>8.1. O presente contrato terá vigência de 12 (doze) meses de repasses, contados a partir do primeiro compartilhamento de lucros, precedidos por um período de estruturação de 30 (trinta) dias contados da data de aceite eletrônico pelo PARCEIRO.</p>
+      <p>8.1. O presente contrato terá vigência de 12 (doze) a 36 (trinta e seis) meses de repasses, conforme o plano contratado, contados a partir do primeiro compartilhamento de lucros, precedidos por um período de estruturação de 30 (trinta) dias contados da data de aceite eletrônico pelo PARCEIRO.</p>
       <p>8.2. O ciclo financeiro da parceria observará as seguintes regras:</p>
       <p className="ml-4">a) O período de estruturação de 30 dias se divide em: 7 (sete) dias para chegada e recebimento do produto, 10 (dez) dias para catalogação e organização do estoque, e 13 (treze) dias para colocação à venda e apuração do primeiro repasse;</p>
-      <p className="ml-4">b) Após o período de estruturação, os compartilhamentos de lucro ocorrerão mensalmente, a cada 30 dias, ao longo dos 12 meses de vigência;</p>
+      <p className="ml-4">b) Após o período de estruturação, os compartilhamentos de lucro ocorrerão mensalmente, a cada 30 dias, ao longo do prazo de vigência contratado (de 12 a 36 meses);</p>
       <p className="ml-4">c) O capital permanecerá alocado continuamente em novas operações enquanto vigente o contrato.</p>
       <p>8.3. Os valores de lucro compartilhado poderão ser retirados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
-      <p>8.4. Ao final dos 12 (doze) meses de repasses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para novo acordo.</p>
+      <p>8.4. Ao final do prazo de repasses contratado (de 12 a 36 meses), a parceria será automaticamente encerrada, salvo manifestação expressa das partes para novo acordo.</p>
       <p>8.5. Encerrada a vigência contratual, o capital aportado será disponibilizado para retirada em até 30 (trinta) dias.</p>
 
       <h5 className="text-green-400 font-bold mt-4">9. DAS OBRIGAÇÕES DO PARCEIRO</h5>

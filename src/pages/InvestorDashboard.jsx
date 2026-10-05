@@ -1,4 +1,6 @@
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 import React, { useState, useEffect } from 'react';
+import { preservarDadosSensiveis } from '@/lib/dadosSensiveisDoUsuario';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { plataforma } from '@/api/plataformaClient';
@@ -114,36 +116,14 @@ const COMMON_FEATURES = [
   'Suporte dedicado',
 ];
 
+// 🔴 02/10/2026 — cotas só a partir de R$ 30 mil (decisão da diretoria): os
+// planos de 5 e 15 mil saíram da oferta. Ver src/lib/planosParceiro.js.
 const PORTFOLIOS = [
-  {
-    id: 1,
-    name: 'Plano Visionário',
-    minInvestment: 5000,
-    expectedReturn: 3,
-    duration: 30,
-    products: ['Eletrônicos'],
-    risk: 'Baixo',
-    description: 'Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.',
-    features: COMMON_FEATURES,
-    imageKey: 'eletronicos',
-  },
-  {
-    id: 2,
-    name: 'Plano Sócios de Ouro',
-    minInvestment: 15000,
-    expectedReturn: 3,
-    duration: 30,
-    products: ['Eletrodomésticos', 'Eletrônicos', 'Apple'],
-    risk: 'Baixo',
-    description: 'Para parceiros que buscam maior retorno com segurança.',
-    features: COMMON_FEATURES,
-    imageKey: 'eletrodomesticos',
-  },
   {
     id: 3,
     name: 'Plano Elite',
     minInvestment: 30000,
-    expectedReturn: 3,
+    expectedReturn: TAXA_PARCEIRO.pct,
     duration: 30,
     products: ['Todas as categorias'],
     risk: 'Baixo',
@@ -157,7 +137,7 @@ const PORTFOLIOS = [
     id: 4,
     name: 'Private Galpão',
     minInvestment: 50000,
-    expectedReturn: 3,
+    expectedReturn: TAXA_PARCEIRO.pct,
     duration: 30,
     products: ['Volume fechado sob demanda'],
     risk: 'Baixo',
@@ -221,7 +201,8 @@ export default function InvestorDashboard() {
 
       const userFromStorage = JSON.parse(savedUserJSON);
       const freshUsers = await plataforma.entities.AppUser.filter({ id: userFromStorage.id });
-      const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+      // 🔐 cpf/pix não vêm mais do banco pelo navegador — preserva o que o login trouxe
+      const user = freshUsers && freshUsers.length > 0 ? preservarDadosSensiveis(freshUsers[0], userFromStorage) : userFromStorage;
 
       try {
         await plataforma.entities.AppUser.update(user.id, {

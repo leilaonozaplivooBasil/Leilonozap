@@ -196,7 +196,7 @@ export default function ComoFunciona() {
       <Lamina
         eyebrow="Passaporte de Lances"
         titulo="Não arrematou? Seu cupom Passaporte libera."
-        apoio="Quem deposita R$ 100 ou mais ganha um cupom de 10% guardado. Cada leilão que você disputa e não leva libera a fatia dele — 10% do seu lance — para usar na Loja Virtual."
+        apoio="Quem deposita a partir de R$ 27 ganha um cupom de 10% guardado. Cada leilão que você disputa e não leva libera a fatia dele — 10% do seu lance — para usar na Loja Virtual."
         bg="var(--nz-verde-fundo)"
       >
         <div className="mx-auto max-w-2xl rounded-2xl border border-nz-borda bg-white p-6 text-left">

@@ -54,7 +54,7 @@ export function numeroBonito(valor) {
  * Categoria sem nada dos dois não entra — card vazio é porta fechada na cara
  * de quem clicou.
  */
-export const CATEGORIAS_NA_VITRINE = 12;
+export const CATEGORIAS_NA_VITRINE = 6;
 
 /**
  * O número que alguém escolheu para esta categoria, ou null.

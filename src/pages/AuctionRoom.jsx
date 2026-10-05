@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 
@@ -18,6 +19,10 @@ import LoginModal from "../components/common/LoginModal";
 import AuctionDisputePanel from '../components/auction/AuctionDisputePanel';
 import { money, addMoney, fmtBR } from '@/lib/money';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
+import { segundosDesdeOFim } from '@/lib/sincronizacaoDaSala';
+import { deveCelebrar, fraseDoVendido } from '@/lib/festaDoFim';
+import { statusDaCotacao, bloqueioDoFrete, abreModalDeCep } from '@/lib/freteDoLance';
 import WalletDrawer from '../components/wallet/WalletDrawer';
 import CompareAquiButton from '../components/comparai/CompareAquiButton';
 import AuctioneerFloat from "../components/auction/AuctioneerFloat";
@@ -45,6 +50,7 @@ import SeloChamada from "@/components/auction/SeloChamada";
 import useChamada from "@/hooks/useChamada";
 // 🚚 Frete calculado uma única vez na sala, junto com o lance
 import FreteLanceBanner from "@/components/auction/FreteLanceBanner";
+import CepDoLanceModal from "@/components/auction/CepDoLanceModal";
 
 import useAuctionTimer from "@/hooks/useAuctionTimer";
 import useAuctionSync from "@/hooks/useAuctionSync";
@@ -100,6 +106,11 @@ export default function AuctionRoom() {
   // 📜 PONTO 67 — Termo de Adesão obrigatório antes do PRIMEIRO lance
   const [showTermoModal, setShowTermoModal] = useState(false);
   const [pendingBidAmount, setPendingBidAmount] = useState(null);
+  // 📮 28/09/2026 — o CEP que falta é pedido num modal, não num alert() (ver CepDoLanceModal).
+  // modalCep = o que a pessoa tentou fazer ({tipo: 'lance'|'arremate', valor});
+  // acaoLiberada = o mesmo, depois do "Continuar" — sai assim que o frete liberar.
+  const [modalCep, setModalCep] = useState(null);
+  const [acaoLiberada, setAcaoLiberada] = useState(null);
 
   // 🚚 Frete: calculado UMA VEZ por sessão na sala (nunca por clique de lance) —
   // depende só do CEP + dimensões do produto, nunca do valor do lance.
@@ -174,6 +185,9 @@ export default function AuctionRoom() {
   const abortControllerRef = useRef(null);
 
   const isEndingRef = useRef(false);
+  // 🔨 a festa do fim acontece UMA vez, e por transição de estado (src/lib/festaDoFim.js)
+  const celebrouRef = useRef(false);
+  const statusAnteriorRef = useRef(null);
 
   const hasInitializedRef = useRef(false);
 
@@ -297,6 +311,29 @@ export default function AuctionRoom() {
   // We pass a stable ref for endAuction since it's defined below
   const endAuctionRef = useRef(null);
 
+  // 🔨 A FESTA DO FIM — 3 marteladas, balão "VENDIDO para …" e, havendo vencedor,
+  // o modal alguns segundos depois. Guardada por `celebrouRef`: dispara UMA vez,
+  // seja pela resposta do servidor (endAuction) ou pela transição de estado (efeito
+  // abaixo). Ver src/lib/festaDoFim.js para o porquê.
+  const celebrarFim = useCallback(({ winner_id, winner_name } = {}) => {
+    if (celebrouRef.current) return;
+    celebrouRef.current = true;
+    playSound('hammer');
+    setTimeout(() => playSound('hammer'), 300);
+    setTimeout(() => playSound('hammer'), 600);
+    setTimeout(() => {
+      setAuctioneerPhase(4);
+      setAuctioneerMessage(fraseDoVendido(winner_name));
+      setShowAuctioneer(true);
+    }, 900);
+    if (winner_id) {
+      playSound('winner');
+      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
+      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
+      setTimeout(() => setShowWinnerModal(true), 4000);
+    }
+  }, [playSound]);
+
   const {
     timeRemaining,
     auctioneerPhase,
@@ -364,7 +401,7 @@ export default function AuctionRoom() {
           if (data?.seconds_remaining > 0) {
             console.warn(`⏱️ [END] Servidor: faltam ${data.seconds_remaining}s. Re-calibrando.`);
             await calibrateServerOffset();
-            await syncAuctionDataOnly();
+            await syncAuctionDataOnly(true);
             return;
           }
           console.warn("⚠️ [END] finalizeAuction sem sucesso:", data?.error);
@@ -378,7 +415,8 @@ export default function AuctionRoom() {
         // Backend indisponível: NÃO inventa resultado no cliente. Re-sincroniza e
         // deixa o próximo ciclo de sync tentar de novo.
         console.error("❌ [END] Servidor não confirmou o arremate. Aguardando novo ciclo.");
-        await syncAuctionDataOnly();
+        // 📡 forçada: o tempo real e o limbo (useAuctionSync) seguem tentando
+        await syncAuctionDataOnly(true);
         return;
       }
 
@@ -394,18 +432,10 @@ export default function AuctionRoom() {
         order_status: result.order_status,
       }));
 
-      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real
-      playSound('hammer');
-      setTimeout(() => playSound('hammer'), 300);
-      setTimeout(() => playSound('hammer'), 600);
-
-      setTimeout(() => {
-        setAuctioneerPhase(4);
-        setAuctioneerMessage(result.winner_name ? `🎉 VENDIDO para ${result.winner_name}! 🎉` : "🔨 Leilão encerrado!");
-        setShowAuctioneer(true);
-      }, 900);
-
-      if (result.winner_id) playSound('winner');
+      // 🔨 3 MARTELADAS + leiloeiro "VENDIDO!" — só DEPOIS da confirmação real.
+      // A mesma festa também dispara pela transição de estado (ver celebrarFim):
+      // quem não conseguiu falar com o servidor celebra pela sincronização.
+      celebrarFim(result);
 
       // Recarrega o chat — a mensagem de vitória foi criada pelo servidor
       await new Promise(resolve => setTimeout(resolve, 1200));
@@ -417,12 +447,6 @@ export default function AuctionRoom() {
         console.error("❌ [END] Erro ao atualizar mensagens:", error);
       }
 
-      // 🎉 Modal de arrematado alguns segundos depois do card no chat —
-      // SÓ quando houve vencedor de verdade (sem lances = sem festa)
-      if (result.winner_id) {
-        setTimeout(() => setShowWinnerModal(true), 4000);
-      }
-
     } catch (error) {
       console.error("❌ [END] Erro:", error);
     } finally {
@@ -430,10 +454,26 @@ export default function AuctionRoom() {
     }
     // syncAuctionDataOnly/clearSyncIntervals vêm do useAuctionSync declarado DEPOIS —
     // são acessados só em tempo de execução (mesmo padrão que o código já usava).
-  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset]);
+  }, [auction, playSound, getServerSyncedTime, calibrateServerOffset, celebrarFim]);
 
   // Wire up the ref so the timer hook can call endAuction without circular deps
   endAuctionRef.current = endAuction;
+
+  // 🔨 Viu o leilão passar de `active` para `ended`/`sold` — por qualquer caminho
+  // (sync, realtime, resposta própria)? Celebra. Uma vez. Sala aberta num leilão
+  // já encerrado não celebra (anterior nunca foi `active` aqui).
+  useEffect(() => {
+    const atual = auction?.status;
+    if (!atual) return;
+    const anterior = statusAnteriorRef.current;
+    statusAnteriorRef.current = atual;
+    // 🔄 01/10/2026 — a janela do F5: quem recarregou no segundo final abre a
+    // sala já encerrada e ainda assim estava aqui na hora. Ver festaDoFim.js.
+    const desdeOFim = segundosDesdeOFim(auction?.end_time, getServerSyncedTime() ?? Date.now());
+    if (deveCelebrar({ anterior, atual, jaCelebrou: celebrouRef.current, segundosDesdeOFim: desdeOFim })) {
+      celebrarFim({ winner_id: auction?.winner_id, winner_name: auction?.winner_name });
+    }
+  }, [auction?.status, auction?.winner_id, auction?.winner_name, auction?.end_time, celebrarFim, getServerSyncedTime]);
 
   // Sync hook
   const {
@@ -451,6 +491,7 @@ export default function AuctionRoom() {
     getServerSyncedTime,
     lastOffsetCalibrationRef,
     onEndAuction: endAuction,
+    timeRemaining,
   });
 
   // 📱 PONTO 86 (19/08/2026) — REGRA DE OURO deste projeto (ver
@@ -578,16 +619,20 @@ export default function AuctionRoom() {
         cep,
       });
       const data = result?.data || result;
-      if (data?.success && Array.isArray(data.opcoes) && data.opcoes.length > 0) {
-        const escolhida = data.opcoes[0];
-        setFreteValor(money(escolhida.preco));
-        setFreteSelo(escolhida.selo || null);
-        setEnderecoAtual(data.endereco_atual || null);
+      // 🤝 24/09/2026 — a leitura da resposta saiu para src/lib/freteDoLance.js
+      // (caso Harley 117: transportadora recusando o VOLUME virava "confira o
+      // CEP"). Cada resposta vira um status com nome: ok · a_combinar ·
+      // needs_address · needs_cep · needs_login · produto_grande · error.
+      const lido = statusDaCotacao(data);
+      if (lido.status === 'ok' || lido.status === 'needs_address' || lido.status === 'a_combinar') {
+        setFreteValor(lido.valor);
+        setFreteSelo(lido.selo);
+        setEnderecoAtual(lido.endereco);
         // 📮 CEP cota o frete, mas despachar exige RUA + NÚMERO. Sem isso o
         // pedido nasce igual ao AR3BEF1939: pago, mas sem como sair do galpão.
         // A caixinha de endereço abre no lugar do "frete calculado" até
         // confirmar — mesmo padrão visual do CEP, sem página nova.
-        setFreteStatus(data.endereco_completo ? 'ok' : 'needs_address');
+        setFreteStatus(lido.status);
       } else {
         setFreteValor(0);
         setFreteSelo(null);
@@ -606,11 +651,7 @@ export default function AuctionRoom() {
         // → e o botão de lance ficaria travado para sempre, num leilão ao vivo,
         // com uma instrução que não resolve nada, porque o CEP delas está certo.
         // Aqui a tela diz a verdade e manda entrar de novo, que é o que resolve.
-        if (data?.error === 'nao_autenticado') {
-          setFreteStatus('needs_login');
-        } else {
-          setFreteStatus(data?.motivo === 'sem_cep' ? 'needs_cep' : 'error');
-        }
+        setFreteStatus(lido.status);
       }
     } catch (e) {
       console.warn('⚠️ [FRETE] Erro ao calcular frete do leilão:', e.message);
@@ -647,25 +688,19 @@ export default function AuctionRoom() {
   // Agora nenhum lance e nenhum arremate passa sem frete cotado. O texto diz o que
   // fazer em cada caso, porque "erro" no meio de um leilão ao vivo sem instrução
   // faz a pessoa desistir.
-  const freteBloqueia = useCallback(() => {
-    if (freteStatus === 'ok' && freteValor > 0 && freteSelo) return null;
-    // selo ausente com cotação "ok" só acontece se a rota antiga responder — e aí
-    // o lance seria recusado no servidor assim que FRETE_MODO=bloquear subir.
-    if (freteStatus === 'ok' && freteValor > 0 && !freteSelo) {
-      return 'Não conseguimos confirmar o frete com o servidor. Recarregue a página e tente de novo.';
-    }
-    if (freteStatus === 'needs_login') return 'Sua sessão expirou. Saia e entre de novo para calcular o frete e dar o lance.';
-    if (freteStatus === 'needs_address') return 'Complete seu endereço de entrega para dar o lance.';
-    if (freteStatus === 'loading') return 'Calculando o frete… aguarde um instante e tente de novo.';
-    if (freteStatus === 'needs_cep' || !freteCep) return 'Informe seu CEP para calcular o frete antes de dar o lance.';
-    if (freteStatus === 'error') return 'Não conseguimos calcular o frete para o seu CEP. Confira o CEP e tente novamente.';
-    return 'O frete ainda não foi calculado. Confira seu CEP antes de dar o lance.';
-  }, [freteStatus, freteValor, freteCep, freteSelo]);
+  //
+  // 🤝 24/09/2026 — a régua mora em src/lib/freteDoLance.js (bloqueioDoFrete).
+  // Única exceção ao "sem frete não passa": o selo 'a_combinar' de lote grande
+  // com retirada ligada pela casa — o servidor confere de novo no lance.
+  const freteBloqueia = useCallback(
+    () => bloqueioDoFrete({ status: freteStatus, valor: freteValor, selo: freteSelo, cep: freteCep }),
+    [freteStatus, freteValor, freteCep, freteSelo],
+  );
 
   // 📮 Salva rua/número (e o resto que o CEP já trouxe) e libera o lance na
   // hora — sem recotar frete de novo, o valor já é o mesmo.
-  const handleConfirmarEndereco = useCallback(async (dados) => {
-    if (!currentUser?.id) return;
+  const handleConfirmarEndereco = useCallback(async (dados, { silencioso = false } = {}) => {
+    if (!currentUser?.id) return false;
     setSalvandoEndereco(true);
     try {
       const AppUser = plataforma.entities.AppUser;
@@ -682,9 +717,11 @@ export default function AuctionRoom() {
       setCurrentUser((prev) => (prev ? { ...prev, ...dados } : prev));
       setEnderecoAtual(dados);
       setFreteStatus('ok');
+      return true;
     } catch (e) {
       console.error('[ENDERECO] falhou salvar:', e?.message);
-      alert('Não foi possível salvar seu endereço. Tente de novo.');
+      if (!silencioso) alert('Não foi possível salvar seu endereço. Tente de novo.');
+      return false;
     } finally {
       setSalvandoEndereco(false);
     }
@@ -696,8 +733,13 @@ export default function AuctionRoom() {
       alert("Este leilão ainda não abriu para lances.");
       return;
     }
-    const semFrete = freteBloqueia();
-    if (semFrete) { alert(semFrete); return; }
+    // Visitante sem conta passa direto: o submitBid pede login antes de tudo —
+    // pedir CEP a quem nem entrou seria um passo a mais para nada.
+    const semFrete = currentUser ? freteBloqueia() : null;
+    if (semFrete) {
+      if (abreModalDeCep(freteStatus)) { setModalCep({ tipo: 'lance', valor: amount }); return; }
+      alert(semFrete); return;
+    }
     if (currentUser && !jaAceitouTermo(currentUser)) {
       setPendingBidAmount(amount);
       setShowTermoModal(true);
@@ -705,7 +747,7 @@ export default function AuctionRoom() {
     }
     trackCtaClick('participar_leilao', 'leilao');
     submitBid(amount);
-  }, [currentUser, submitBid, freteBloqueia]);
+  }, [currentUser, submitBid, freteBloqueia, freteStatus]);
 
   const aceitarTermoEContinuar = useCallback(async () => {
     setShowTermoModal(false);
@@ -853,7 +895,10 @@ export default function AuctionRoom() {
 
     // 🚚 mesma trava do lance: arremate sem frete cotado não sai
     const semFreteArremate = freteBloqueia();
-    if (semFreteArremate) { alert(semFreteArremate); return; }
+    if (semFreteArremate) {
+      if (abreModalDeCep(freteStatus)) { setModalCep({ tipo: 'arremate', valor: precoArremateAgora(auction) }); return; }
+      alert(semFreteArremate); return;
+    }
 
     // 🛡️ PONTO 70 — sem preço REAL de arremate imediato, a ação nem começa
     const buyNowAmount = precoArremateAgora(auction);
@@ -881,7 +926,18 @@ export default function AuctionRoom() {
     }
 
     setShowBuyNowModal(true);
-  }, [auction, currentUser, freteBloqueia]);
+  }, [auction, currentUser, freteBloqueia, freteStatus]);
+
+  // 📮 "Continuar" no modal de CEP: a ação que a pessoa tentou sai assim que o
+  // frete liberar — pelo MESMO caminho de antes (termo, saldo, confirmação),
+  // com a régua do bloqueioDoFrete já lendo o estado novo.
+  useEffect(() => {
+    if (!acaoLiberada || freteBloqueia()) return;
+    const acao = acaoLiberada;
+    setAcaoLiberada(null);
+    if (acao.tipo === 'arremate') handleBuyNow();
+    else handleSubmitBidComTermo(acao.valor);
+  }, [acaoLiberada, freteBloqueia, handleBuyNow, handleSubmitBidComTermo]);
 
   const confirmBuyNow = useCallback(async () => {
     if (!auction || !currentUser) return;
@@ -961,15 +1017,20 @@ export default function AuctionRoom() {
     // 🎯 LINK DE COMPARTILHAMENTO: rota server-side /l/:id — o WhatsApp precisa dela
     // pra mostrar a FOTO REAL do leilão no preview (a URL da SPA só devolve a logo).
     // Ela redireciona de volta pra esta mesma sala; nada do fluxo de lance muda.
-    const productUrl = `${window.location.origin}/l/${auction.id}`;
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
     const currentPrice = auction.current_price || auction.starting_price;
 
+    // 🚀 pré-lançamento: não existe lance ainda — a mensagem leva a abertura
+    const linhaDoLance = ehPreLancamento(auction)
+      ? `🚀 Pré-lançamento · ${textoDeAbertura(auction)}`
+      : `💰 Lance: R$ ${fmtBR(currentPrice)}`;
     const shareText = `🔥 LEILÃO NOZAP!
 
 📱 ${auction.title}
-💰 Lance: R$ ${fmtBR(currentPrice)}
+${linhaDoLance}
 
-⚡ Dê seu lance: ${productUrl}`;
+⚡ ${ehPreLancamento(auction) ? 'Entre e acompanhe' : 'Dê seu lance'}: ${productUrl}`;
 
     if (isAndroid && packageName) {
       const intentUrl = `intent://send?text=${encodeURIComponent(shareText)}#Intent;scheme=whatsapp;package=${packageName};end`;
@@ -1018,6 +1079,8 @@ export default function AuctionRoom() {
   const getDisplayTime = () => {
     if (!auction) return "Carregando...";
 
+    // 🚀 pré-lançamento: a sala não diz "Encerrado" para um leilão que ainda vai abrir
+    if (ehPreLancamento(auction)) return "Pré-lançamento";
     if (auction.status !== "active") return "Encerrado";
 
     if (timeRemaining !== null) {
@@ -1095,7 +1158,10 @@ export default function AuctionRoom() {
   // data nenhuma, que é exatamente o rótulo de resolução de semana que gerou o
   // chamado da Caixa de Som Mondial. A barra lateral (que só existe no desktop)
   // passa a carregar a mesma frase, vinda da MESMA régua.
-  const fimEmTexto = textoDeTermino(auction?.end_time);
+  const preLancamento = ehPreLancamento(auction);
+  const abertura = preLancamento ? textoDeAbertura(auction) : '';
+  // no pré-lançamento o end_time é a hora de ABRIR — não é término, não mostra "Termina"
+  const fimEmTexto = preLancamento ? '' : textoDeTermino(auction?.end_time);
   const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
   const currentPrice = money(auction.current_price || auction.starting_price);
   // Leilão pode vir sem incremento definido (ex.: reativado/legado) — nunca deixar null quebrar o render nem gerar NaN no lance
@@ -1210,6 +1276,8 @@ export default function AuctionRoom() {
             endTime={auction?.end_time}
             isAuctionActive={isAuctionActive}
             isWarMode={isWarMode}
+            preLancamento={preLancamento}
+            abertura={abertura}
             onInfo={() => setShowMobilePanel(true)}
             leaderName={auction?.winner_name}
             thumbUrl={auction?.image_urls?.[0] || null}
@@ -1251,7 +1319,11 @@ export default function AuctionRoom() {
             <div className="product-panel__body">
               <h2 className="product-panel__title">{auction.title}</h2>
               <div className="product-panel__meta">
-                <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
+                {preLancamento ? (
+                  <span className="product-panel__price" data-teste="abertura-pre-lancamento-sala">{abertura}</span>
+                ) : (
+                  <span className="product-panel__price">Lance atual: R$ {fmtBR(currentPrice)}</span>
+                )}
                 <span className="product-panel__timer">{displayTime}</span>
                 {fimEmTexto && (
                   <span data-teste="data-de-termino-sala" className="product-panel__fim">
@@ -1493,6 +1565,22 @@ export default function AuctionRoom() {
         </div>
       )}
 
+      {modalCep && (
+        <CepDoLanceModal
+          acao={modalCep}
+          status={freteStatus}
+          freteValor={freteValor}
+          liberado={!freteBloqueia()}
+          cepInicial={freteCep}
+          enderecoAtual={enderecoAtual}
+          salvandoEndereco={salvandoEndereco}
+          onCalcular={(cep) => { setFreteCep(cep); return calcularFreteLance(cep); }}
+          onConfirmarEndereco={(dados) => handleConfirmarEndereco(dados, { silencioso: true })}
+          onContinuar={() => { setAcaoLiberada(modalCep); setModalCep(null); }}
+          onFechar={() => setModalCep(null)}
+        />
+      )}
+
       {/* 📜 PONTO 67 — Termo obrigatório antes do primeiro lance (cancelar = nenhum lance, nenhum saldo tocado) */}
       {showTermoModal && (
         <TermoAdesaoModal
@@ -1586,6 +1674,9 @@ export default function AuctionRoom() {
         currentBalance={userWallet?.balance || 0}
         requiredAmount={addMoney(currentPrice, safeIncrement)}
         freteValor={freteValor}
+        /* ⚡ 25/09 — a gaveta gera o PIX aqui mesmo e, confirmado, atualiza o saldo da sala */
+        currentUser={currentUser}
+        onSaldoAtualizado={refreshWalletBalance}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);

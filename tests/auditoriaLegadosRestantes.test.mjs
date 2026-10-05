@@ -5,10 +5,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const ler = (rel) => readFileSync(new URL(rel, import.meta.url), 'utf8');
 
-test('cartão do leilão confere saldo pela função canônica, não pela digital_wallets vazia', () => {
+// 25/09/2026 — o cartão não confere mais saldo nenhum (dono: "ele deve sim
+// conseguir entrar na sala"); quem confere é a sala, na hora do lance, pela
+// função canônica. A regra que continua valendo: nunca a digital_wallets vazia.
+test('cartão do leilão não lê a digital_wallets vazia; a sala confere saldo pela função canônica', () => {
   const s = ler('../src/components/auction/AuctionCard.jsx');
   assert.ok(!/DigitalWallet\.filter/.test(s));
-  assert.match(s, /invoke\('getDigitalWalletBalance', \{ user_id: user\.id \}\)/);
+  const sala = ler('../src/pages/AuctionRoom.jsx');
+  assert.match(sala, /invoke\('getDigitalWalletBalance', \{ user_id: user\.id \}\)/);
 });
 
 test('rastreador de visualizações não toca mais na auction_views (0 linhas, 400 em toda sala)', () => {

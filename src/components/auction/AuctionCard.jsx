@@ -11,16 +11,16 @@
  * ========================================================================
  */
 import React, { useState, useRef, useEffect, memo } from "react";
+import { linkComAfiliado } from '@/lib/linkDeAfiliado';
 import { capOf } from '@/lib/fotoLegenda';
-import { addMoney, gteMoney, fmtBR } from '@/lib/money';
+import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { plataforma } from "@/api/plataformaClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Zap, Volume2, VolumeX } from "lucide-react";
+import { Clock, Users, TrendingUp, Search, Pause, Info, Edit, Flame, Share2, Volume2, VolumeX } from "lucide-react";
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
@@ -31,15 +31,22 @@ import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import FavoriteButton from '../recommendations/FavoriteButton';
 import { proxyImage } from "@/functions/proxyImage";
 // 📣 PONTO 69 — Modo Chamada (pré-lançamento): selo de contagem + lance travado
-import SeloChamada from './SeloChamada';
 import useChamada from '@/hooks/useChamada';
-// 🛡️ PONTO 70 — Compre Já só aparece com preço real (nunca valor residual de R$ 1,00)
-import { precoArremateAgora } from '@/lib/arremateAgora';
+import { ehPreLancamento, textoDeAbertura } from '@/lib/preLancamento';
 import useAutoCarousel from '@/hooks/useAutoCarousel';
 import { textoDeTermino } from '@/lib/relogioLeilao';
+// 🃏 25/09/2026 — padrão dos cards (opção A, escolhida pelo dono na banca): título em 2
+// linhas, prazo curto ao lado de "Lance atual", linhas reservadas, botões no rodapé
+import { prazoDoCard, CLASSES_DO_TITULO_FIXO } from '@/lib/padraoDoCard';
 import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
+// 🔗 25/09/2026 — o adesivo de link do story do Instagram só aceita URL pura
+import { copiarLinkLimpo, mensagemSemLink } from '@/lib/compartilhar';
+import { toast } from 'sonner';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
+
+/** Quanto o slide do vídeo espera ele começar antes de seguir para as fotos. */
+export const ESPERA_DO_VIDEO_MS = 10000;
 
 function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = null, variant = "default", favoriteContext = "nozap", bidStats = null, video = null, videoAtivo = false }) {
   // 🎞️ PONTO 91 — as fotos passam sozinhas em qualquer aparelho, pausam no
@@ -154,9 +161,20 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     if (!querMudo) { calarARadio(); v?.play?.().catch(() => {}); }
   };
 
+  // ⏳ 28/09/2026 — "cards de leilões seguem sem vídeo" (dono, print do iPhone
+  // 17 e da Harley). O rodízio só segurava o vídeo DEPOIS que ele começava a
+  // tocar. Vídeo que demora a começar — os dois têm o índice (moov) no FIM do
+  // arquivo, e o do iPhone tinha 41 MB — perdia o slide em 2,5s, ia para as
+  // fotos e, quando enfim tocava, tocava ESCONDIDO atrás da foto, ainda
+  // travando o rodízio. Agora o slide do vídeo ESPERA ele começar (até
+  // ESPERA_DO_VIDEO_MS); não começou, segue para as fotos e tenta de novo na
+  // próxima volta. Saiu do slide, o vídeo pausa; voltou, toca do começo.
+  const [esperandoVideo, setEsperandoVideo] = useState(temVideo);
+  // vídeo que já deu erro não é esperado de novo a cada volta do rodízio
+  const videoFalhouRef = useRef(false);
   const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
     totalSlides,
-    { segurar: videoTocando },
+    { segurar: videoTocando || esperandoVideo },
   );
 
   // O vídeo, quando existe, é o slide 0. `currentImageIndex` continua sendo o
@@ -164,6 +182,31 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // fica opaca e nenhuma legenda aparece — sem precisar tocar no resto do JSX.
   const mostrandoVideo = temVideo && slideAtual === 0;
   const currentImageIndex = temVideo ? slideAtual - 1 : slideAtual;
+
+  useEffect(() => {
+    if (!temVideo || video?.tipo !== 'arquivo') { setEsperandoVideo(false); return undefined; }
+    const v = videoRef.current;
+    if (!mostrandoVideo) {
+      // saiu do slide (rodízio ou dedo): vídeo escondido não toca nem segura nada
+      setEsperandoVideo(false);
+      setVideoTocando(false);
+      try { v?.pause?.(); } catch { /* sem vídeo na tela */ }
+      return undefined;
+    }
+    if (videoFalhouRef.current) { setEsperandoVideo(false); return undefined; }
+    setEsperandoVideo(true);
+    if (v) {
+      try { if (v.ended || v.currentTime > 0) v.currentTime = 0; } catch { /* ainda sem metadados */ }
+      v.play?.().catch(() => {});
+    }
+    const desiste = setTimeout(() => setEsperandoVideo(false), ESPERA_DO_VIDEO_MS);
+    return () => clearTimeout(desiste);
+  }, [mostrandoVideo, temVideo, video?.tipo]);
+  useEffect(() => { videoFalhouRef.current = false; }, [video?.embed]);
+  // ↙️ o selo de fábrica mora no canto inferior esquerdo: estas duas dizem
+  // se o botão de som ou a legenda estão ali agora, para ele desviar
+  const somNaFoto = temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
+  const legendaNaFoto = Boolean(capOf(images[currentImageIndex]));
 
   // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
   const handleCardClick = (e) => {
@@ -185,7 +228,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   };
 
   // 🆕 FUNÇÃO PARA ENTRAR E DAR LANCE COM VERIFICAÇÃO DE SALDO
-  const handleEnterAuction = async (e) => {
+  const handleEnterAuction = (e) => {
     e.stopPropagation();
 
     if (!auction || !auction.id) {
@@ -201,37 +244,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       return;
     }
 
-    try {
-      const user = JSON.parse(savedUser);
-
-      // 💰 Saldo pela função canônica (15/09/2026): a tabela digital_wallets é
-      // herança vazia do Base44 — a consulta por user_id dava 400 em TODO clique
-      // no cartão e o cliente só entrava na sala porque o catch deixava passar.
-      const wRes = await plataforma.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
-      const wData = wRes?.data || wRes;
-      if (wData?.balance == null) throw new Error('saldo indisponível');
-      const currentBalance = Number(wData.balance) || 0;
-      const minBid = addMoney(auction.current_price, auction.increment);
-
-      // 🐛 FIX: Se saldo insuficiente → Alerta e opção de recarga
-      if (!gteMoney(currentBalance, minBid)) {
-        console.warn(`⚠️ Saldo insuficiente. DigitalWallet: ${currentBalance} < ${minBid}`);
-
-        if (confirm(`Saldo insuficiente (R$ ${fmtBR(currentBalance)}). O lance mínimo é R$ ${fmtBR(minBid)}.\n\nDeseja adicionar fundos agora?`)) {
-          navigate(createPageUrl("AddFunds"), {
-            state: { returnTo: window.location.pathname + window.location.search }
-          });
-        }
-        return;
-      }
-
-      // Saldo ok - abre sala normalmente
-      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
-    } catch (error) {
-      console.error("Erro ao verificar saldo:", error);
-      // Em caso de erro técnico, permite tentar entrar (o backend validará)
-      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
-    }
+    // ⚡ 25/09/2026 — dono (urgente): "quando o usuário tem pouco ou nenhum saldo e
+    // tenta dar lance, ele recebe o aviso de saldo insuficiente… isso causa
+    // abandono. Ele deve sim conseguir entrar na sala do leilão, e só na hora de
+    // dar o lance receber o aviso." A checagem de saldo que ficava AQUI (um
+    // confirm() branco que barrava a entrada) saiu: a sala já confere na hora do
+    // lance e abre a gaveta de recarga rápida (LowBalanceModal) sem sair dela.
+    navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
   };
 
   const categoryEmojis = {
@@ -271,7 +290,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // Rota server-side (/l/:id): garante o preview do WhatsApp com a FOTO REAL do
     // leilão. Ela só emite as meta tags e redireciona pra /AuctionRoom?id=... —
     // o fluxo de lance segue exatamente o mesmo.
-    const productUrl = `${window.location.origin}/l/${auction.id}`;
+    // 🔗 sempre com o código de afiliado de quem compartilha (src/lib/linkDeAfiliado.js)
+    const productUrl = linkComAfiliado(`${window.location.origin}/l/${auction.id}`);
     const currentPrice = auction.current_price || auction.starting_price;
 
     if (!auction.id || !displayTitle) {
@@ -279,12 +299,23 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       return;
     }
 
+    // 🚀 pré-lançamento: não existe lance ainda — a mensagem leva a abertura
+    const linhaDoLance = ehPreLancamento(auction)
+      ? `🚀 Pré-lançamento · ${textoDeAbertura(auction)}`
+      : `💰 Lance: R$ ${fmtBR(currentPrice)}`;
+    const chamada = ehPreLancamento(auction) ? 'Entre e acompanhe' : 'Dê seu lance';
     const shareMessage = `🔨📦 LEILÃO NO🔥ZAP!
 
 📱 ${displayTitle}
-💰 Lance: R$ ${fmtBR(currentPrice)}
+${linhaDoLance}
 
-⚡ Dê seu lance: ${productUrl}`;
+⚡ ${chamada}: ${productUrl}`;
+    // 🔗 25/09/2026 — dono: "copia o link, cola no adesivo do story do Instagram
+    // e dá link inválido". O link é curto; o que a pessoa colava era a MENSAGEM
+    // inteira (o "Copiar" da folha junta texto + link). Então o link LIMPO vai
+    // pra área de transferência ANTES da folha abrir — cancelou, é só colar.
+    const linkCopiado = await copiarLinkLimpo(productUrl);
+    if (linkCopiado) toast.success('Link copiado. Cole onde quiser — story, bio, WhatsApp.', { duration: 3500 });
 
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -320,7 +351,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             const nome = `${(displayTitle || 'leilao').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}.mp4`;
             const arquivo = new File([blob], nome, { type: blob.type || 'video/mp4' });
             if (navigator.canShare({ files: [arquivo] })) {
-              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl, files: [arquivo] });
+              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: mensagemSemLink(shareMessage, productUrl), url: productUrl, files: [arquivo] });
               return;
             }
           }
@@ -365,7 +396,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           if (navigator.canShare(shareData)) {
             await navigator.share({
               title: `🔨📦 ${displayTitle}`,
-              text: shareMessage,
+              text: mensagemSemLink(shareMessage, productUrl),
               url: productUrl,
               files: [file]
             });
@@ -381,7 +412,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // NÍVEL 2: Share só texto (sem imagem)
     if (navigator.share) {
       try {
-        await navigator.share({ title: `🔨📦 ${displayTitle}`, text: shareMessage, url: productUrl });
+        await navigator.share({ title: `🔨📦 ${displayTitle}`, text: mensagemSemLink(shareMessage, productUrl), url: productUrl });
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
@@ -398,6 +429,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   const isActive = localStatus === 'active' && auction.status === 'active';
 
   const currentPrice = auction.current_price || auction.starting_price;
+  // 🚀 pré-lançamento: só "Abre hoje às 19h" — sem preço, sem relógio (src/lib/preLancamento.js)
+  const preLancamento = ehPreLancamento(auction);
 
   // 🆕 CALCULA ECONOMIA SE TIVER market_price
   const showPechincaBadge = auction.market_price && auction.market_price > currentPrice;
@@ -486,6 +519,15 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     '--hover-shadow': '0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
   } : {};
 
+  // 🃏 25/09/2026 — PADRÃO DOS CARDS (dono: "os cards ficam sempre diferentes uns dos
+  // outros em tamanho e diagramação"). O card estica até a altura da linha da grade
+  // (auto-rows-fr na vitrine) e os botões descem pro rodapé (mt-auto): todos os
+  // cards da linha ficam iguais. O prazo vira uma palavra ao lado de "Lance atual"
+  // (src/lib/padraoDoCard.js) — o bloco "Termina · 1 semana · data" saiu.
+  const classesDoCard = `${cardStyles} h-full flex flex-col`;
+  const mostraPrazo = isActive && !chamada.emChamada && Boolean(timeRemaining) && timeRemaining.text !== 'Encerrado';
+  const prazo = mostraPrazo ? prazoDoCard(timeRemaining, auction.end_time) : null;
+
   const textColor = variant === "sai_de_baixo" ? "text-gray-900" : "text-gray-100";
   const secondaryTextColor = variant === "sai_de_baixo" ? "text-gray-600" : "text-gray-400";
 
@@ -501,7 +543,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   return (
     <>
       <Card
-        className={cardStyles}
+        className={classesDoCard}
         style={glassStyle}
         onClick={handleCardClick}
         onMouseEnter={(e) => {
@@ -536,12 +578,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   // a primeira foto como cartaz: o card nunca nasce preto, e
                   // quem está com dados curtos vê a foto de sempre
                   poster={images[0] || undefined}
-                  onPlay={() => setVideoTocando(true)}
-                  onEnded={() => setVideoTocando(false)}
+                  // `playing` (não `play`): só conta quando a imagem ANDA de fato
+                  onPlaying={() => { setVideoTocando(true); setEsperandoVideo(false); }}
+                  onEnded={() => { setVideoTocando(false); setEsperandoVideo(false); }}
                   onPause={() => setVideoTocando(false)}
                   // vídeo que não carrega não pode deixar buraco: solta a rédea
                   // e o rodízio segue pras fotos
-                  onError={() => setVideoTocando(false)}
+                  onError={() => { videoFalhouRef.current = true; setVideoTocando(false); setEsperandoVideo(false); }}
                   className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${mostrandoVideo ? 'opacity-100' : 'opacity-0'}`}
                 />
               ) : (
@@ -614,7 +657,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {images.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
+            <div
+              data-teste="bolinhas-do-carrossel"
+              className={`absolute ${auction.product_source === 'factory_new' ? 'bottom-10 sm:bottom-12' : 'bottom-3'} left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none`}
+            >
               {images.map((_, index) => (
                 <div
                   key={index}
@@ -638,13 +684,34 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               botões (top-14) — centralizado na horizontal, como pedido, e fora da
               faixa ocupada. Medido em tests/navegador/seloDeGarantia.spec.mjs, com
               os DOIS botões na tela. */}
+          {/* 🔝 25/09/2026 (dono: "reposicionar a tag NOVO em cima dos cards"):
+              o selo sai do MEIO da foto — onde cobria o produto, ver print do
+              PS5 e do liquidificador — e vai pro CANTO SUPERIOR DIREITO, na
+              mesma linha dos botões (que ficam à esquerda). Foto limpa, selo
+              visível de cara. No celular a vitrine mostra 2 cards por linha
+              (25/09, como a loja virtual), então o card é estreito e a primeira
+              linha não cabe ao lado do coração: abaixo de sm ele desce uma
+              linha, ainda no canto direito. Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
+          {/* ↙️ 28/09/2026 (dono, print da Canon com seta vermelha: "a tag NOVO -
+              Garantia deve ser fixa no canto inferior esquerdo do card"): no
+              canto de cima ela disputava espaço com compartilhar/coração e, no
+              celular, descia para o meio da foto. Agora fica FIXA embaixo à
+              esquerda. O que já morava ali abre espaço para ela:
+              · botão de som do vídeo (bottom-2 left-2) → o selo anda para a
+                direita dele, só no slide do vídeo;
+              · legenda da foto (faixa escura no pé) → o selo sobe acima dela;
+              · bolinhas do carrossel → sobem uma linha nos cards de fábrica;
+              · lápis do admin → foi para o canto SUPERIOR direito.
+              Medido em tests/navegador/seloDeGarantia.spec.mjs. */}
           {auction.product_source === 'factory_new' && (
             <div
-              className="absolute top-14 sm:top-16 left-1/2 -translate-x-1/2 z-10 max-w-[70%] pointer-events-none"
+              className={`absolute ${legendaNaFoto ? 'bottom-10 sm:bottom-11' : 'bottom-2 sm:bottom-3'} ${somNaFoto ? 'left-12 sm:left-14' : 'left-2 sm:left-3'} z-20 max-w-[75%] sm:max-w-[62%] pointer-events-none`}
               data-teste="selo-de-garantia"
             >
-              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[11px] sm:text-sm">
-                ✨ NOVO - Com Garantia
+              <Badge className="whitespace-nowrap bg-green-600 text-white font-bold text-[10px] sm:text-sm px-1.5 sm:px-2.5 shadow-lg">
+                {/* no card de ~170px (2 por linha) o texto inteiro não cabe: encurta */}
+                <span className="sm:hidden">✨ NOVO · Garantia</span>
+                <span className="hidden sm:inline">✨ NOVO - Com Garantia</span>
               </Badge>
             </div>
           )}
@@ -677,9 +744,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
           </div>
 
-          {/* 🆕 BOTÃO EDITAR (BOTTOM RIGHT NA IMAGEM) - SÓ ADMIN */}
+          {/* 🆕 BOTÃO EDITAR - SÓ ADMIN
+              28/09/2026: saiu do canto inferior direito para o SUPERIOR direito.
+              Com o selo de fábrica fixo no canto inferior esquerdo, no celular
+              (foto de ~160px) os dois se encostavam — medido: selo até 155px,
+              lápis a partir de 145px. Em cima à direita não mora mais nada. */}
           {isAdmin && (
-            <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 z-20">
+            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20" data-teste="lapis-do-admin">
               <Link
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`}
                 onClick={(e) => e.stopPropagation()}
@@ -699,70 +770,62 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
 
-        <CardContent className="p-3 sm:p-4 md:p-5" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
-          <h3 className={`font-bold text-sm sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
+        <CardContent className="p-3 sm:p-4 md:p-5 flex-1 flex flex-col" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
+          <h3 className={`font-bold text-xs sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere ${CLASSES_DO_TITULO_FIXO}`}>
             {displayTitle}
           </h3>
 
-          {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
-          <div className="flex items-center justify-between mb-3 gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <p className={`text-xs sm:text-sm ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
-                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? 'Em breve' : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+          {/* 🃏 PREÇO NO PADRÃO: o prazo curto ("até 07/10", "4 dias", "00:09:12") fica
+              na linha do rótulo "Lance atual", à direita; a linha do líder é sempre
+              reservada. A data completa segue no title (e na sala e nos detalhes). */}
+          <div className="mb-3" data-teste="bloco-preco-padrao">
+            <div className="flex items-center justify-between gap-2 mb-0.5 sm:mb-1">
+              <div className="flex items-center gap-2 min-w-0">
+                <p className={`text-xs sm:text-sm whitespace-nowrap ${auction.status === 'paused' ? 'text-amber-400 font-bold' : secondaryTextColor}`}>
+                  {isActive ? 'Lance atual' : auction.status === 'scheduled' ? (preLancamento ? 'Pré-lançamento' : 'Em breve') : auction.status === 'paused' ? 'Leilão pausado' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
                 </p>
                 <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
               </div>
-              <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
-                R$ {fmtBR(currentPrice)}
-              </p>
-              {/* 🏆 quem está ganhando agora — visível também com o leilão ativo, não só depois de encerrar */}
-              {isActive && auction.winner_name && (
-                <p className="text-xs text-amber-400 font-semibold truncate mt-0.5">
-                  🏆 {auction.winner_name}
-                </p>
+              {prazo && (
+                <span
+                  data-teste={prazo.ehData ? 'data-de-termino' : 'prazo-compacto'}
+                  title={fimEmTexto ? `Termina ${fimEmTexto}` : undefined}
+                  className={`flex items-center gap-1 font-mono text-[11px] sm:text-sm font-bold whitespace-nowrap shrink-0 ${prazo.urgente ? 'text-red-500 animate-pulse' : 'text-gray-200'}`}
+                >
+                  <Clock className="w-3 h-3" />
+                  {prazo.texto}
+                </span>
+              )}
+              {auction.status === 'scheduled' && !preLancamento && timeRemaining && (
+                <span className="flex items-center gap-1 font-mono text-xs sm:text-sm font-bold text-sky-400 whitespace-nowrap shrink-0" title="Começa em">
+                  <Clock className="w-3 h-3" />
+                  {timeRemaining.text}
+                </span>
               )}
             </div>
-
-            {/* 📣 PONTO 69 — em chamada, o card mostra "Abre em ..." no lugar do "Termina" */}
-            {isActive && chamada.preLancamento && (
-              <div className="text-right flex-shrink-0">
-                <SeloChamada auction={auction} />
-              </div>
+            {preLancamento ? (
+              <p data-teste="abertura-pre-lancamento" className="text-base sm:text-lg md:text-xl font-bold text-sky-400 whitespace-nowrap">
+                {textoDeAbertura(auction)}
+              </p>
+            ) : (
+              <p className="text-xl sm:text-xl md:text-2xl font-bold text-green-600 whitespace-nowrap tabular-nums">
+                R$ {fmtBR(currentPrice)}
+              </p>
             )}
-
-            {isActive && !chamada.emChamada && timeRemaining && timeRemaining.text !== "Encerrado" && (
-              <div className="text-right flex-shrink-0">
-                <div className={`flex items-center gap-1 ${secondaryTextColor} mb-1`}>
-                  <Clock className="w-3 h-3" />
-                  <span className="text-xs">Termina</span>
-                </div>
-                <div className={`font-mono text-sm sm:text-lg md:text-xl font-bold ${timeRemaining.isUrgent ? 'text-red-600 animate-pulse' : variant === 'sai_de_baixo' ? 'text-gray-900' : 'text-gray-200'}`}>
-                  {timeRemaining.text}
-                </div>
-                {fimEmTexto && (
-                  <div data-teste="data-de-termino" className={`mt-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap ${secondaryTextColor}`}>
-                    {fimEmTexto}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {auction.status === 'scheduled' && timeRemaining && (
-              <div className="text-right flex-shrink-0">
-                <div className="flex items-center gap-1 text-sky-400 mb-1">
-                  <Clock className="w-3 h-3" />
-                  <span className="text-xs font-bold">Começa em</span>
-                </div>
-                <div className="font-mono text-sm sm:text-lg md:text-xl font-bold text-sky-400">
-                  {timeRemaining.text}
-                </div>
-              </div>
-            )}
+            {/* 🏆 quem está ganhando agora — linha SEMPRE reservada, pra altura não variar */}
+            <p data-teste="linha-do-lider" className={`text-xs font-semibold truncate mt-0.5 min-h-[1rem] ${isActive && auction.winner_name ? 'text-amber-400' : secondaryTextColor}`}>
+              {isActive && auction.winner_name ? `🏆 ${auction.winner_name}` : isActive ? '🔥 Seja o primeiro' : ''}
+            </p>
+            {/* 🚫 25/09/2026 — o selo "Abre em … / ABERTO AGORA!" saiu do card (dono:
+                "está feio e poluindo os cards"). O Modo Chamada segue valendo: o
+                botão de lance continua travado até a abertura (chamada.emChamada,
+                abaixo) e o selo continua na sala. */}
           </div>
 
-          <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
-            <div className="flex items-center gap-4 min-w-0">
+          {/* 🃏 esta linha tem altura reservada mesmo sem lances e sem "Compre já":
+              o botão de baixo nasce na mesma altura em todos os cards */}
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs sm:text-sm ${secondaryTextColor} mb-3 sm:mb-4 min-h-[24px] sm:min-h-[28px]`}>
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               {temLancesReais && (
                 <>
                   {Number(bidStats?.users) > 0 && (
@@ -778,13 +841,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </>
               )}
             </div>
-            {/* 🛡️ PONTO 70 — só mostra Compre Já com preço REAL (acima do lance inicial) */}
-            {isActive && precoArremateAgora(auction) !== null && (
-              <div className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded-lg px-2 py-1">
-                <Zap className="w-3.5 h-3.5" />
-                Compre já: R$ {fmtBR(precoArremateAgora(auction))}
-              </div>
-            )}
+            {/* 🚫 25/09/2026 — o "Compre já: R$ X" SAIU do card (dono: "deve aparecer
+                só na sala do leilão; na página dos leilões fica feio e prejudica a
+                lógica"). A oferta continua existindo onde já existia: na sala
+                (AuctionRoom), só para os leilões que já têm buy_now_price — nada
+                foi ativado nem desativado em leilão nenhum. */}
           </div>
 
           {!isActive && auction.status !== 'paused' && auction.status !== 'scheduled' && (
@@ -821,7 +882,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {isActive ? (
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2 sm:space-y-3 mt-auto">
               {/* O link "Mais Informações" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
@@ -831,8 +892,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.12)',
                     border: '1px solid rgba(255,255,255,0.2)',
@@ -850,8 +911,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   setShowComparai(true);
                 }}
                 className={variant === "sai_de_baixo"
-                  ? "w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
-                  : "w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"}
+                  ? "w-full min-h-[40px] sm:min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-xs sm:text-base"
+                  : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"}
                 style={variant !== "sai_de_baixo" ? {
                   background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
                   boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
@@ -870,7 +931,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   disabled
                   onClick={(e) => e.stopPropagation()}
-                  className="w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-sky-200 disabled:opacity-100 cursor-not-allowed"
+                  className="w-full min-h-[48px] rounded-xl font-bold text-xs sm:text-base border-0 text-sky-200 disabled:opacity-100 cursor-not-allowed"
                   style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.35)' }}
                 >
                   <Clock className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
@@ -881,7 +942,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   onClick={handleEnterAuction}
                   className={variant === "sai_de_baixo"
                     ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                    : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
+                    : "w-full min-h-[48px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'linear-gradient(135deg, #f59e0b, #ea580c, #dc2626)',
                     boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
@@ -893,7 +954,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               )}
             </div>
           ) : (
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2 sm:space-y-3 mt-auto">
               {/* O link "Ver Detalhes do Lote" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
@@ -903,8 +964,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -917,7 +978,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               {/* 🆕 COMPARAI também nos lotes encerrados/arrematados */}
               <Button
                 onClick={(e) => { e.stopPropagation(); setShowComparai(true); }}
-                className="w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+                className="w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-bold text-xs sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)', boxShadow: '0 4px 16px rgba(59,130,246,0.35)' }}
               >
                 <img
@@ -935,8 +996,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 <Button
                   variant="outline"
                   className={variant === "sai_de_baixo"
-                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
-                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                    ? "w-full min-h-[40px] sm:min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[40px] sm:min-h-[44px] rounded-xl font-semibold text-xs sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
                     background: 'rgba(255,255,255,0.05)',
                     border: '1px solid rgba(255,255,255,0.08)',
@@ -977,6 +1038,12 @@ export default memo(AuctionCard, (prevProps, nextProps) => {
     prevProps.bidStats?.users === nextProps.bidStats?.users &&
     prevProps.isAdmin === nextProps.isAdmin &&
     prevProps.showFavoriteButton === nextProps.showFavoriteButton &&
-    prevProps.userId === nextProps.userId
+    prevProps.userId === nextProps.userId &&
+    // 🎬 28/09/2026 — "cards de leilões seguem sem vídeo". Nos Destaques o vídeo
+    // chega DEPOIS do card (2ª consulta, ver DestaquesLeiloes). Sem estas duas
+    // linhas a memo recusava o novo `video` e o card ficava só com as fotos.
+    prevProps.video?.embed === nextProps.video?.embed &&
+    prevProps.video?.tipo === nextProps.video?.tipo &&
+    prevProps.videoAtivo === nextProps.videoAtivo
   );
 });

@@ -116,7 +116,7 @@ export const ETAPAS = [
     dia: DIA_PRIMEIRO_REPASSE,
     titulo: 'Repasse pago e prestação de contas',
     texto:
-      'Fechamento do ciclo no 30º dia: repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas. Deste marco começam a contar os 12 meses de repasses do contrato.',
+      'Fechamento do ciclo no 30º dia: repasse do resultado apurado e demonstrativo completo na tela de Prestação de Contas. Deste marco começam a contar os repasses do contrato (de 12 a 36 meses, conforme o plano).',
     marco: 'Financeiro',
     destaque: true,
   },

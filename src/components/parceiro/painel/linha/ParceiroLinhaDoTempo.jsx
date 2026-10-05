@@ -1,3 +1,4 @@
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 import React from 'react';
 import { History, Info } from 'lucide-react';
 import { real } from '@/lib/operacaoNumeros';
@@ -20,8 +21,8 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
   const demonstracao = !investimento;
   // 📊 Giro de HOJE elevado pelo quadro, pra a barra do histórico somar junto
   const [giroDeHoje, setGiroDeHoje] = React.useState(0);
-  const aporte = investimento?.amount || 15000;
-  const taxa = investimento?.investmentRate || 3;
+  const aporte = investimento?.amount || 30000;
+  const taxa = investimento?.investmentRate || TAXA_PARCEIRO.pct;
   // 🎬 MODO DEMONSTRAÇÃO: conta como se o depósito tivesse entrado no dia em que
   // a pessoa abriu a tela pela primeira vez — e ANDA a partir dali (D+1, D+2 ...
   // D+30), igual ao aporte real. A âncora fica na conta (não no aparelho).
@@ -52,7 +53,7 @@ export default function ParceiroLinhaDoTempo({ investimento }) {
         o seu capital começa a rentabilizar. No{' '}
         <strong className="text-pc-ouro">{DIA_PRIMEIRO_REPASSE}º dia</strong> o repasse é pago com a
         prestação de contas do ciclo. Deste primeiro repasse começam a contar os{' '}
-        <strong className="text-pc-ouro">12 meses</strong> do contrato.
+        <strong className="text-pc-ouro">12 a 36 meses</strong> do contrato, conforme o plano.
       </p>
 
       {demonstracao && (

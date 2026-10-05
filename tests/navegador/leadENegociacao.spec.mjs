@@ -116,3 +116,93 @@ test('🤝 Negociação: só a minha lista, vencido no topo, pago fora', { skip:
     assert.deepEqual(erros, []);
   } finally { await ctx.close(); }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 🧩 24/09/2026 — "TUDO AQUI": o painel do lead dentro do card
+// ═══════════════════════════════════════════════════════════════════════════
+test('🧩 o painel abre do card: só a MINHA lista, vincular por ali, e a qualificação abre por cima', { skip: semNavegador }, async () => {
+  const { ctx, pagina, erros } = await abrir('quadro', '[data-teste="lead-do-cartao"]');
+  try {
+    await pagina.click('[data-teste="abrir-modal-lead"]');
+    await pagina.waitForSelector('[data-teste="modal-do-lead"]');
+    await pagina.waitForSelector('[data-teste="modal-contato"]');
+    const nomes = await pagina.$$eval('[data-teste="modal-contato"]', (ns) => ns.map((n) => n.querySelector('p').textContent.trim()));
+    assert.ok(nomes.includes('Ângela Conceição') && nomes.includes('José Antônio'));
+    assert.ok(!nomes.includes('Cliente de Outro'), 'a lista de outra pessoa vazou no painel');
+    // a qualificação já feita aparece na linha
+    assert.match(await pagina.locator('[data-teste="modal-contato"]', { hasText: 'José Antônio' }).innerText(), /12\/15 · 75%/);
+    if (process.env.FOTO_BANCA) { await pagina.waitForTimeout(400); await pagina.screenshot({ path: process.env.FOTO_BANCA.replace('.png', '-lista.png') }); }
+    // buscar filtra
+    await pagina.fill('[data-teste="modal-busca"]', 'angela');
+    assert.equal(await pagina.locator('[data-teste="modal-contato"]').count(), 1);
+    // vincular pelo painel → o card ganha o chip, e a qualificação abre POR CIMA do painel
+    await pagina.locator('[data-teste="modal-vincular"]').first().click();
+    await pagina.waitForSelector('[data-teste="chip-cliente"]');
+    assert.match(await pagina.$eval('[data-teste="chip-cliente"]', (n) => n.textContent), /Ângela Conceição/);
+    await pagina.getByText('Qualificar contato').waitFor();
+    const porCima = await pagina.evaluate(() => {
+      const q = [...document.querySelectorAll('div.fixed.inset-0')].find((d) => d.textContent.includes('Qualificar contato'));
+      const m = document.querySelector('[data-teste="modal-do-lead"]');
+      return !!q && !!m && (m.compareDocumentPosition(q) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+    });
+    assert.equal(porCima, true, 'o modal de qualificação precisa montar depois do painel (pra ficar por cima)');
+    if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA.replace('.png', '-painel.png') });
+  } finally { await ctx.close(); }
+  assert.deepEqual(erros, []);
+});
+
+test('🧩 contato NOVO pelo painel: a trava de duplicado, o carimbo, o vínculo ao card', { skip: semNavegador }, async () => {
+  const { ctx, pagina, erros } = await abrir('quadro', '[data-teste="lead-do-cartao"]');
+  try {
+    await pagina.click('[data-teste="abrir-modal-lead"]');
+    await pagina.waitForSelector('[data-teste="modal-do-lead"]');
+    await pagina.click('[data-teste="aba-novo"]');
+    await pagina.waitForSelector('[data-teste="novo-nome"]');
+    // e-mail já da minha lista? tranca sem apelação
+    await pagina.fill('[data-teste="novo-nome"]', 'Fulana');
+    await pagina.fill('[data-teste="novo-email"]', 'x@y.z');
+    assert.equal(await pagina.locator('[data-teste="novo-duplicado"]').count(), 0);
+    // nome igual ao de alguém da lista: pede confirmação
+    await pagina.fill('[data-teste="novo-email"]', '');
+    await pagina.fill('[data-teste="novo-nome"]', 'jose antonio');
+    await pagina.waitForSelector('[data-teste="novo-duplicado"][data-motivo="nome"]');
+    assert.equal(await pagina.locator('[data-teste="novo-salvar"]').isDisabled(), true);
+    await pagina.check('[data-teste="novo-e-outra-pessoa"]');
+    assert.equal(await pagina.locator('[data-teste="novo-salvar"]').isDisabled(), false);
+    // cadastra um de verdade
+    await pagina.fill('[data-teste="novo-nome"]', 'Carlos Souza');
+    await pagina.fill('[data-teste="novo-telefone"]', '21988887777');
+    await pagina.waitForFunction(() => !document.querySelector('[data-teste="novo-duplicado"]'));
+    await pagina.click('[data-teste="novo-salvar"]');
+    await pagina.waitForSelector('[data-teste="chip-cliente"]');
+    assert.match(await pagina.$eval('[data-teste="chip-cliente"]', (n) => n.textContent), /Carlos Souza/);
+    const gravado = await pagina.evaluate(() => (window.__bancoFalso.escritas.find((e) => e.tabela === 'customers' && e.tipo === 'insert') || {}).linhas?.[0]);
+    assert.equal(gravado.full_name, 'Carlos Souza');
+    assert.equal(gravado.created_by_id, 'a1b2c3d4e5f60718293a4b5c', 'o carimbo de quem cadastrou é o que dá o escopo depois');
+    assert.equal(gravado.status, 'lead');
+    // e a qualificação abre em seguida, como quando se escolhe um da lista
+    await pagina.getByText('Qualificar contato').waitFor();
+  } finally { await ctx.close(); }
+  assert.deepEqual(erros, []);
+});
+
+test('🧩 registrar contato pelo painel grava no histórico do cliente com o carimbo', { skip: semNavegador }, async () => {
+  const { ctx, pagina, erros } = await abrir('quadro', '[data-teste="lead-do-cartao"]');
+  try {
+    await pagina.click('[data-teste="abrir-modal-lead"]');
+    await pagina.waitForSelector('[data-teste="modal-contato"]');
+    await pagina.locator('[data-teste="modal-contato"]', { hasText: 'Luís Gonçalves' }).locator('[data-teste="modal-contatar-linha"]').click();
+    await pagina.getByText('Registrar contato').first().waitFor();
+    // o registro de desfecho: "Contato feito" e salvar
+    await pagina.getByRole('button', { name: /Contato feito/ }).click();
+    await pagina.getByRole('button', { name: /^Salvar/ }).click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.entidade === 'Customer' && c.dados?.contatos_metodo));
+    const upd = await pagina.evaluate(() => window.__plataformaFalsa.chamadas.find((c) => c.tipo === 'update' && c.entidade === 'Customer' && c.dados?.contatos_metodo));
+    assert.equal(upd.id, 'c3');
+    const reg = upd.dados.contatos_metodo.at(-1);
+    assert.equal(reg.resultado, 'feito');
+    assert.equal(reg.registrado_por_id, 'a1b2c3d4e5f60718293a4b5c');
+    assert.ok(reg.id && reg.em);
+  } finally { await ctx.close(); }
+  assert.deepEqual(erros, []);
+});

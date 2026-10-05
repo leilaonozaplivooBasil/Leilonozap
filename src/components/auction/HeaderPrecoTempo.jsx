@@ -7,12 +7,13 @@ import { textoDeTermino } from '@/lib/relogioLeilao';
  * PONTO 84 — cabeçalho da sala: PREÇO à esquerda, RELÓGIO à direita.
  * Só apresentação — nenhuma regra de leilão vive aqui.
  */
-export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName, endTime, thumbUrl = null, titulo = '' }) {
+export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionActive, isWarMode, onInfo, leaderName, endTime, thumbUrl = null, titulo = '', preLancamento = false, abertura = '' }) {
   // 🔴 03/09/2026 — a data por extenso embaixo do cronômetro.
   // O cronômetro tem resolução de semana: fica parado em "1 semana" por sete
   // dias e um cliente abriu chamado achando o leilão travado. `endTime` é prop
   // NOVA e opcional — quem não passar não desenha nada, e a sala fica igual.
-  const fimEmTexto = textoDeTermino(endTime);
+  // 🚀 pré-lançamento: end_time é a hora de ABRIR, não de terminar
+  const fimEmTexto = preLancamento ? '' : textoDeTermino(endTime);
   return (
     <div className="flex w-full items-center justify-between gap-2">
       {/* 🖼️ 23/09/2026 — A MINIATURA DO PRODUTO, no celular. Dono: "quando o cara
@@ -41,14 +42,14 @@ export default function HeaderPrecoTempo({ currentPrice, displayTime, isAuctionA
           aria-label="Detalhes do produto"
           className="flex items-center gap-1"
         >
-          <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300/60">Lance atual</span>
+          <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300/60">{preLancamento ? 'Pré-lançamento' : 'Lance atual'}</span>
           <Info className="h-2.5 w-2.5 text-emerald-400/70" />
         </button>
         <span
           className="whitespace-nowrap text-base font-extrabold leading-tight tracking-tight text-white sm:text-lg"
           style={{ textShadow: '0 0 18px rgba(16,185,129,0.35)' }}
         >
-          R$ <span className="text-emerald-400">{fmtBR(currentPrice)}</span>
+          {preLancamento ? <span className="text-sky-400">{abertura}</span> : <>R$ <span className="text-emerald-400">{fmtBR(currentPrice)}</span></>}
         </span>
         {/* 🏆 PONTO 85 — quem está liderando o lance, visível pra todo mundo na sala */}
         {leaderName && (

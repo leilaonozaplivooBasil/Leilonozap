@@ -2,6 +2,7 @@
 // Monta um card único: foto REAL do produto + o leiloeiro NoZap + o lance atual.
 // ⚠️ Somente LEITURA. Não dá lance, não toca saldo/carteira/comissão/status.
 import { ImageResponse } from '@vercel/og';
+import { ehPreLancamento, textoDeAbertura } from '../src/lib/preLancamento.js';
 import React from 'react';
 
 export const config = { runtime: 'edge' };
@@ -19,7 +20,7 @@ export default async function handler(req) {
   try {
     const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/auctions?select=title,current_price,starting_price,image_urls,status&id=eq.${encodeURIComponent(id)}&limit=1`, {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/auctions?select=title,current_price,starting_price,image_urls,status,end_time&id=eq.${encodeURIComponent(id)}&limit=1`, {
       headers: { apikey: SR, Authorization: `Bearer ${SR}` },
     });
     const rows = await r.json();
@@ -29,6 +30,8 @@ export default async function handler(req) {
   const titulo = (a?.title || 'Leilão NoZap').slice(0, 70);
   const preco = Number(a?.current_price) > 0 ? Number(a.current_price) : Number(a?.starting_price) || 0;
   const encerrado = a?.status && a.status !== 'active';
+  // 🚀 pré-lançamento: sem lance inicial, o card mostra a abertura no lugar do valor
+  const preLancamento = ehPreLancamento(a);
   // 🖼️ A foto do produto costuma vir de domínios que recusam requisição sem
   // navegador (gstatic etc). Por isso baixamos aqui com User-Agent e embutimos
   // como data URI — assim o card SEMPRE mostra a foto real. Formato não suportado
@@ -72,9 +75,9 @@ export default async function handler(req) {
           h('span', { key: 'b', style: { color: '#34d399', display: 'flex', marginLeft: '10px' } }, 'NOZAP'),
         ]),
         h('div', { key: 'tit', style: { display: 'flex', fontSize: '40px', fontWeight: 800, lineHeight: 1.15, marginBottom: '26px' } }, titulo),
-        h('div', { key: 'lbl', style: { display: 'flex', fontSize: '24px', letterSpacing: '4px', color: '#a7f3d0' } }, encerrado ? 'ARREMATADO POR' : 'LANCE ATUAL'),
-        h('div', { key: 'val', style: { display: 'flex', fontSize: '100px', fontWeight: 900, color: '#34d399', lineHeight: 1.1 } }, money(preco)),
-        h('div', { key: 'cta', style: { display: 'flex', marginTop: '22px', background: 'rgba(52,211,153,0.14)', border: '2px solid rgba(52,211,153,0.55)', borderRadius: '999px', padding: '14px 30px', fontSize: '28px', fontWeight: 800, color: '#d1fae5' } }, encerrado ? 'Veja outros leilões' : 'Dê seu lance agora'),
+        h('div', { key: 'lbl', style: { display: 'flex', fontSize: '24px', letterSpacing: '4px', color: '#a7f3d0' } }, preLancamento ? 'PRÉ-LANÇAMENTO' : encerrado ? 'ARREMATADO POR' : 'LANCE ATUAL'),
+        h('div', { key: 'val', style: { display: 'flex', fontSize: preLancamento ? '64px' : '100px', fontWeight: 900, color: '#34d399', lineHeight: 1.1 } }, preLancamento ? textoDeAbertura(a) : money(preco)),
+        h('div', { key: 'cta', style: { display: 'flex', marginTop: '22px', background: 'rgba(52,211,153,0.14)', border: '2px solid rgba(52,211,153,0.55)', borderRadius: '999px', padding: '14px 30px', fontSize: '28px', fontWeight: 800, color: '#d1fae5' } }, preLancamento ? 'Entre e acompanhe' : encerrado ? 'Veja outros leilões' : 'Dê seu lance agora'),
         // 🔨 leiloeiro ancorado no canto inferior direito
         h('img', { key: 'leil', src: LEILOEIRO, width: 300, height: 300, style: { position: 'absolute', right: '10px', bottom: '0px', width: '300px', height: '300px', objectFit: 'contain' } }),
       ]),

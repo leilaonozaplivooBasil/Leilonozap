@@ -25,7 +25,7 @@ export default function RegisterLicensee() {
     queryKey: ["licensees"],
     queryFn: async () => {
       // Busca todos os AppUsers que são ou já foram licenciados
-      const res = await plataforma.entities.AppUser.list("-updated_date", 1000);
+      const res = await plataforma.entities.AppUser.listAll("-updated_date");
       return (res || []).filter(u =>
         (u.career_levels || []).includes("licenciado_catalogo") ||
         u.role === "licensee" ||

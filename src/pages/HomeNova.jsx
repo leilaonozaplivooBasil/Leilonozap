@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/api/supabaseClient';
 import { estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import { videoDoProduto } from '@/lib/videoDoProduto';
-import { categoriasDaVitrine, leiloesDaSemana, maisValiosos, quantosDestaques, numerosDaCasa, valorDoItem } from '@/lib/homeNova';
+import { categoriasDaVitrine, leiloesDaSemana, maisValiosos, quantosDestaques, numerosDaCasa } from '@/lib/homeNova';
 import TopoHomeNova from '@/components/homenova/TopoHomeNova';
 import HeroDoDia from '@/components/homenova/HeroDoDia';
 import ExplorePorCategoria from '@/components/homenova/ExplorePorCategoria';
@@ -12,6 +12,9 @@ import CarrosselDeLeiloes from '@/components/homenova/CarrosselDeLeiloes';
 import BlocoParceiro from '@/components/homenova/BlocoParceiro';
 import SelosDeConfianca from '@/components/homenova/SelosDeConfianca';
 import RodapeHomeNova from '@/components/homenova/RodapeHomeNova';
+// 🔔 prova social — os MESMOS blocos da página de leilões (ticker de lances e quem arrematou)
+import LancesAoVivo from '@/components/home/LancesAoVivo';
+import ProvasSociais from '@/components/home/ProvasSociais';
 
 // 🏠 HOME NOVA — página de entrada repaginada (preview).
 //
@@ -134,31 +137,44 @@ export default function HomeNova() {
   // o selo "ao vivo" do topo usa a MESMA contagem da faixa — um número só
   const leiloesAgora = Number(String(numeros.find((n) => n.chave === 'leiloes')?.valor || '').replace(/\./g, '')) || 0;
 
+  // 📱 25/09/2026 — ORDEM NO CELULAR (dono): o primeiro leilão só aparecia na
+  // segunda tela (hero + categorias + números somavam 1.400px). Abaixo de lg os
+  // destaques vêm logo depois do hero; categorias e números descem. No desktop
+  // a ordem segue a de sempre (order-none). Os `order` vivem em <div> finos
+  // porque as seções são componentes e o flex ordena filhos diretos.
   return (
-    <div className="min-h-screen bg-nz-noite">
-      <TopoHomeNova leiloesAgora={leiloesAgora} onBuscar={buscar} />
-      <HeroDoDia leilao={heroi} naLoja={valorDoItem(heroi, precoNaLoja)} video={videoNaLoja[heroi?.product_id] || null} />
-      <ExplorePorCategoria categorias={categorias} />
-      <FaixaDeNumeros itens={numeros} />
-      <CarrosselDeLeiloes
-        titulo="Em destaque"
-        subtitulo="A seleção da casa, atualizada por nós."
-        leiloes={emDestaque}
-        precoNaLoja={precoNaLoja}
-        rotuloDoBotao="Dar lance"
-        teste="carrossel-destaque"
-      />
-      <CarrosselDeLeiloes
-        titulo="Leilões da semana"
-        subtitulo="Terminam nos próximos 7 dias — quem acaba primeiro na frente."
-        leiloes={semana}
-        precoNaLoja={precoNaLoja}
-        rotuloDoBotao="Entrar no leilão"
-        teste="carrossel-semana"
-      />
-      <BlocoParceiro />
-      <SelosDeConfianca />
-      <RodapeHomeNova />
+    <div className="flex min-h-screen flex-col bg-nz-noite">
+      <div className="order-none"><TopoHomeNova leiloesAgora={leiloesAgora} onBuscar={buscar} /></div>
+      <div className="order-1 lg:order-none">
+        <HeroDoDia leilao={heroi} video={videoNaLoja[heroi?.product_id] || null} />
+        {/* 🔔 prova social: lances acontecendo agora, o mesmo ticker da página de leilões */}
+        <div className="bg-nz-noite px-1 pt-5" data-teste="prova-social-lances"><LancesAoVivo /></div>
+      </div>
+      <div className="order-3 lg:order-none"><ExplorePorCategoria categorias={categorias} /></div>
+      <div className="order-4 lg:order-none"><FaixaDeNumeros itens={numeros} /></div>
+      <div className="order-2 lg:order-none">
+        <CarrosselDeLeiloes
+          titulo="Em destaque"
+          subtitulo="A seleção da casa, atualizada por nós."
+          leiloes={emDestaque}
+          rotuloDoBotao="Dar lance"
+          teste="carrossel-destaque"
+        />
+      </div>
+      <div className="order-5 lg:order-none">
+        <CarrosselDeLeiloes
+          titulo="Leilões da semana"
+          subtitulo="Terminam nos próximos 7 dias — quem acaba primeiro na frente."
+          leiloes={semana}
+          rotuloDoBotao="Entrar no leilão"
+          teste="carrossel-semana"
+        />
+        {/* 🏆 quem já arrematou e o ranking — os mesmos blocos da página de leilões */}
+        <div className="bg-nz-noite px-1 pb-10" data-teste="prova-social-arremates"><ProvasSociais /></div>
+      </div>
+      <div className="order-6 lg:order-none"><BlocoParceiro /></div>
+      <div className="order-7 lg:order-none"><SelosDeConfianca /></div>
+      <div className="order-8 lg:order-none"><RodapeHomeNova /></div>
     </div>
   );
 }

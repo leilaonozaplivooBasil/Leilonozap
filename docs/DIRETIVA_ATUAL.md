@@ -1,41 +1,46 @@
-## 🪙 DIR-184 — As moedas vazavam pra dentro das visões (24/09/2026)
+## 👔 DIR-185 — O elenco sumia no celular (05/10/2026)
 
-**Dono, olhando o DIR-183:** "ficou quase perfeito. As moedas só têm que
-aparecer quando eu abrir o quadro. Cliquei na Jornada, vai sumir tudo, vai
-aparecer só a Jornada."
+**Dono, com um print do iPhone e outro do MacBook lado a lado:** "na Jornada os
+bonequinhos que aparecem no desktop não estão aparecendo no mobile. Precisa
+identificar esse erro imediatamente e fazer toda a experiência ser igual em
+todos os dispositivos."
 
-**🔴 O que eu errei no DIR-183:** prendi o `PlacarDoDia` à capa e **esqueci que
-a moeda em fatias, o Modelo, o "Onde estou × Executivo Ideal", as Missões e a
-votação do MvM são blocos SEPARADOS**, todos presos a `mostrarPainel` — e o
-`mostrarPainel` ainda tinha dois escapes:
+**🔴 A causa, numa linha só** (`XGameJornada.jsx`, o `<span>` do boneco):
 
 ```
-const mostrarPainel = naCapaDasVisoes || (visao === 'lista' && !celular) || painelAberto;
-                                          └─ dentro da Lista, no computador   └─ GRAVADO no aparelho
+hidden sm:block
 ```
 
-O segundo é o grave: `painelAberto` vem do `localStorage`, então **quem já
-tinha o painel aberto via a moeda dentro de TODA visão** — exatamente o que o
-dono viu. Prender metade do placar à capa e deixar a outra metade solta não é
-meio conserto: é o defeito inteiro, porque quem vazava era justo a moeda.
+Escondido abaixo de 640px — ou seja, em **todo celular**, de propósito. Era
+precaução contra o boneco vazar pela lateral numa tela estreita, e **ninguém
+nunca mediu se vazava mesmo**.
 
-Agora é uma frase só, sem escape: `const mostrarPainel = naCapaDasVisoes;`
+**Medido agora, em Chromium real, em três larguras:**
 
-**🗑️ E o "Eu no Game" morreu junto**, de propósito. Ele recolhia/fixava o
-placar (pedido de 08/09). Com a capa sendo o lugar onde tudo aparece e a visão
-o lugar onde nada de placar aparece, ele não tem mais dois estados pra
-alternar — botão morto, e estado morto gravado no aparelho é o que volta a
-assombrar seis meses depois. A escolha do dono virou a estrutura da tela.
+| largura | bonecos | vaza esquerda | vaza direita | rolagem lateral |
+|---|---|---|---|---|
+| 320px (iPhone SE) | 3 | 0 | 0 | não |
+| 390px (iPhone atual) | 3 | 0 | 0 | não |
+| 1280px (computador) | 3 | 0 | 0 | não |
 
-**Provas:**
-- `tests/capaDasVisoes.test.mjs` (11) — dois testes novos travam a regra pelos
-  DOIS lados: a frase do `mostrarPainel` não pode ganhar escape, e todo bloco
-  do placar tem que estar preso a ela (varre `moeda-pizza`, `moeda-pizza-modelo`
-  e `votacao-mvm-toggle` no arquivo e exige a guarda antes de cada um).
-- Mutação: repus o escape do `painelAberto` → caiu o 1º; soltei a moeda em
-  fatias da capa → caiu o 2º. Restaurei, verde.
-- `tests/navegador/placarDoDia.spec.mjs` (5) no Chromium real.
-- Suíte **3691/3691** · lint 0 erro · build OK.
+A 390px as caixas ficam entre 174px e 295px numa tela de 390 — sobra larga dos
+dois lados. A precaução escondia um elenco que sempre coube.
+
+**Provas:** `tests/navegador/rodapeJornada.spec.mjs` (+2) — um mede os dois
+lados e a rolagem nas três larguras; o outro compara o elenco do celular com o
+do computador e exige que sejam **idênticos** (mesmo boneco, mesma pose).
+
+**🩹 A mutação achou um defeito no MEU teste:** repus o `hidden sm:block` e o
+segundo teste PASSOU — porque `hidden` deixa o elemento no DOM, e eu estava
+contando presença, não visibilidade. Corrigido pra filtrar por caixa com
+largura > 0. Com a correção, a mutação derruba os dois. Um teste que não cai
+com o defeito de volta não é prova de nada.
+
+**Varredura:** zero `hidden sm:` / `sm:hidden` / `useEhCelular` sobrando em
+`XGameJornada`, `XGameCapas`, `ElencoBoneco`, `PlacarDoDia`, `BarraDaVisao`,
+`PortasDasVisoes` e `RodapeDaJornada`. A experiência é a mesma em todo aparelho.
+
+Suíte **3691/3691** · lint 0 erro · build OK.
 
 ---
 

@@ -40,6 +40,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: false, error: 'Falha ao liberar', detail: t.slice(0, 200) });
     }
     const released = await r.json(); // nº de beneficiários liberados (0 se já estava liberado)
+    // 📦 DIR-187: quem recebeu foi o cliente — isso é PROVA de entrega. Gravar delivered_at
+    // e fulfillment_status faz a tela "Acompanhar Pedido" e o card dizerem "Entregue" com
+    // base em fato, não no status de pagamento. Best-effort: a liberação já aconteceu.
+    await sb(`catalog_sales?id=eq.${encodeURIComponent(saleId)}&delivered_at=is.null`, {
+      method: 'PATCH', headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ delivered_at: new Date().toISOString(), fulfillment_status: 'entregue' }),
+    }).catch(() => null);
     return res.status(200).json({ success: true, released: Number(released) || 0 });
   } catch (e) {
     return res.status(200).json({ success: false, error: String(e?.message || e) });

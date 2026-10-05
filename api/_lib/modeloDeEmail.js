@@ -60,8 +60,9 @@ const botaoHtml = (b, secundario = false) => (b && b.url ? `<table role="present
  * @param {string} [o.motivo]      por que a pessoa recebe este e-mail (rodapé)
  * @param {{rotulo:string,url:string}} [o.sair]  o link de descadastro (rodapé)
  * @param {string} [o.preheader]   a linha que o Gmail mostra ao lado do assunto
+ * @param {{url:string,alt?:string,href?:string}} [o.imagem]  arte de topo (campanha), entre a logo e a manchete
  */
-export function modeloDeEmail({ titulo, corpo = [], botao = null, botaoSecundario = null, depoisDoBotao = [], avisoFinal = '', motivo = '', sair = null, preheader = '' } = {}) {
+export function modeloDeEmail({ titulo, corpo = [], botao = null, botaoSecundario = null, depoisDoBotao = [], avisoFinal = '', motivo = '', sair = null, preheader = '', imagem = null } = {}) {
   const pre = preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:${CORES.fundo};opacity:0">${esc(preheader)}</div>` : '';
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titulo)}</title></head>
 <body style="margin:0;padding:0;background:${CORES.fundo};font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased">${pre}
@@ -71,6 +72,7 @@ export function modeloDeEmail({ titulo, corpo = [], botao = null, botaoSecundari
       <tr><td align="center" style="padding:28px 32px 6px">
         <a href="${SITE}" target="_blank" style="text-decoration:none"><img src="${LOGO_URL}" alt="Leilão NoZap" width="220" style="display:block;border:0;width:220px;max-width:220px;height:auto"></a>
       </td></tr>
+      ${imagem && imagem.url ? `<tr><td style="padding:14px 32px 0">${imagem.href ? `<a href="${esc(imagem.href)}" target="_blank" style="text-decoration:none">` : ''}<img src="${esc(imagem.url)}" alt="${esc(imagem.alt || titulo)}" width="496" style="display:block;border:0;width:100%;max-width:496px;height:auto;border-radius:12px">${imagem.href ? '</a>' : ''}</td></tr>` : ''}
       <tr><td style="padding:14px 32px 0">
         <h1 style="margin:0 0 14px;color:${CORES.marinho};font-size:22px;line-height:1.3;font-weight:800">${esc(titulo)}</h1>
         ${corpo.join('\n        ')}

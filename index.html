@@ -56,48 +56,41 @@
     <link rel="preload" as="image" href="/brand/logo-horizontal-dark.webp" fetchpriority="high" />
 
     <!-- Theme -->
-    <meta name="theme-color" content="#111827" />
+    <!-- 📱 DIR-189 (30/09/2026): theme-color na cor da barra do topo e color-scheme
+         escuro. O Safari do iPhone pinta o material da barra de status (o
+         degradê translúcido em cima da página) conforme o esquema da PÁGINA;
+         sem declarar, com o aparelho em modo claro, ele vem branco por cima da
+         logo. O Layout troca para "light" nas telas claras do painel. -->
+    <meta name="theme-color" content="#21222B" />
+    <meta name="color-scheme" content="dark" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
 
     <!-- manifest: injetado automaticamente pelo vite-plugin-pwa (/manifest.json) -->
 
-    <!-- 📊 Google Tag Manager — contêiner GTM-K2KHK4CB (Vinicius, 22/09/2026).
-         Fica DEPOIS dos preconnect/preload de propósito: o GTM é assíncrono e
-         não bloqueia a pintura, mas subir ele acima do preload do logo atrasaria
-         o LCP sem ganho nenhum de medição.
-         ⚠️ O gtag.js do GA4 (G-YS4W9104X6) logo abaixo continua ativo. Se o
-         contêiner também tiver uma tag GA4 com ESSE mesmo ID, o pageview conta
-         duas vezes. Ver src/docs/GTM.md. -->
-    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-    })(window,document,'script','dataLayer','GTM-K2KHK4CB');</script>
-    <!-- End Google Tag Manager -->
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YS4W9104X6"></script>
+    <!-- 📊 MEDIÇÃO DEPOIS DA TELA (27/09/2026, "4 ok" do dono).
+         Tag Manager (GTM-K2KHK4CB, Vinicius 22/09), Google Analytics (G-YS4W9104X6)
+         e Datadog RUM carregavam JUNTO com a página e disputavam a internet do
+         celular com ela. Agora:
+           • as FILAS são criadas aqui, na hora (dataLayer, gtag, DD_RUM.onReady):
+             todo evento empurrado antes do script chegar fica guardado e é enviado
+             quando ele carrega — o mesmo mecanismo oficial dos snippets;
+           • os SCRIPTS entram só depois do evento `load`, quando o navegador fica
+             ocioso (no máximo 3 s depois). Ver src/lib/terceirosDepoisDaTela.js.
+         ⚠️ Se o contêiner GTM também tiver uma tag GA4 com o mesmo ID, o pageview
+         conta duas vezes. Ver src/docs/GTM.md.
+         O login do Google (gsi/client) SAIU daqui: só as telas de entrar/cadastrar
+         usam, e elas carregam sob demanda (src/lib/googleLogin.js). -->
     <script>
       window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-
       gtag('config', 'G-YS4W9104X6');
-    </script>
-
-    <!-- Login com Google (Google Identity Services) -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-
-    <!-- 📊 Datadog RUM (monitoramento real de uso/erros no navegador) -->
-    <script>
-      (function(h,o,u,n,d) {
-        h=h[d]=h[d]||{q:[],onReady:function(c){h.q.push(c)}}
-        d=o.createElement(u);d.async=1;d.src=n;d.crossOrigin=''
-        n=o.getElementsByTagName(u)[0];n.parentNode.insertBefore(d,n)
-      })(window,document,'script','https://www.datadoghq-browser-agent.com/us3/v7/datadog-rum.js','DD_RUM')
-      window.DD_RUM.onReady(function() {
-        window.DD_RUM.init({
+      (function (h) {
+        h.DD_RUM = h.DD_RUM || { q: [], onReady: function (c) { h.DD_RUM.q.push(c); } };
+        h.DD_RUM.onReady(function () {
+          h.DD_RUM.init({
             applicationId: '573b8217-6038-4df8-ab56-ee2655cbeded',
             clientToken: 'pubc59b83e50228c395c98d8f11b39d6318',
             site: 'us3.datadoghq.com',
@@ -109,8 +102,29 @@
             trackResources: true,
             trackUserInteractions: true,
             trackLongTasks: true,
+          });
         });
-      })
+      })(window);
+      (function (w, d) {
+        var feito = false;
+        function script(src, cross) {
+          var s = d.createElement('script'); s.async = true; s.src = src;
+          if (cross) s.crossOrigin = '';
+          d.head.appendChild(s);
+        }
+        function carregar() {
+          if (feito) return; feito = true;
+          script('https://www.googletagmanager.com/gtm.js?id=GTM-K2KHK4CB');
+          script('https://www.googletagmanager.com/gtag/js?id=G-YS4W9104X6');
+          script('https://www.datadoghq-browser-agent.com/us3/v7/datadog-rum.js', true);
+        }
+        function ocioso() {
+          if (w.requestIdleCallback) w.requestIdleCallback(carregar, { timeout: 3000 });
+          else w.setTimeout(carregar, 1500);
+        }
+        if (d.readyState === 'complete') ocioso();
+        else w.addEventListener('load', ocioso, { once: true });
+      })(window, document);
     </script>
 
     <!-- 🛟 RECUPERAÇÃO DE CACHE (27/07/2026) — o app instalado no celular abria em

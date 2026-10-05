@@ -64,7 +64,10 @@ export default async function handler(req, res) {
       let offset = 0;
       const pageSize = 1000;
       while (true) {
-        const rows = await (await sb(`commission_records?select=amount,sale_type&user_id=eq.${encodeURIComponent(u.id)}&status=neq.canceled&limit=${pageSize}&offset=${offset}`)).json();
+        // 28/09/2026 — 'paid' (pago por linha, já saiu do saldo) e 'reversed'
+        // (estornado por cancelar_venda, que já descontou do saldo) NÃO são
+        // saldo a receber. Contá-los devolveria ao saldo dinheiro que já saiu.
+        const rows = await (await sb(`commission_records?select=amount,sale_type&user_id=eq.${encodeURIComponent(u.id)}&status=not.in.(canceled,reversed,paid)&limit=${pageSize}&offset=${offset}`)).json();
         if (!Array.isArray(rows) || rows.length === 0) break;
         all = all.concat(rows);
         if (rows.length < pageSize) break;

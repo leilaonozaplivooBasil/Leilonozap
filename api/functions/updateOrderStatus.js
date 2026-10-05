@@ -31,6 +31,8 @@
 // decisão de negócio, não conserto de bug. Por isso a resposta devolve
 // `comprador_pagou` — pra esse valor ficar na cara de quem cancelou.
 import { exigirSessao } from '../_lib/sessao.js';
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
+import { pedidoSaiu, codigoDeRastreio, numeroDoPedido } from '../_lib/regrasDosAvisos.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // ══════════════════════════════════════════════════════════════════════════════
@@ -106,7 +108,7 @@ export default async function handler(req, res) {
     // guard: ator admin/super_admin OU vendedor do pedido
     const actorArr = await (await sb(`app_users?select=id,role&id=eq.${encodeURIComponent(actorId)}&limit=1`)).json();
     const actor = Array.isArray(actorArr) ? actorArr[0] : null;
-    const saleArr = await (await sb(`catalog_sales?select=id,seller_id,status,total_amount&id=eq.${encodeURIComponent(saleId)}&limit=1`)).json();
+    const saleArr = await (await sb(`catalog_sales?select=id,kind,seller_id,buyer_id,status,total_amount,tracking_code&id=eq.${encodeURIComponent(saleId)}&limit=1`)).json();
     const sale = Array.isArray(saleArr) ? saleArr[0] : null;
     if (!sale) return res.status(200).json({ success: false, error: 'Pedido não encontrado' });
     const isAdmin = actor && ['admin', 'super_admin'].includes(actor.role);
@@ -153,7 +155,9 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: false, error: 'Falha ao estornar o cancelamento', details: t.slice(0, 200) });
       }
       const estorno = await rpc.json().catch(() => null);
-      // A própria cancelar_venda() já gravou status='cancelado' — não precisa do PATCH.
+      // A própria cancelar_venda() já gravou status='cancelado' — não precisa do PATCH de status.
+      // 🧾 DIR-197 (03/10/2026) — quem cancelou e por quê ficam na venda (a hora é carimbada por trigger).
+      await sb(`catalog_sales?id=eq.${encodeURIComponent(saleId)}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ cancelado_por: actorId || null, cancelamento_motivo: String(body?.motivo || ('Cancelado por ' + (isAdmin ? 'admin' : 'vendedor'))).slice(0, 300) }) }).catch(() => {});
       return res.status(200).json({ success: true, status: 'cancelado', estorno });
     }
 
@@ -193,6 +197,12 @@ export default async function handler(req, res) {
       r = await sb(`catalog_sales?id=eq.${saleId}`, { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status }) });
     }
     if (!r.ok) { const t = await r.text(); return res.status(200).json({ success: false, error: 'Falha ao atualizar', details: t.slice(0, 200) }); }
+    // ✉️ "pedido a caminho" (28/09/2026) — o aviso só existia no entityWrite, e a
+    // tela de pedidos usa ESTA rota: 0 e-mails de envio até hoje. Chave = id da
+    // venda, a mesma do entityWrite: sai 1x por pedido, venha de onde vier.
+    if (sale.buyer_id && pedidoSaiu(status, fulfillment)) {
+      await enviarAviso({ tipo: 'compra_enviada', userId: sale.buyer_id, chave: saleId, dados: { pedido: numeroDoPedido(sale), rastreio: codigoDeRastreio(tracking || sale.tracking_code), arremate: sale.kind === 'arremate' } });
+    }
     return res.status(200).json({ success: true, status, fulfillment_status: fulfillment });
   } catch (e) {
     return res.status(200).json({ success: false, error: 'Erro', details: String(e?.message || e) });

@@ -28,6 +28,7 @@ import BidHistoryCard from '@/components/auction/BidHistoryCard';
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
 import { precoArremateAgora, normalizarArremateAgora } from '@/lib/arremateAgora';
 import { supabase } from '@/api/supabaseClient';
+import { mapaDePosicoes, POSICOES_DO_DESTAQUE } from '@/lib/posicoesDoDestaque';
 
 // 🔔 Toasts personalizados da página — NUNCA usar alert()/confirm() do navegador
 // (o Brave/Chrome pode bloquear diálogos nativos e o clique "não faz nada").
@@ -144,6 +145,9 @@ export default function EditAuction() {
     const [isFeatured, setIsFeatured] = useState(false);
     const [featuredPosition, setFeaturedPosition] = useState(1);
     const [occupiedPositions, setOccupiedPositions] = useState({}); // { [posicao]: { id: auctionId, title } }
+    // 🌟 28/09/2026 — posição presa por destaque de leilão ENCERRADO: aparece livre
+    // e é liberada (o antigo é desligado) quando alguém a escolhe.
+    const [stalePositions, setStalePositions] = useState({});
     const [savingFeatured, setSavingFeatured] = useState(false);
 
     // Promove uma foto a capa (posição 0)
@@ -581,18 +585,21 @@ export default function EditAuction() {
                 setIsFeatured(mine.is_active !== false);
                 setFeaturedPosition(mine.sort_order || 1);
             }
-            const occ = {};
-            linked.forEach((r) => {
-                if (r.raw_base44.auction_id !== auctionId && r.is_active !== false && r.sort_order) {
-                    occ[r.sort_order] = { id: r.raw_base44.auction_id, title: r.name };
-                }
-            });
+            // Quem segura posição é só destaque de leilão ainda no cartaz.
+            const outros = [...new Set(linked.map((r) => r.raw_base44.auction_id).filter((id) => id !== auctionId))];
+            let leiloes = {};
+            if (outros.length) {
+                const { data: auc, error: erroAuc } = await supabase.from('auctions').select('id,status,end_time').in('id', outros);
+                leiloes = erroAuc ? null : Object.fromEntries((auc || []).map((a) => [a.id, a]));
+            }
+            const { ocupadas: occ, vencidas } = mapaDePosicoes(linked, leiloes, auctionId);
             setOccupiedPositions(occ);
+            setStalePositions(vencidas);
             // 🐛 FIX: se este leilão ainda não é destaque, sugere a primeira posição LIVRE
             // (1 a 6) em vez de sempre a 1 — senão ligar o interruptor travava direto na
             // posição 1 quando ela já estava ocupada, sem o admin nem ver o seletor.
             if (!mine) {
-                const livre = [1, 2, 3, 4, 5, 6].find((p) => !occ[p]);
+                const livre = POSICOES_DO_DESTAQUE.find((p) => !occ[p]);
                 if (livre) setFeaturedPosition(livre);
             }
         } catch (e) {
@@ -604,6 +611,15 @@ export default function EditAuction() {
         loadFeaturedInfo();
     }, [loadFeaturedInfo]);
 
+    // Destaque de leilão encerrado na posição escolhida: desliga antes de gravar
+    // o novo, para a Home não ter dois na mesma posição.
+    const liberarPosicaoVencida = async (pos) => {
+        const velho = stalePositions[pos];
+        if (!velho?.featuredId) return;
+        await FeaturedProduct.update(velho.featuredId, { is_active: false });
+        setStalePositions((prev) => { const n = { ...prev }; delete n[pos]; return n; });
+    };
+
     const handleToggleFeatured = async (checked) => {
         setSavingFeatured(true);
         try {
@@ -614,6 +630,7 @@ export default function EditAuction() {
                     setSavingFeatured(false);
                     return;
                 }
+                await liberarPosicaoVencida(featuredPosition);
                 const payload = {
                     name: formData.title || 'Leilão em destaque',
                     category: formData.category || 'outros',
@@ -655,6 +672,7 @@ export default function EditAuction() {
         }
         setSavingFeatured(true);
         try {
+            await liberarPosicaoVencida(newPos);
             if (featuredId) await FeaturedProduct.update(featuredId, { order: newPos });
             notify.ok('Posição atualizada', `Agora na posição ${newPos}`);
         } catch (e) {
@@ -1551,7 +1569,7 @@ export default function EditAuction() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
-                                        {[1, 2, 3, 4, 5, 6].map((p) => {
+                                        {POSICOES_DO_DESTAQUE.map((p) => {
                                             const conflito = occupiedPositions[p] && occupiedPositions[p].id !== auctionId ? occupiedPositions[p] : null;
                                             return (
                                                 <SelectItem key={p} value={String(p)} disabled={!!conflito}>

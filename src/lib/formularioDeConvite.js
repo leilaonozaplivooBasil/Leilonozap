@@ -1,6 +1,9 @@
-// 🚫 O FORMULÁRIO DE CONVITE ("Você foi convidado por … · Crie seu Perfil de
-// Lance") — DESLIGADO ATÉ SEGUNDA ORDEM (24/09/2026).
+// ✅ O FORMULÁRIO DE CONVITE ("Você foi convidado por … · Crie seu Perfil de
+// Lance") — RELIGADO em 28/09/2026. Dono: "devemos voltar com o popup de
+// cadastro assim que o user entra na plataforma, como era" (Luiz: "a pessoa tem
+// que dar uma volta pra ir pro cadastro"). Histórico do desligamento abaixo.
 //
+// (24/09/2026 — desligado até segunda ordem:)
 // Dono: "O usuário que abre o site pela primeira vez não tem que ver o
 // formulário de cadastro. É uma estratégia do marketing da empresa, está
 // atrapalhando a metrificação. Desative o formulário até segunda ordem."
@@ -15,7 +18,7 @@
 //
 // PRA RELIGAR: `FORMULARIO_DE_CONVITE_LIGADO = true` — uma linha. Nada mais
 // foi apagado de propósito, pra que a volta seja tão barata quanto a ida.
-export const FORMULARIO_DE_CONVITE_LIGADO = false;
+export const FORMULARIO_DE_CONVITE_LIGADO = true;
 
 /**
  * O popup deve abrir sozinho nesta visita?

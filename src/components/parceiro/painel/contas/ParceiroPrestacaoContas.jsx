@@ -1,3 +1,4 @@
+import { TAXA_PARCEIRO } from '@/lib/planosParceiro';
 import React from 'react';
 import { Receipt, FileCheck2, Info, CalendarClock, ShieldAlert } from 'lucide-react';
 import { real } from '@/lib/operacaoNumeros';
@@ -12,8 +13,8 @@ const DIA_MS = 86400000;
 // Só leitura. Sem plano ativo, mostra o MODELO DEMONSTRATIVO do que ele receberá.
 export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha }) {
   const demonstracao = !investimento;
-  const aporte = investimento?.amount || 15000;
-  const taxa = investimento?.investmentRate || 3;
+  const aporte = investimento?.amount || 30000;
+  const taxa = investimento?.investmentRate || TAXA_PARCEIRO.pct;
   const assinatura = investimento?.startDate || new Date(Date.now() - 18 * DIA_MS).toISOString();
   const r = useRentabilidadeAcumulada(assinatura, aporte, taxa);
 
@@ -98,7 +99,7 @@ export default function ParceiroPrestacaoContas({ investimento, onIrParaLinha })
           <li>• <strong className="text-pc-tinta">D+0</strong> — contrato assinado, aporte confirmado e lote pago no mesmo dia.</li>
           <li>• <strong className="text-pc-tinta">D+3 a D+7</strong> — retirada e carregamento do lote no leiloeiro.</li>
           <li>• <strong className="text-pc-tinta">D+{DIAS_CICLO_FISICO}</strong> — produtos publicados na Loja Virtual e capital começa a rentabilizar (D+{DIA_INICIO_APURACAO}).</li>
-          <li>• <strong className="text-pc-tinta">D+{DIA_PRIMEIRO_REPASSE}</strong> — fechamento do ciclo, repasse pago e demonstrativo completo (Cláusula 8.2). Deste marco começam os 12 meses de repasses.</li>
+          <li>• <strong className="text-pc-tinta">D+{DIA_PRIMEIRO_REPASSE}</strong> — fechamento do ciclo, repasse pago e demonstrativo completo (Cláusula 8.2). Deste marco começam os repasses (de 12 a 36 meses, conforme o plano).</li>
           <li>• <strong className="text-pc-tinta">A cada fechamento</strong> — você decide: retirar o resultado ou recompor o capital no ciclo seguinte.</li>
         </ul>
         <button

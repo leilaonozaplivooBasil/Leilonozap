@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Send, X, UserRound, GraduationCap, BookmarkPlus, ListChecks, AlarmClock, Brain } from 'lucide-react';
+import { Loader2, Send, X, UserRound, GraduationCap, BookmarkPlus, ListChecks, AlarmClock, Brain, Users } from 'lucide-react';
 import { supabase } from '@/api/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import { DIAS_FIXO, PESO_MIN, PESO_MAX } from '@/lib/distribuicaoFixo';
 import { MENTALIDADES, mentalidadeDe, mentalidadePadrao, pesoComMentalidade, ensinamentoDaTarefa, habitoDe } from '@/lib/mentalidades';
 import { ACOES_PADRAO, catalogoJunto, classificarAcao, jaNoCatalogo, acaoParaGravar, parecidas, montarMentoria, ROTEIRO_MENTORIA, TEMAS, CATEGORIAS_ACAO } from '@/lib/catalogoAcoes';
 import { prazoDe, rotuloDoPrazo } from '@/lib/pronto';
+import { destinatariosDoEnvio, alternarMarcado, todosDaLista, linhasParaVarios, primeiraDeCadaPessoa, resumoDoEnvio } from '@/lib/distribuirParaVarios';
 
 // 🎯 DISTRIBUIR TAREFA — o formulário da gestão, agora uma peça só (07/09/2026).
 //
@@ -92,8 +93,16 @@ const NOVA_VAZIA = (categoria = 'mentoria', prazoHora = '18:00') => ({ titulo: '
 export default function DistribuirTarefa({
   currentUser, equipe = [], participanteDe, nomeDe, tarefasCiclo = [], carregarTarefas, catalogo = ACOES_PADRAO, acoesDoBanco = [], onAcoesDoBanco = null,
   pessoa, onPessoa, dia, onDia, onAbrirQuadroGeral = null, desfazer = null, moldura = true, legenda = true,
+  // 👥 24/09/2026 — a lista completa pra "várias pessoas" (time corporativo +
+  // quem está ativo no jogo). Sem ela, usa a própria `equipe`.
+  pessoasMetodo = null,
 }) {
   const [salvando, setSalvando] = useState(false);
+  const [varios, setVarios] = useState(false);
+  const [marcados, setMarcados] = useState([]);
+  const listaVarios = pessoasMetodo && pessoasMetodo.length ? pessoasMetodo : equipe;
+  const ligarVarios = () => { setVarios(true); setMarcados((m) => (m.length ? m : (pessoa ? [String(pessoa)] : []))); };
+  const destinos = destinatariosDoEnvio({ pessoa, varios, marcados });
   const [nova, setNova] = useState(() => NOVA_VAZIA());
   const [mentoriaCompleta, setMentoriaCompleta] = useState(false);
   const [prioridade, setPrioridade] = useState('alta');   // alta | media | baixa
@@ -167,8 +176,8 @@ export default function DistribuirTarefa({
   const valoresDoDia = previa?.valoresDia || {};
 
   // 🗂️ o card do quadro pessoal (DIR-75/76) que a demanda vira, ligado ou não à tarefa
-  const cardDaDemanda = (tarefaId) => ({
-    user_id: pessoa, titulo: nova.titulo.trim(), detalhe: ensinamento || null, coluna: 'aberto',
+  const cardDaDemanda = (tarefaId, destino = pessoa) => ({
+    user_id: destino, titulo: nova.titulo.trim(), detalhe: ensinamento || null, coluna: 'aberto',
     habito: habitoAtual ? Number(habitoAtual) : null, prazo: prazoDaPrioridade(nova.prazoDia || dia, prioridade),
     responsavel_nome: nomeDe(currentUser?.id), virou_tarefa_id: tarefaId, virou_tarefa_em: tarefaId ? new Date().toISOString() : null,
     ordem: 0, checklist: [],
@@ -194,45 +203,49 @@ export default function DistribuirTarefa({
   // aviso que acende o sino — numa função só, pra nunca faltar nenhum
   // caminho que distribui tarefa (achado na auditoria noturna: a mentoria
   // completa gravava só a Jornada, os outros dois nunca eram chamados).
-  const criarQuadroEAviso = async (tarefaId, tituloParaAviso, prazoEmParaAviso) => {
-    const { error: erroQuadro } = await supabase.from('metodo_quadro').insert(cardDaDemanda(tarefaId || null));
-    const { error: erroAviso } = await supabase.from('xgame_mensagens').insert({
+  // 👥 24/09/2026 — em lote: um insert de cards e um de avisos, com uma linha
+  // por pessoa. `pares` = [{ destino, tarefaId, titulo, prazoEm }].
+  const criarQuadrosEAvisos = async (pares) => {
+    const { error: erroQuadro } = await supabase.from('metodo_quadro').insert(pares.map((x) => cardDaDemanda(x.tarefaId || null, x.destino)));
+    const { error: erroAviso } = await supabase.from('xgame_mensagens').insert(pares.map((x) => ({
       remetente_id: currentUser?.id || null,
       remetente_nome: nomeExibicao(currentUser) || currentUser?.full_name || 'a gestão',
-      destino_tipo: 'pessoa', destino_id: pessoa, destino_nome: nomeDe(pessoa),
+      destino_tipo: 'pessoa', destino_id: x.destino, destino_nome: nomeDe(x.destino),
       tipo: 'demanda',
-      texto: `📋 nova tarefa: "${tituloParaAviso}" — ${rotuloDoPrazo(prazoEmParaAviso, dia) || 'combine o pronto com a gestão'}.`,
-    });
+      texto: `📋 nova tarefa: "${x.titulo}" — ${rotuloDoPrazo(x.prazoEm, dia) || 'combine o pronto com a gestão'}.`,
+    })));
     if (erroQuadro) toast.error('Entrou na jornada, mas o card do quadro não gravou — confere lá');
-    if (erroAviso) toast.error('Entrou na jornada, mas o sino não avisou a pessoa — confere lá');
+    if (erroAviso) toast.error('Entrou na jornada, mas o sino não avisou — confere lá');
     return { ok: !erroQuadro && !erroAviso };
   };
 
   const distribuir = async () => {
-    if (!pessoa || !nova.titulo.trim()) { toast.error('Escolha a pessoa e diga qual é a tarefa.'); return; }
+    const ids = destinos;
+    if (!ids.length || !nova.titulo.trim()) { toast.error(varios ? 'Marque ao menos uma pessoa e diga qual é a tarefa.' : 'Escolha a pessoa e diga qual é a tarefa.'); return; }
+    const pra = resumoDoEnvio(ids.map((id) => nomeDe(id)));
     setSalvando(true);
     // 🎓 mentoria completa: três blocos encadeados, cada um com o seu ensinamento
     if (blocosMentoria) {
-      const linhas = blocosMentoria.map((b, i) => ({
-        user_id: pessoa, data: dia, hora: b.hora, titulo: b.titulo, feito: false, ordem: ordemPelaHora(b.hora),
+      const base = blocosMentoria.map((b) => ({
+        data: dia, hora: b.hora, titulo: b.titulo, feito: false, ordem: ordemPelaHora(b.hora),
         categoria: b.categoria, peso: pesoComMentalidade(b.titulo, mentalidadeAtual).peso,
         origem: 'xperf', criado_por_id: currentUser?.id || null,
         mentalidade: mentalidadeAtual, habito: b.habito,
         detalhe: ensinamentoDaTarefa({ mentalidade: mentalidadeAtual, habito: b.habito, detalhe: `Bloco da mentoria (${b.minutos} min): ${b.tema}.` }),
         prazo_em: prazoDe(nova.prazoDia || dia, nova.prazoHora || '18:00'),
       }));
-      const { data: gravadasMentoria, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
+      const { data: gravadasMentoria, error } = await supabase.from('metodo_tarefas').insert(linhasParaVarios(base, ids)).select();
       if (error) { setSalvando(false); toast.error('Não distribuiu a mentoria — tenta de novo'); return; }
-      const primeiraMentoria = Array.isArray(gravadasMentoria) ? gravadasMentoria[0] : gravadasMentoria;
-      const { ok } = await criarQuadroEAviso(primeiraMentoria?.id, `Mentoria: ${linhas[0].titulo}`, linhas[0].prazo_em);
+      const primeiras = primeiraDeCadaPessoa(gravadasMentoria);
+      const { ok } = await criarQuadrosEAvisos(ids.map((id) => ({ destino: id, tarefaId: primeiras.get(id)?.id, titulo: `Mentoria: ${base[0].titulo}`, prazoEm: base[0].prazo_em })));
       setSalvando(false);
-      toast.success(`Mentoria distribuída pra ${nomeDe(pessoa)}: ${linhas.length} blocos, das ${linhas[0].hora} às ${linhas[2].hora} (+2h)${ok ? ' — jornada, quadro e sino avisados' : ''}`);
+      toast.success(`Mentoria distribuída pra ${pra}: ${base.length} blocos, das ${base[0].hora} às ${base[2].hora} (+2h)${ok ? ' — jornada, quadro e sino avisados' : ''}`);
       setMentoriaCompleta(false);
       limparFormulario();
       return;
     }
     const linha = {
-      user_id: pessoa, data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
+      data: dia, hora: nova.hora || null, titulo: nova.titulo.trim(),
       feito: false, ordem: ordemPelaHora(nova.hora), categoria: categoriaAtual, peso: pesoEfetivo,
       origem: 'xperf', criado_por_id: currentUser?.id || null,
       mentalidade: mentalidadeAtual, habito: habitoAtual ? Number(habitoAtual) : null,
@@ -241,26 +254,29 @@ export default function DistribuirTarefa({
     };
     // 📅 repetir nos dias úteis até a sexta desta semana
     const diasAlvo = repetirSemana ? diasUteisAteSexta(dia) : [dia];
-    const linhas = diasAlvo.map((d) => ({ ...linha, data: d, prazo_em: prazoDe(d === dia ? (nova.prazoDia || d) : d, nova.prazoHora || '18:00') }));
-    const { data: gravadas, error } = await supabase.from('metodo_tarefas').insert(linhas).select();
+    const base = diasAlvo.map((d) => ({ ...linha, data: d, prazo_em: prazoDe(d === dia ? (nova.prazoDia || d) : d, nova.prazoHora || '18:00') }));
+    const { data: gravadas, error } = await supabase.from('metodo_tarefas').insert(linhasParaVarios(base, ids)).select();
     if (error) { setSalvando(false); toast.error('Não distribuiu a tarefa — tenta de novo'); return; }
-    const primeira = Array.isArray(gravadas) ? gravadas[0] : gravadas;
-    const { ok } = await criarQuadroEAviso(primeira?.id, linha.titulo, linha.prazo_em);
+    const primeiras = primeiraDeCadaPessoa(gravadas);
+    const { ok } = await criarQuadrosEAvisos(ids.map((id) => ({ destino: id, tarefaId: primeiras.get(id)?.id, titulo: linha.titulo, prazoEm: linha.prazo_em })));
     setSalvando(false);
     if (diasAlvo.length > 1) toast.success(`${diasAlvo.length} dias: "${linha.titulo}" de ${fmtDia(diasAlvo[0])} a ${fmtDia(diasAlvo.at(-1))}`);
     // a ação do catálogo (do banco) conta um uso — é o que sobe na lista
     const usada = catalogo.find((a) => a.id === acaoEscolhida);
     if (usada && !usada.padrao) supabase.from('xperf_acoes').update({ usos: (Number(usada.usos) || 0) + 1 }).eq('id', usada.id).then(() => {});
-    const valor = previa?.sim?.valorNova;
+    // o valor da prévia é o do dia da pessoa escolhida — com várias pessoas,
+    // cada uma tem o próprio fixo, então o toast não promete um valor só
+    const valor = ids.length === 1 ? previa?.sim?.valorNova : null;
     // 🐛 09/09/2026 — achado na auditoria noturna: este toast disparava
     // incondicional, dizendo "jornada, quadro e sino avisados" mesmo quando
     // um dos dois tinha acabado de falhar (toast de erro logo acima). Agora
     // só promete o que de fato aconteceu.
     toast.success(
       valor != null
-        ? `Tarefa distribuída pra ${nomeDe(pessoa)}: vale ${fmtReais(valor)}${ok ? ' — jornada, quadro e sino avisados' : ''}`
-        : `Tarefa distribuída pra ${nomeDe(pessoa)}${ok ? ' — jornada, quadro e sino avisados' : ''}`,
+        ? `Tarefa distribuída pra ${pra}: vale ${fmtReais(valor)}${ok ? ' — jornada, quadro e sino avisados' : ''}`
+        : `Tarefa distribuída pra ${pra}${ok ? ' — jornada, quadro e sino avisados' : ''}`,
     );
+    if (varios) setMarcados([]);
     limparFormulario();
   };
 
@@ -293,6 +309,36 @@ export default function DistribuirTarefa({
           horário (opcional)
           <input type="time" value={nova.hora} onChange={(e) => setNova((n) => ({ ...n, hora: e.target.value }))} className={`mt-1 block ${campo}`} data-teste="hora-inicio" />
         </label>
+      </div>
+      {/* 👥 24/09/2026 — várias pessoas de uma vez: cada uma recebe a própria cópia */}
+      <div className="mt-2" data-teste="bloco-varios">
+        {!varios ? (
+          <button type="button" onClick={ligarVarios} className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.04] hover:bg-white/[0.08] px-2.5 py-1 text-[11px] text-white/80" data-teste="modo-varios">
+            <Users className="w-3.5 h-3.5" /> mandar para várias pessoas
+          </button>
+        ) : (
+          <div className="rounded-lg border border-white/15 bg-white/[0.03] p-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Users className="w-3.5 h-3.5 text-nz-verde" />
+              <span className="text-[11px] font-bold text-white" data-teste="contagem-varios">{marcados.length} {marcados.length === 1 ? 'pessoa marcada' : 'pessoas marcadas'}</span>
+              <button type="button" onClick={() => setMarcados(todosDaLista(listaVarios))} className="text-[11px] text-nz-verde hover:underline" data-teste="marcar-todos">marcar todos</button>
+              <button type="button" onClick={() => setMarcados([])} className="text-[11px] text-white/50 hover:underline" data-teste="limpar-marcados">limpar</button>
+              <button type="button" onClick={() => { setVarios(false); setMarcados([]); }} className="ml-auto text-[11px] text-white/50 hover:text-white" data-teste="sair-varios">só uma pessoa</button>
+            </div>
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+              {listaVarios.map((p) => {
+                const marcado = marcados.includes(String(p.id));
+                return (
+                  <label key={p.id} className={`flex items-center gap-2 rounded-md px-2 py-1 text-[11px] cursor-pointer ${marcado ? 'bg-nz-verde/15 text-white' : 'text-white/70 hover:bg-white/[0.05]'}`} data-teste="pessoa-varios">
+                    <input type="checkbox" checked={marcado} onChange={() => setMarcados((m) => alternarMarcado(m, p.id))} className="accent-green-600" />
+                    <span className="truncate">{p.nome}{p.funcao ? <span className="text-white/35"> · {p.funcao}</span> : null}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <p className="mt-1.5 text-[10px] text-white/35">cada pessoa recebe a própria tarefa, o próprio card no quadro e o próprio sino — e dá o pronto sozinha. A prévia de valor abaixo é de {nomeDe(pessoa)}; cada um vale pelo próprio fixo.</p>
+          </div>
+        )}
       </div>
       {/* 🕐 09/09/2026 — dono: "ela não tem que entrar na hora que eu coloquei...
           deixando a opção da pessoa escolher o melhor horário pra ela fazer,
@@ -483,11 +529,11 @@ export default function DistribuirTarefa({
         </label>
       </div>
       <div className="mt-3 flex items-center gap-2 flex-wrap">
-        <Button size="sm" onClick={distribuir} disabled={salvando || !nova.titulo.trim()} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]" data-teste="distribuir">
+        <Button size="sm" onClick={distribuir} disabled={salvando || !nova.titulo.trim() || !destinos.length} className="bg-nz-verde hover:bg-nz-verde-claro text-white h-8 text-[11px]" data-teste="distribuir">
           {salvando ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Send className="w-3.5 h-3.5 mr-1" />}
-          Distribuir tarefa
+          {varios ? `Distribuir pra ${destinos.length} ${destinos.length === 1 ? 'pessoa' : 'pessoas'}` : 'Distribuir tarefa'}
         </Button>
-        <span className="text-[10px] text-white/35">entra na Jornada, no Quadro e na Lista dele, e acende o sino — no dia escolhido</span>
+        <span className="text-[10px] text-white/35">{varios ? 'cada um recebe na Jornada, no Quadro e na Lista, e o sino acende pra cada um' : 'entra na Jornada, no Quadro e na Lista dele, e acende o sino — no dia escolhido'}</span>
         {nova.titulo.trim() && !noCatalogo && (
           <Button size="sm" variant="ghost" onClick={salvarNoCatalogo} disabled={salvandoAcao} className="ml-auto h-8 text-[11px] text-white/70 hover:text-white hover:bg-white/10" title="guarda esta ação no menu, com a mentalidade, o Hábito e o peso de agora" data-teste="salvar-catalogo">
             {salvandoAcao ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}

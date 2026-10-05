@@ -42,6 +42,12 @@ try {
 } catch { /* dependência opcional: os casos se marcam como PULADOS */ }
 
 const semNavegador = chromium ? false : 'playwright não instalado — rode: npm i -D playwright';
+// ⚠️ BANCA DESATUALIZADA (25/09/2026) — decisão do dono: "deixe aviso nelas, só
+// mantém". A fórmula do fixo mudou em 13/09 (DIR-142) e estes cenários ficaram
+// com números antigos. Ficam guardados como referência do comportamento
+// desenhado; quando o X-Game for revisitado, refazer as expectativas e tirar
+// o skip. Não é bug em produção — é a prova que envelheceu.
+const BANCA_DESATUALIZADA = 'banca desatualizada desde 13/09 (fórmula do fixo DIR-142) — mantida por decisão do dono em 25/09';
 
 let navegador; let BASE; let servidor;
 const TIPOS = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png' };
@@ -95,7 +101,7 @@ const escritas = (pagina) => pagina.evaluate(() => window.__bancoFalso.escritas)
 const texto = async (pagina, sel) => (await pagina.locator(sel).textContent()).replace(/\s+/g, ' ').trim();
 const ATE = (n) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do dia perde', { skip: semNavegador }, async () => {
+test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do dia perde', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   assert.equal(await pagina.locator('[data-teste="dia"]').inputValue(), '2026-09-08', 'o dia nasce em "amanhã" (dia útil)');
   assert.equal(await texto(pagina, '[data-teste="valor-dia"]'), ATE(291.67), 'R$ 7.000 ÷ 24 dias de operação');
@@ -119,7 +125,7 @@ test('PRÉVIA: antes de gravar, diz quanto a tarefa vale e o que cada outra do d
   await ctx.close();
 });
 
-test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a lista do dia recalcula na hora; desfazer só o que nasceu aqui', { skip: semNavegador }, async () => {
+test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a lista do dia recalcula na hora; desfazer só o que nasceu aqui', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
   await pagina.locator('[data-teste="peso"]').selectOption('4');
@@ -155,7 +161,7 @@ test('DISTRIBUIR: grava na tabela do Compromisso da pessoa (origem xperf) e a li
   await ctx.close();
 });
 
-test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor do dia em todo lugar', { skip: semNavegador }, async () => {
+test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor do dia em todo lugar', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   // quem aparece vem do painel de controle: do executivo ao embaixador — o trainee não entra
   const nomes = await pagina.locator('[data-teste="pessoa-fixo"] option').allTextContents();
@@ -187,7 +193,7 @@ test('FIXO: o menu suspenso abre o modal da pessoa, e mudar o fixo muda o valor 
   await ctx.close();
 });
 
-test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela primeira vez', { skip: semNavegador }, async () => {
+test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela primeira vez', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('dono');
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="dono"]');
@@ -206,7 +212,7 @@ test('FIXO: quem não tem cadastro no jogo ganha um ao definir o fixo pela prime
   await ctx.close();
 });
 
-test('DIA INCOMPLETO: quem não tem fixo usa a verba de produção; e o aviso diz o que falta pro dia completo', { skip: semNavegador }, async () => {
+test('DIA INCOMPLETO: quem não tem fixo usa a verba de produção; e o aviso diz o que falta pro dia completo', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa"]').selectOption('carla');
   await pagina.locator('[data-teste="sem-fixo"]').waitFor();
@@ -220,7 +226,7 @@ test('DIA INCOMPLETO: quem não tem fixo usa a verba de produção; e o aviso di
   await ctx.close();
 });
 
-test('ADMIN EMBUTIDO: a gestão do X-GAME de sempre abre dentro do X-Performance', { skip: semNavegador }, async () => {
+test('ADMIN EMBUTIDO: a gestão do X-GAME de sempre abre dentro do X-Performance', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   await pagina.locator('[data-teste="abrir-admin"]').click();
   await pagina.getByRole('button', { name: /Participantes/ }).first().waitFor();
@@ -229,7 +235,7 @@ test('ADMIN EMBUTIDO: a gestão do X-GAME de sempre abre dentro do X-Performance
   await ctx.close();
 });
 
-test('MENTALIDADE: a tarefa nasce com a trilha da pessoa, o peso ganha o acréscimo e o ensinamento vai junto — no banco e na prévia', { skip: semNavegador }, async () => {
+test('MENTALIDADE: a tarefa nasce com a trilha da pessoa, o peso ganha o acréscimo e o ensinamento vai junto — no banco e na prévia', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   // Emanuel é executivo no jogo → a mentalidade nasce na do executivo
   assert.equal(await pagina.locator('[data-teste="mentalidade"]').inputValue(), 'executivo');
@@ -264,7 +270,7 @@ test('MENTALIDADE: a tarefa nasce com a trilha da pessoa, o peso ganha o acrésc
   await ctx.close();
 });
 
-test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeita dele daqui', { skip: semNavegador }, async () => {
+test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeita dele daqui', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   // Emanuel não tem tarefa em 07/09 (hoje) → não gerou
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
@@ -286,7 +292,7 @@ test('PLANEJAMENTO: o modal avisa quem não gerou o dia, e gera a Rotina Perfeit
   await ctx.close();
 });
 
-test('CATÁLOGO: a lista do que tem pra fazer, por mentalidade; escolher uma ação preenche título, mentalidade, Hábito e peso', { skip: semNavegador }, async () => {
+test('CATÁLOGO: a lista do que tem pra fazer, por mentalidade; escolher uma ação preenche título, mentalidade, Hábito e peso', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const grupos = await pagina.locator('[data-teste="catalogo"] optgroup').evaluateAll((els) => els.map((e) => e.label));
   assert.deepEqual(grupos.map((g) => g.split(' — ')[0]), ['Mentalidade do Executivo', 'Mentalidade do Diretor', 'Mentalidade do CEO']);
@@ -303,7 +309,7 @@ test('CATÁLOGO: a lista do que tem pra fazer, por mentalidade; escolher uma aç
   await ctx.close();
 });
 
-test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no menu; ao distribuir, conta um uso', { skip: semNavegador }, async () => {
+test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no menu; ao distribuir, conta um uso', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="titulo"]').fill('Visitar a loja do Centro');
   assert.match(await texto(pagina, '[data-teste="mentalidade-lida"]'), /Mentalidade do Executivo \(pelo texto: ação da própria mão\)/);
@@ -326,7 +332,7 @@ test('CATÁLOGO: ação escrita à mão é lida pela régua e pode ser salva no 
   await ctx.close();
 });
 
-test('PRONTO: a tarefa sai com "começar às" e "pronto até", e a pessoa vê o prazo na linha', { skip: semNavegador }, async () => {
+test('PRONTO: a tarefa sai com "começar às" e "pronto até", e a pessoa vê o prazo na linha', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   assert.equal(await pagina.locator('[data-teste="prazo-dia"]').inputValue(), '2026-09-08', 'o pronto nasce no dia da tarefa');
   assert.equal(await pagina.locator('[data-teste="prazo-hora"]').inputValue(), '18:00');
@@ -344,7 +350,7 @@ test('PRONTO: a tarefa sai com "começar às" e "pronto até", e a pessoa vê o 
   await ctx.close();
 });
 
-test('FILA DO PRONTO: o pronto da Carla espera o ✔✔; devolver com recado desfaz o pronto e grava o porquê; conferir dá o SIM', { skip: semNavegador }, async () => {
+test('FILA DO PRONTO: o pronto da Carla espera o ✔✔; devolver com recado desfaz o pronto e grava o porquê; conferir dá o SIM', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const item = pagina.locator('[data-teste="pronto-item"]');
   assert.equal(await item.count(), 1);
@@ -376,7 +382,7 @@ test('FILA DO PRONTO: o pronto da Carla espera o ✔✔; devolver com recado des
   await ctx.close();
 });
 
-test('LEITURA VIVA: a leitura muda a cada palavra — o último nome escrito vence, e os temas viram etiquetas', { skip: semNavegador }, async () => {
+test('LEITURA VIVA: a leitura muda a cada palavra — o último nome escrito vence, e os temas viram etiquetas', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const titulo = pagina.locator('[data-teste="titulo"]');
   await titulo.fill('Pegar as pautas');
@@ -401,7 +407,7 @@ test('LEITURA VIVA: a leitura muda a cada palavra — o último nome escrito ven
   await ctx.close();
 });
 
-test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião viram três tarefas encadeadas no horário', { skip: semNavegador }, async () => {
+test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião viram três tarefas encadeadas no horário', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="titulo"]').fill('Mentoria de segunda com o time');
   await pagina.locator('[data-teste="hora-inicio"]').fill('14:00');
@@ -422,7 +428,7 @@ test('MENTORIA COMPLETA: 15 min de leitura, 45 de treinamento e 2h de reunião v
   await ctx.close();
 });
 
-test('FAXINA: pra gestão, só a XPerformanceGestao — sem as dobras de "diretoria" e "sobre"', { skip: semNavegador }, async () => {
+test('FAXINA: pra gestão, só a XPerformanceGestao — sem as dobras de "diretoria" e "sobre"', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   // 🧹 08/09/2026 — dono: "essa diretoria [encontro de segunda + quadro]
   // pode tirar, foi um começo que a gente não fez. E a mentalidade está
   // muito genérica, muito feia — pode tirar isso também." As duas dobras
@@ -435,7 +441,7 @@ test('FAXINA: pra gestão, só a XPerformanceGestao — sem as dobras de "direto
   await ctx.close();
 });
 
-test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer coisa', { skip: semNavegador }, async () => {
+test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer coisa', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const resumo = pagina.locator('[data-teste="resumo-time-hoje"]');
   await resumo.waitFor();
@@ -448,7 +454,7 @@ test('O TIME NUM RELANCE: o resumo de quantidade fica no topo, antes de qualquer
   await ctx.close();
 });
 
-test('FUNÇÃO E EMPRESA: a posição vem do painel de controle e a função do Documento Oficial (Emanuel → COO); pode ser trocada (CFO); a empresa e o "através da" gravam; o dia da função é distribuído de uma vez', { skip: semNavegador }, async () => {
+test('FUNÇÃO E EMPRESA: a posição vem do painel de controle e a função do Documento Oficial (Emanuel → COO); pode ser trocada (CFO); a empresa e o "através da" gravam; o dia da função é distribuído de uma vez', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   await pagina.locator('[data-teste="pessoa-fixo"]').selectOption('emanuel');
   const modal = pagina.locator('[data-teste="modal-pessoa"][data-pessoa="emanuel"]');
@@ -492,7 +498,7 @@ test('FUNÇÃO E EMPRESA: a posição vem do painel de controle e a função do 
   await ctx.close();
 });
 
-test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis; as cinco camadas com os números dela; o Score Executivo com a linha dos 80% e a escada', { skip: semNavegador }, async () => {
+test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis; as cinco camadas com os números dela; o Score Executivo com a linha dos 80% e a escada', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   const oficial = modal.locator('[data-teste="funcao-oficial"]');
@@ -543,7 +549,7 @@ test('DOCUMENTO OFICIAL NO PAINEL: a função com missão, metas e entregáveis;
   await ctx.close();
 });
 
-test('DIR-130: toda demanda distribuída SEMPRE cai na Jornada, no Quadro (ligado) e acende o sino — nunca mais só uma das três', { skip: semNavegador }, async () => {
+test('DIR-130: toda demanda distribuída SEMPRE cai na Jornada, no Quadro (ligado) e acende o sino — nunca mais só uma das três', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   // sem escolha de destino nenhuma: uma tarefa distribuída grava nos TRÊS —
   // a tarefa do dia (Jornada), o card do quadro (ligado pelo id) e a
@@ -588,7 +594,7 @@ async function abrirQuadroGeral(pagina, pessoa = 'emanuel') {
 }
 const aba = (modal, id) => modal.locator(`[data-teste="abas-quadro-geral"] [data-aba="${id}"]`).click();
 
-test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e WhatsApp no topo, e as seis abas', { skip: semNavegador }, async () => {
+test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e WhatsApp no topo, e as seis abas', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   // o botão fica no cartão do Distribuir, junto do responsável (já selecionado: Emanuel)
   await pagina.locator('[data-teste="abrir-quadro-geral"]').click();
@@ -606,7 +612,7 @@ test('QUADRO GERAL: abre do botão ao lado do responsável, com semáforo e What
   await ctx.close();
 });
 
-test('MVM DELE: a aba abre a tela X-GAME de Emanuel de verdade, em modo só-olhar — sem botão de votar nem "voltar"', { skip: semNavegador }, async () => {
+test('MVM DELE: a aba abre a tela X-GAME de Emanuel de verdade, em modo só-olhar — sem botão de votar nem "voltar"', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx, erros } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   await aba(modal, 'mvm');
@@ -626,7 +632,7 @@ test('MVM DELE: a aba abre a tela X-GAME de Emanuel de verdade, em modo só-olha
   await ctx.close();
 });
 
-test('METAS: o modelo da função entra com um toque; progresso sai das tarefas feitas e das vendas pagas; meta de produto', { skip: semNavegador }, async () => {
+test('METAS: o modelo da função entra com um toque; progresso sai das tarefas feitas e das vendas pagas; meta de produto', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   await aba(modal, 'metas');
@@ -659,7 +665,7 @@ test('METAS: o modelo da função entra com um toque; progresso sai das tarefas 
   await ctx.close();
 });
 
-test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acrescentar e tirar grava por cima do padrão; pôr no quadro dela vira cards', { skip: semNavegador }, async () => {
+test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acrescentar e tirar grava por cima do padrão; pôr no quadro dela vira cards', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   await aba(modal, 'programa');
@@ -692,7 +698,7 @@ test('PROGRAMA: sete meses de set/2026 a mar/2027, na mentalidade da pessoa; acr
   await ctx.close();
 });
 
-test('SEMANA, QUADRO DELE e HISTÓRICO', { skip: semNavegador }, async () => {
+test('SEMANA, QUADRO DELE e HISTÓRICO', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const modal = await abrirQuadroGeral(pagina);
   await aba(modal, 'semana');
@@ -722,7 +728,7 @@ test('SEMANA, QUADRO DELE e HISTÓRICO', { skip: semNavegador }, async () => {
   await ctx.close();
 });
 
-test('COMPROVAÇÕES: subiram — a fila geral em cima (aprovar / reprovar com motivo) e a aba da pessoa com o radar', { skip: semNavegador }, async () => {
+test('COMPROVAÇÕES: subiram — a fila geral em cima (aprovar / reprovar com motivo) e a aba da pessoa com o radar', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir();
   const geral = pagina.locator('[data-teste="comprovacoes-geral"]');
   await geral.waitFor();
@@ -750,7 +756,7 @@ test('COMPROVAÇÕES: subiram — a fila geral em cima (aprovar / reprovar com m
   await ctx.close();
 });
 
-test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador }, async () => {
+test('CELULAR: a gestão cabe na tela — foto pra julgar', { skip: semNavegador || BANCA_DESATUALIZADA }, async () => {
   const { pagina, ctx } = await abrir({ celular: true });
   await pagina.locator('[data-teste="titulo"]').fill('Pegar as pautas da reunião de amanhã');
   await pagina.locator('[data-teste="peso"]').selectOption('4');

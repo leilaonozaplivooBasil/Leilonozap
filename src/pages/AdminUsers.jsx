@@ -55,7 +55,7 @@ export default function AdminUsers() {
         return;
       }
 
-      const allUsers = await AppUser.list('-created_date', 1000);
+      const allUsers = await AppUser.listAll('-created_date');
       setUsers(allUsers);
       setFilteredUsers(allUsers);
     } catch (error) {

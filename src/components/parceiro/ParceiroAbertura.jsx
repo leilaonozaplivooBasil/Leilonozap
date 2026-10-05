@@ -29,7 +29,7 @@ export default function ParceiroAbertura({ onSolicitarAcesso }) {
 
         <p className="mt-8 max-w-2xl text-sm leading-relaxed text-pc-tinta-fraca sm:text-base">
           Capital alocado em operações sucessivas de compra e revenda de produtos de alto giro,
-          com participação no resultado comercial apurado. Ciclo fechado de doze meses.
+          com participação no resultado comercial apurado. Ciclo fechado de 12 a 36 meses.
         </p>
 
         <button

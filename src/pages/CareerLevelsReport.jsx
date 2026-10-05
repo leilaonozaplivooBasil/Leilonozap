@@ -18,7 +18,7 @@ export default function CareerLevelsReport() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const allUsers = await AppUser.list('-created_date', 1000);
+        const allUsers = await AppUser.listAll('-created_date');
         setUsers(allUsers);
         setFilteredUsers(allUsers);
       } catch (error) {

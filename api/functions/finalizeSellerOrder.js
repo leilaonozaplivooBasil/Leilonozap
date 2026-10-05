@@ -41,6 +41,12 @@ export default async function handler(req, res) {
     const adesao = Array.isArray(adesoes) ? adesoes[0] : null;
     const nivelAdesao = String(adesao?.adesao_level || adesao?.raw_base44?.role || adesao?.raw_base44?.role_grant || '').toLowerCase();
     const cargo = (nivelAdesao === 'licenciado' || Number(adesao?.total_amount) >= 5000 || (!adesao && balance >= 5000)) ? 'licenciado' : 'vendedor';
+    // 🎯 26/09/2026 — quem JÁ é Parceiro (ou acima) e recebeu crédito em produtos
+    // como parte da adesão continua com o cargo que tem: a compra dos produtos
+    // não pode "rebaixar" a lista de cargos acrescentando licenciado/vendedor.
+    const CARGOS_ACIMA = ['parceiro', 'ponto_retirada', 'loja_fisica', 'distribuidor'];
+    const cargoQueJaTem = (Array.isArray(user.career_levels) ? user.career_levels : []).map((c) => String(c).toLowerCase()).find((c) => CARGOS_ACIMA.includes(c));
+    const cargoFinal = cargoQueJaTem || cargo;
     if (role && role !== cargo) console.warn(`[finalizeSellerOrder] body pediu '${role}', a adesão paga dá '${cargo}' — vale a adesão (user ${user_id}).`);
 
     // 🔒 Recalcula o total no servidor a partir do preço real do produto — não confia no total do cliente.
@@ -134,7 +140,7 @@ export default async function handler(req, res) {
         });
       }
 
-      careerLevels = Array.from(new Set([...(user.career_levels || []), cargo]));
+      careerLevels = Array.from(new Set([...(user.career_levels || []), cargoFinal]));
       await sb(`app_users?id=eq.${encodeURIComponent(user_id)}`, {
         method: 'PATCH', headers: { Prefer: 'return=minimal' },
         body: JSON.stringify({ is_seller: true, career_levels: careerLevels }),

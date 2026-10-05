@@ -7,6 +7,11 @@ const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 function sb(path) { return fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: { apikey: SR, Authorization: `Bearer ${SR}` } }); }
 
 export default async function handler(req, res) {
+  // 🔐 AUDITORIA 26/09/2026 — cron: com CRON_SECRET configurado na Vercel, só aceita a chamada
+  // que a própria Vercel manda (Authorization: Bearer). Era a única rota de cron sem a guarda.
+  if (process.env.CRON_SECRET && (req.headers?.authorization || '') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return res.status(401).json({ ok: false, error: 'nao_autorizado' });
+  }
   res.setHeader('Content-Type', 'application/json');
   try {
     const { de, ate } = janelaUltimaHora();

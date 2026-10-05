@@ -11,6 +11,8 @@ import crypto from 'crypto';
 import { montarAviso, TIPOS_DE_AVISO, CATEGORIA_POR_TIPO } from './textosDosAvisos.js';
 import { pessoaAceita, podeRepetir } from './regrasDosAvisos.js';
 import { registrarEmail, idDaBrevo } from './registroDeEmail.js';
+import { gravarNotificacao } from './notificacoesNaTela.js';
+import { enviarMensagemDoAviso } from './avisosPorMensagem.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -62,7 +64,17 @@ async function remarcar(userId, tipo, chaveDoAviso, agoraISO) {
  * @param {{tipo:string, userId:string, chave:string, dados?:object}} p
  *   chave: o que torna o aviso único (id do leilão, da venda, do saque; 'conta' pro cadastro/KYC)
  */
-export async function enviarAviso({ tipo, userId, chave: chaveDoAviso, dados = {} }) {
+export async function enviarAviso(p) {
+  // 🔔 28/09/2026 — o MESMO gatilho alimenta o sino do site (notificacoesNaTela.js).
+  // Correm juntos: o sino não espera a Brevo, e o e-mail não espera o banco.
+  // A notificação não depende de e-mail cadastrado nem da preferência de e-mail.
+  // 📱 29/09/2026 — e, pros 5 avisos urgentes, WhatsApp/SMS (avisosPorMensagem.js;
+  // desligado até a Brevo estar configurada).
+  const [email, tela, msg] = await Promise.all([enviarEmailDoAviso(p || {}), gravarNotificacao(p || {}), enviarMensagemDoAviso(p || {})]);
+  return { ...email, naTela: tela.gravada, mensagem: msg.canal && msg.enviado ? msg.canal : null };
+}
+
+async function enviarEmailDoAviso({ tipo, userId, chave: chaveDoAviso, dados = {} }) {
   try {
     if (!TIPOS_DE_AVISO.includes(tipo) || !userId || !chaveDoAviso) return { enviado: false, motivo: 'parametros' };
     if (!SUPABASE_URL || !SR || !BREVO_KEY) return { enviado: false, motivo: 'config' };

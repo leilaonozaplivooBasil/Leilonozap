@@ -6,6 +6,7 @@
 // Supabase Auth + verificação de JWT antes do go-live público. Ver auditoria 2026-06-10.
 
 import { exigirSessao } from '../_lib/sessao.js';
+import { nascimentoISO } from '../../src/lib/dataDeNascimento.js';
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -31,6 +32,9 @@ const ALLOWED = [
   'referral_code', 'store_slug',
   // 'active' = arquivar/reativar usuário sem apagar histórico (painel da rede)
   'active',
+  // 🎂 03/10/2026 (DIR-194) — data de nascimento (opcional). Admin editando o PRÓPRIO
+  // perfil passa por aqui, não pela rota do cliente; sem isto o campo sumia calado.
+  'birth_date',
   // ══════════════════════════════════════════════════════════════════════════
   // 🔴 15/09/2026 — ADMIN NÃO CONSEGUIA DAR LANCE. O ENDEREÇO FALTAVA AQUI.
   // ══════════════════════════════════════════════════════════════════════════
@@ -221,6 +225,7 @@ export default async function handler(req, res) {
     const payload = {};
     for (const k of ALLOWED) if (k in updates) payload[k] = updates[k];
 
+    if ('birth_date' in payload) payload.birth_date = nascimentoISO(payload.birth_date);
     // cargos: descarta ids que não existem mais no plano
     if ('career_levels' in payload) payload.career_levels = sanearCargos(payload.career_levels);
     if ('primary_career_level' in payload && payload.primary_career_level) {
@@ -228,7 +233,14 @@ export default async function handler(req, res) {
       payload.primary_career_level = CARGOS_VALIDOS.has(p) ? p : (RENOMEAR_CARGO[p] || 'usuario');
     }
     if (Object.keys(payload).length === 0) {
-      return res.status(400).json({ success: false, error: 'Nenhum campo válido para atualizar' });
+      // 🔎 30/09/2026 — 7 de 8 chamadas em 24h voltaram 400 sem ninguém saber o
+      // porquê. Agora a recusa diz quais campos chegaram, pra tela mostrar.
+      const recebidos = Object.keys(updates);
+      return res.status(400).json({
+        success: false,
+        error: `Nenhum campo válido para atualizar (recebi: ${recebidos.length ? recebidos.join(', ') : 'nada'})`,
+        campos_recebidos: recebidos,
+      });
     }
 
     // 🛡️ ANTI-REBAIXAMENTO: nunca tirar o acesso de um admin/super_admin sem pedir explicitamente.

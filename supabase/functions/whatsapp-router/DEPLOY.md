@@ -20,7 +20,7 @@ supabase secrets set \
   ZAPI_TOKEN=seu_token_da_instancia \
   ZAPI_CLIENT_TOKEN=cole_aqui_o_token_de_seguranca_da_conta \
   ADMIN_PHONE_NUMBERS=5521960142766,5521982795387 \
-  WEBHOOK_SECRET=8e2fdf2d2a026e7dd3cd7e86b1a0d24a0f5aa27af0985808
+  WEBHOOK_SECRET=<gere um novo: openssl rand -hex 24>
 ```
 
 - `ZAPI_INSTANCE_ID` e `ZAPI_TOKEN`: painel Z-API → Instâncias → sua instância.
@@ -32,8 +32,10 @@ supabase secrets set \
   vira Heloim ao falar 1:1, e quem pode aprovar/rejeitar solicitação em grupo. Exemplo acima:
   Luiz (`21 96014-2766`) e Ávila (`21 98279-5387`). Sem essa variável, ninguém vira Heloim,
   todo mundo cai no Zeca.
-- `WEBHOOK_SECRET`: reaproveitei o mesmo valor gerado na etapa da Evolution API
-  (`8e2fdf2d2a026e7dd3cd7e86b1a0d24a0f5aa27af0985808`) — troque se preferir gerar um novo.
+- `WEBHOOK_SECRET`: gere um valor novo (`openssl rand -hex 24`) e cadastre nos secrets. **Nunca**
+  escreva o valor neste arquivo nem em mensagem — ele fica só no cofre do Supabase e na URL do
+  webhook configurada no painel da Z-API (`...?secret=<valor>`). 25/09/2026: o valor antigo que
+  estava aqui foi considerado exposto e precisa ser trocado nos dois lugares.
 - `EXECUTIVO_VENDEDOR_PHONE` (opcional): número do executivo que recebe os leads de "quero
   ser vendedor" vindos de anúncio (Zeca encaminha automático). Sem configurar, usa o número
   do João Paim (`21984942730`) como padrão — só precisa desse secret se for trocar.
@@ -196,7 +198,7 @@ Diferente da Evolution API, aqui não é por `curl` — é pela interface web:
    próprios e não devem apontar pra esta function), cole:
 
 ```
-https://gezvviyegtxytnwjkrjv.supabase.co/functions/v1/whatsapp-router?secret=8e2fdf2d2a026e7dd3cd7e86b1a0d24a0f5aa27af0985808
+https://gezvviyegtxytnwjkrjv.supabase.co/functions/v1/whatsapp-router?secret=<o valor do WEBHOOK_SECRET>
 ```
 
 O segredo vai na própria URL (query string) porque o painel do Z-API normalmente não
@@ -205,7 +207,7 @@ deixa configurar headers customizados no webhook — só o campo de URL mesmo.
 ## 5. Testar sem depender do WhatsApp de verdade
 
 ```bash
-curl -X POST "https://gezvviyegtxytnwjkrjv.supabase.co/functions/v1/whatsapp-router?secret=8e2fdf2d2a026e7dd3cd7e86b1a0d24a0f5aa27af0985808" \
+curl -X POST "https://gezvviyegtxytnwjkrjv.supabase.co/functions/v1/whatsapp-router?secret=<o valor do WEBHOOK_SECRET>" \
   -H "Content-Type: application/json" \
   -d '{
     "phone": "5511999999999",

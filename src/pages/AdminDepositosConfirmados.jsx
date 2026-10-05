@@ -8,9 +8,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, Filter, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { SITUACOES, resumoDasComissoes } from '@/lib/comissaoDoDeposito';
 
 // Tempo máximo (ms) para um PIX ser considerado pendente válido — 30 minutos
 const PIX_EXPIRY_MS = 30 * 60 * 1000;
+
+// 💸 28/09/2026 — cor de cada situação da comissão (ver src/lib/comissaoDoDeposito.js)
+const COR_COMISSAO = {
+  [SITUACOES.ESPERA]: 'text-sky-300',
+  [SITUACOES.LIBERADA]: 'text-emerald-300 font-semibold',
+  [SITUACOES.PAGA]: 'text-slate-300',
+  [SITUACOES.EMPRESA]: 'text-slate-400',
+  [SITUACOES.ESTORNADA]: 'text-slate-400',
+  [SITUACOES.CONFERIR]: 'text-amber-300 font-semibold',
+};
+const FILTROS_COMISSAO = {
+  todas: () => true,
+  espera: (c) => c === SITUACOES.ESPERA,
+  liberada: (c) => c === SITUACOES.LIBERADA,
+  paga: (c) => c === SITUACOES.PAGA,
+  sem: (c) => ![SITUACOES.ESPERA, SITUACOES.LIBERADA, SITUACOES.PAGA, SITUACOES.EMPRESA, SITUACOES.NAO_SE_APLICA].includes(c),
+};
+const brl = (v) => `R$ ${(Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const KIND_LABEL = {
   wallet_deposit: 'Depósito na Carteira',
@@ -20,6 +39,7 @@ const KIND_LABEL = {
 
 export default function AdminDepositosConfirmados() {
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filtroComissao, setFiltroComissao] = useState('todas');
   const [searchEmail, setSearchEmail] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
@@ -46,7 +66,10 @@ export default function AdminDepositosConfirmados() {
   const filteredTransactions = transactions.filter(t => {
     const matchStatus = filterStatus === 'all' || t.status === filterStatus;
     const term = searchEmail.toLowerCase().trim();
-    const matchEmail = !term || (t.email || '').toLowerCase().includes(term) || (t.name || '').toLowerCase().includes(term);
+    // busca também por QUEM INDICOU: "Verônica" traz os depósitos dos clientes dela
+    const matchEmail = !term || (t.email || '').toLowerCase().includes(term) || (t.name || '').toLowerCase().includes(term)
+      || (t.indicador?.nome || '').toLowerCase().includes(term);
+    const matchComissao = (FILTROS_COMISSAO[filtroComissao] || FILTROS_COMISSAO.todas)(t.comissao?.codigo);
 
     let matchDate = true;
     if (filterDateFrom || filterDateTo) {
@@ -55,7 +78,7 @@ export default function AdminDepositosConfirmados() {
       if (filterDateTo && matchDate) matchDate = txDate <= new Date(filterDateTo).getTime();
     }
 
-    return matchStatus && matchEmail && matchDate;
+    return matchStatus && matchEmail && matchDate && matchComissao;
   });
 
   // PIX expirados: pendentes há mais de 30 minutos
@@ -72,6 +95,7 @@ export default function AdminDepositosConfirmados() {
     expired: expiredPix.length,
     totalAmount: filteredTransactions.filter(t => t.status === 'confirmed').reduce((sum, t) => sum + (t.amount || 0), 0),
   };
+  const comissoes = resumoDasComissoes(filteredTransactions);
 
   const handleCleanupExpired = async () => {
     if (expiredPix.length === 0) {
@@ -105,7 +129,7 @@ export default function AdminDepositosConfirmados() {
   };
 
   const handleExportCSV = () => {
-    const headers = ['Email', 'Nome', 'Tipo', 'Valor (R$)', 'Status', 'Data'];
+    const headers = ['Email', 'Nome', 'Tipo', 'Valor (R$)', 'Status', 'Data', 'Quem indicou', 'Comissão (R$)', 'Situação da comissão'];
     const rows = filteredTransactions.map(t => [
       t.email,
       t.name,
@@ -113,7 +137,10 @@ export default function AdminDepositosConfirmados() {
       t.amount?.toFixed(2),
       t.status,
       new Date(t.created_date).toLocaleDateString('pt-BR'),
-    ]);
+      t.indicador?.nome || '',
+      t.comissao?.valor ? t.comissao.valor.toFixed(2) : '',
+      t.comissao?.texto || '',
+    ].map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`));
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -199,6 +226,36 @@ export default function AdminDepositosConfirmados() {
           </Card>
         </div>
 
+        {/* 💸 Comissão de indicação — 10% do depósito, a partir de 23/09 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" data-teste="resumo-comissoes">
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-400 text-sm font-medium">Comissão em espera (7 dias)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-sky-300">{brl(comissoes.emEspera)}</div>
+              <p className="text-xs text-slate-500 mt-1">Libera sozinha na data de cada depósito</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-400 text-sm font-medium">Comissão liberada — pode pagar</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-emerald-300">{brl(comissoes.liberada)}</div>
+              <p className="text-xs text-slate-500 mt-1">Pague em Pagamentos de Comissões</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-slate-400 text-sm font-medium">Comissão já paga</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-200">{brl(comissoes.paga)}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Filters */}
         <Card className="bg-slate-800 border-slate-700 mb-6">
           <CardHeader>
@@ -207,11 +264,11 @@ export default function AdminDepositosConfirmados() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div>
-                <label className="block text-xs text-slate-400 mb-2 uppercase font-semibold">Email ou nome</label>
+                <label className="block text-xs text-slate-400 mb-2 uppercase font-semibold">Cliente ou quem indicou</label>
                 <Input
-                  placeholder="Buscar..."
+                  placeholder="Ex.: Verônica"
                   value={searchEmail}
                   onChange={(e) => setSearchEmail(e.target.value)}
                   className="bg-slate-700 border-slate-600 text-white placeholder-slate-500"
@@ -229,6 +286,22 @@ export default function AdminDepositosConfirmados() {
                     <SelectItem value="confirmed">Confirmado</SelectItem>
                     <SelectItem value="pending">Pendente</SelectItem>
                     <SelectItem value="failed">Cancelado/Falhou</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-xs text-slate-400 mb-2 uppercase font-semibold">Comissão</label>
+                <Select value={filtroComissao} onValueChange={setFiltroComissao}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white" data-teste="filtro-comissao">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-700 border-slate-600">
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="espera">Em espera</SelectItem>
+                    <SelectItem value="liberada">Liberada — pode pagar</SelectItem>
+                    <SelectItem value="paga">Paga</SelectItem>
+                    <SelectItem value="sem">Sem comissão</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -287,6 +360,8 @@ export default function AdminDepositosConfirmados() {
                       <th className="text-right py-3 px-4 text-slate-300 font-semibold">Valor</th>
                       <th className="text-center py-3 px-4 text-slate-300 font-semibold">Status</th>
                       <th className="text-left py-3 px-4 text-slate-300 font-semibold">Data</th>
+                      <th className="text-left py-3 px-4 text-slate-300 font-semibold">Quem indicou</th>
+                      <th className="text-right py-3 px-4 text-slate-300 font-semibold">Comissão 10%</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -297,8 +372,8 @@ export default function AdminDepositosConfirmados() {
                           <div className="text-slate-500 font-mono text-xs">{tx.email || tx.user_id}</div>
                         </td>
                         <td className="py-3 px-4 text-slate-300 text-sm">{KIND_LABEL[tx.kind] || tx.kind}</td>
-                        <td className="py-3 px-4 text-right text-green-400 font-bold">
-                          R$ {tx.amount?.toFixed(2) || '0.00'}
+                        <td className="py-3 px-4 text-right text-green-400 font-bold whitespace-nowrap tabular-nums">
+                          {brl(tx.amount)}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <Badge className={
@@ -312,6 +387,14 @@ export default function AdminDepositosConfirmados() {
                         </td>
                         <td className="py-3 px-4 text-slate-400 text-sm">
                           {new Date(tx.created_date).toLocaleString('pt-BR')}
+                        </td>
+                        <td className="py-3 px-4 text-slate-300 text-sm" data-teste="quem-indicou">
+                          {tx.indicador?.nome || '—'}
+                          {tx.indicador?.empresa && <span className="ml-1 text-xs text-slate-500">(empresa)</span>}
+                        </td>
+                        <td className="py-3 px-4 text-right text-sm" data-teste="comissao-do-deposito">
+                          {tx.comissao?.valor > 0 && <div className="font-bold text-white tabular-nums">{brl(tx.comissao.valor)}</div>}
+                          <div className={`text-xs ${COR_COMISSAO[tx.comissao?.codigo] || 'text-slate-500'}`}>{tx.comissao?.texto || '—'}</div>
                         </td>
                       </tr>
                     ))}

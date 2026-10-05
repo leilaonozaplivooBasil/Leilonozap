@@ -7,29 +7,51 @@ import { Search, Landmark, Loader2, ShieldCheck, AlertTriangle } from 'lucide-re
 import { toast } from 'sonner';
 import ComissaoUsuarioCard from '@/components/comissoes/ComissaoUsuarioCard';
 import { AVISO_COMISSAO, LINK_APROVACAO } from '@/lib/comissaoSoConsulta';
+import { jaPagoDaPessoa } from '@/lib/pagamentoManualDeComissao';
+import { cabecalhosSessao } from '@/lib/sessaoCliente';
 
-// 🏦 PAGAMENTOS DE COMISSÕES — extrato por pessoa, SÓ CONSULTA (23/09/2026)
+// 🏦 PAGAMENTOS DE COMISSÕES — extrato por pessoa (23/09/2026 → 24/09/2026)
 // Nasceu em 12/08 como "banco interno" pra pagar PIX na mão e marcar pago. O
-// "marcar pago" nunca gravou (tabela fora do entityWrite) e não podia mesmo: a
-// comissão já está no commission_balance da pessoa, que saca pela plataforma
-// depois do KYC. Pagar por fora era pagar em dobro. Decisão do dono em 23/09:
-// comissão só pelo saque. A tela mostra quanto cada um tem e em que pé está o
-// KYC, e aponta pra fila de aprovação. Ver src/lib/comissaoSoConsulta.js.
+// "marcar pago" nunca gravou (tabela fora do entityWrite), virou só-consulta
+// em 23/09, e em 24/09 voltou a pagar — com débito atômico do saldo real, sem
+// o furo de antes. Ver src/lib/comissaoSoConsulta.js pro histórico da decisão.
+//
+// 🔴 "A RECEBER" NÃO VEM MAIS DA SOMA DE commission_records (24/09/2026) — o
+// que a pessoa PODE receber de verdade é `commission_balance` em app_users: a
+// soma dos registros pendentes já tinha divergido dele pra quem estava com
+// saque em andamento (o dinheiro sai de commission_balance na hora do pedido,
+// mas o commission_record continuava "pendente"). Pagar em cima do número
+// errado passaria por cima de dinheiro já reservado ou já pago. Os registros
+// de commission_records continuam servindo pra mostrar QUAIS vendas geraram o
+// saldo (a tabela de detalhe, ao expandir o cartão).
 export default function PagamentosComissoes() {
   const [loading, setLoading] = useState(true);
   const [commissions, setCommissions] = useState([]);
   const [usersById, setUsersById] = useState({});
+  const [pagamentosManuais, setPagamentosManuais] = useState([]);
+  // ⏳ 28/09/2026 — comissão de indicação de depósito nos 7 dias de espera
+  const [emEspera, setEmEspera] = useState([]);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState('a_pagar'); // a_pagar | pago | todos
+  const [admin] = useState(() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; } });
 
   const carregar = async () => {
     setLoading(true);
     try {
-      const [comms, users] = await Promise.all([
+      const [comms, users, manuais] = await Promise.all([
         plataforma.entities.CommissionRecord.list('-created_date', 5000),
         plataforma.entities.AppUser.list(),
+        plataforma.entities.ComissaoPagamentoManual.list('-created_at', 2000),
       ]);
       setCommissions(comms || []);
+      // ⏳ em espera vem do servidor (commission_ledger é fechado ao navegador).
+      // Falhou? A tela segue sem ela — nunca derruba o extrato.
+      try {
+        const r = await fetch('/api/functions/comissoesEmEspera', { method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }), body: '{}' });
+        const j = await r.json().catch(() => null);
+        setEmEspera(j?.success && Array.isArray(j.rows) ? j.rows : []);
+      } catch { setEmEspera([]); }
+      setPagamentosManuais(manuais || []);
       const map = {};
       (users || []).forEach((u) => { map[u.id] = u; });
       setUsersById(map);
@@ -42,36 +64,58 @@ export default function PagamentosComissoes() {
 
   useEffect(() => { carregar(); }, []);
 
+  const manuaisByUser = useMemo(() => {
+    const m = {};
+    pagamentosManuais.forEach((p) => { (m[p.user_id] ||= []).push(p); });
+    return m;
+  }, [pagamentosManuais]);
+
   const grupos = useMemo(() => {
     const byUser = {};
+    const novoGrupo = (userId, nome) => {
+      const u = usersById[userId];
+      return {
+        user_id: userId,
+        user_name: nome || u?.full_name || 'Sem nome',
+        kyc_status: u?.kyc_status || 'nao_iniciado',
+        commissions: [],
+        pendentes: [],
+        totalPendente: Math.max(0, Number(u?.commission_balance) || 0),
+        totalPago: 0,
+        pagamentosManuais: manuaisByUser[userId] || [],
+        emEspera: [],
+        totalEmEspera: 0,
+      };
+    };
     commissions.forEach((c) => {
-      if (!byUser[c.user_id]) {
-        const u = usersById[c.user_id];
-        byUser[c.user_id] = {
-          user_id: c.user_id,
-          user_name: c.user_name || u?.full_name || 'Sem nome',
-          kyc_status: u?.kyc_status || 'nao_iniciado',
-          commissions: [],
-          pendentes: [],
-          totalPendente: 0,
-          totalPago: 0,
-        };
-      }
+      // 🔴 totalPendente vem do saldo real (commission_balance), não da soma
+      // dos registros — ver o cabeçalho do arquivo.
+      if (!byUser[c.user_id]) byUser[c.user_id] = novoGrupo(c.user_id, c.user_name);
       const g = byUser[c.user_id];
       g.commissions.push(c);
-      if (c.status === 'paid') g.totalPago += c.amount || 0;
-      else if (c.status === 'pending' || c.status === 'confirmed') {
-        g.totalPendente += c.amount || 0;
-        g.pendentes.push(c);
-      }
+      if (c.status === 'pending' || c.status === 'confirmed') g.pendentes.push(c);
+    });
+    // ⏳ comissão em espera: entra no cartão da pessoa (e cria o cartão, se ela
+    // ainda não tem nenhuma comissão liberada — foi o caso reclamado de 28/09).
+    emEspera.forEach((l) => {
+      if (!byUser[l.user_id]) byUser[l.user_id] = novoGrupo(l.user_id, l.user_name);
+      const g = byUser[l.user_id];
+      g.emEspera.push(l);
+      g.totalEmEspera = Math.round((g.totalEmEspera + (Number(l.amount) || 0)) * 100) / 100;
+    });
+    // "Já pago" = pagamentos manuais + linhas pagas que não vieram deles.
+    // 28/09/2026: com o pagamento POR LINHA, a mesma linha é "paid" E está num
+    // pagamento manual — somar os dois contaria o dinheiro duas vezes.
+    Object.values(byUser).forEach((g) => {
+      g.totalPago = jaPagoDaPessoa(g.commissions, g.pagamentosManuais);
     });
     return Object.values(byUser).sort((a, b) => b.totalPendente - a.totalPendente);
-  }, [commissions, usersById]);
+  }, [commissions, usersById, manuaisByUser, emEspera]);
 
   const filtrados = useMemo(() => {
     return grupos
       .filter((g) => {
-        if (aba === 'a_pagar') return g.totalPendente > 0;
+        if (aba === 'a_pagar') return g.totalPendente > 0 || g.totalEmEspera > 0;
         if (aba === 'pago') return g.totalPago > 0;
         return true;
       })
@@ -80,6 +124,7 @@ export default function PagamentosComissoes() {
 
   const totalGeralPendente = grupos.reduce((s, g) => s + g.totalPendente, 0);
   const totalGeralPago = grupos.reduce((s, g) => s + g.totalPago, 0);
+  const totalGeralEmEspera = grupos.reduce((s, g) => s + (g.totalEmEspera || 0), 0);
   const pessoasAPagar = grupos.filter((g) => g.totalPendente > 0).length;
 
   if (loading) {
@@ -98,9 +143,9 @@ export default function PagamentosComissoes() {
           <h1 className="text-2xl font-black">Pagamentos de Comissões</h1>
         </div>
         <p className="text-gray-400 text-sm mb-4">
-          Todas as comissões (leilão e loja virtual) organizadas por pessoa, como um extrato. Só consulta.
+          Todas as comissões (leilão e loja virtual) organizadas por pessoa, como um extrato.
         </p>
-        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col md:flex-row md:items-center gap-3" data-teste="aviso-so-consulta">
+        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 flex flex-col md:flex-row md:items-center gap-3" data-teste="aviso-pagamento-manual">
           <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
           <p className="text-sm text-amber-100 flex-1">{AVISO_COMISSAO}</p>
           <Link to={LINK_APROVACAO} className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-3 py-2 whitespace-nowrap">
@@ -112,6 +157,9 @@ export default function PagamentosComissoes() {
           <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4">
             <div className="text-xs text-amber-400">Total no saldo das pessoas</div>
             <div className="text-2xl font-black text-amber-400">R$ {fmtBR(totalGeralPendente)}</div>
+            {totalGeralEmEspera > 0 && (
+              <div className="text-xs text-gray-400 mt-1" data-teste="total-em-espera">+ R$ {fmtBR(totalGeralEmEspera)} em espera (liberam sozinhas)</div>
+            )}
           </div>
           <div className="bg-gray-900 border border-green-900/50 rounded-xl p-4">
             <div className="text-xs text-green-400">Já pago</div>
@@ -152,7 +200,7 @@ export default function PagamentosComissoes() {
 
         <div className="space-y-3">
           {filtrados.map((g) => (
-            <ComissaoUsuarioCard key={g.user_id} grupo={g} />
+            <ComissaoUsuarioCard key={g.user_id} grupo={g} admin={admin} onPago={carregar} />
           ))}
           {filtrados.length === 0 && (
             <div className="text-center text-gray-500 py-16">Nenhuma comissão encontrada com esse filtro.</div>

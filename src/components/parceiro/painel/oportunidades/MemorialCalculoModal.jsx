@@ -5,11 +5,8 @@ import {
   pctBr,
   PCT_VENDA_SOBRE_MERCADO,
   PCT_COMISSAO_REDE,
-  PCT_PARCEIRO_COMPRA_TOTAL,
   PCT_IMPOSTO,
-  PCT_REPASSE_PARCEIRO_CICLO,
-  PCT_PARCEIRO_REPASSE,
-  PCT_PARCEIRO_ESTRUTURA,
+  ROTULO_REPASSE_PARCEIRO,
 } from '@/lib/lastroOperacao';
 import CompraDaListaCard from './CompraDaListaCard';
 import NotaTributariaBotao from './NotaTributariaBotao';
@@ -39,22 +36,6 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
       nota: `${pctBr(PCT_COMISSAO_REDE)} da receita`,
       valor: r.comissaoRede,
       sinal: '−',
-    },
-    {
-      rotulo: 'Parceiros de compra',
-      nota: `${pctBr(PCT_PARCEIRO_COMPRA_TOTAL)} sobre o capital aportado (${brl(r.capital)})`,
-      valor: r.orcamentoParceiros,
-      sinal: '−',
-      filhos: [
-        {
-          rotulo: `Parceiro de compra · ${pctBr(PCT_PARCEIRO_REPASSE)} do aporte`,
-          valor: r.parceiroRepasseFatia,
-        },
-        {
-          rotulo: `Estrutura do braço operacional · ${pctBr(PCT_PARCEIRO_ESTRUTURA)} do aporte`,
-          valor: r.parceiroEstruturaFatia,
-        },
-      ],
     },
     {
       rotulo: 'Imposto',
@@ -192,7 +173,7 @@ export default function MemorialCalculoModal({ resumo: r, onFechar }) {
             </p>
             <p className="mt-1 text-xl font-black text-pc-ouro sm:text-2xl">{brl(r.repasse)}</p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-pc-tinta-fraca sm:text-xs">
-              {pctBr(PCT_REPASSE_PARCEIRO_CICLO)} sobre o capital aportado, por ciclo de 30 dias — a
+              Participação de {ROTULO_REPASSE_PARCEIRO} sobre o capital aportado, por ciclo de 30 dias — a
               mesma regra do contador que você vê no seu ciclo. É pago do lucro da operação, que
               neste ciclo é de {brl(r.lucro)}.
             </p>

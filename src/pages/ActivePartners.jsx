@@ -169,7 +169,7 @@ export default function ActivePartners() {
       const purchases = response?.data?.purchases || [];
 
       // 2️⃣ Buscar usuários com planos ativos no sistema antigo (AppUser)
-      const usersWithPlans = await plataforma.entities.AppUser.list('-partner_plan_activated_at', 500);
+      const usersWithPlans = await plataforma.entities.AppUser.listAll('-partner_plan_activated_at');
       
       // 3️⃣ CRIAR SET de user_ids que JÁ TEM planos no sistema novo
       const userIdsWithNewPlans = new Set(purchases.map(p => p.user_id));

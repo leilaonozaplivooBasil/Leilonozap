@@ -85,7 +85,7 @@ export default function ParceiroCicloRoda({ etapas }) {
           <div
             role="group"
             tabIndex={0}
-            aria-label="Roda do ciclo de doze meses. Use as setas para navegar entre as etapas."
+            aria-label="Roda do ciclo de repasses. Use as setas para navegar entre as etapas."
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}

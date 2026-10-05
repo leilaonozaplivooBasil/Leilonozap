@@ -893,6 +893,7 @@ export default function XPerformanceGestao({ currentUser, hojeISO }) {
               currentUser={currentUser} equipe={equipe} participanteDe={participanteDe} nomeDe={nomeDe}
               tarefasCiclo={tarefasCiclo} carregarTarefas={carregarTarefas} catalogo={catalogo} acoesDoBanco={acoesDoBanco} onAcoesDoBanco={setAcoesDoBanco}
               pessoa={pessoa} onPessoa={setPessoa} dia={dia} onDia={setDia} desfazer={desfazer}
+              pessoasMetodo={equipeQuadroGeral}
               onAbrirQuadroGeral={(id) => { setPessoaFixo(id); setAbaModal('pessoa'); setModalAberto(true); }}
             />
           </div>

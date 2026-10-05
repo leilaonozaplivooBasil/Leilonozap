@@ -40,15 +40,21 @@ export default function OrderItemsChecklist({ items, packedIndices = [], onToggl
             }`}>
               {packed && <Check className="h-4 w-4 text-white" />}
             </span>
+            {/* 🖼️ 01/10/2026 — miniatura grande o bastante para reconhecer o
+                produto (a operadora não identificava nove itens só pelo nome).
+                Fundo branco porque as fotos de catálogo são em fundo branco. */}
             {mostraImagem ? (
               <img
                 src={it.image}
                 alt=""
-                className="h-10 w-10 shrink-0 rounded object-cover"
+                className="h-14 w-14 shrink-0 rounded-md border border-gray-500/40 bg-white object-contain"
+                loading="lazy"
                 onError={() => marcarSemImagem(idx)}
               />
             ) : (
-              <Package className={`h-5 w-5 shrink-0 ${packed ? 'text-green-400' : 'text-gray-400'}`} />
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-800/60">
+                <Package className={`h-6 w-6 ${packed ? 'text-green-400' : 'text-gray-400'}`} />
+              </span>
             )}
             <div className="min-w-0 flex-1">
               <p className={`text-sm font-medium ${packed ? 'text-green-300 line-through' : 'text-white'}`}>{it.title}</p>

@@ -159,7 +159,7 @@ test('no celular a home não vaza pro lado', { skip: semNavegador }, async () =>
   await pagina.close();
 });
 
-test('na tela, o "Em destaque" começa pelos itens âncora — e mostra o preço da loja', { skip: semNavegador }, async () => {
+test('na tela, o "Em destaque" começa pelos itens âncora — e o "na loja" não aparece mais (25/09)', { skip: semNavegador }, async () => {
   const pagina = await abrirHome();
 
   const titulos = await pagina.$$eval(
@@ -172,11 +172,8 @@ test('na tela, o "Em destaque" começa pelos itens âncora — e mostra o preço
   assert.match(titulos[0], /Harley/i, `o primeiro devia ser a Harley, veio: ${titulos[0]}`);
   assert.match(titulos[1], /Patinete/i, `o segundo devia ser o patinete, veio: ${titulos[1]}`);
 
-  const naLoja = await pagina.$$eval(
-    '[data-teste="carrossel-destaque"] [data-teste="preco-na-loja"]',
-    (ns) => ns.map((n) => n.textContent.trim()),
-  );
-  assert.ok(naLoja.some((t) => /3\.300,00/.test(t)), `faltou o preço de loja da Harley: ${naLoja.join(' | ')}`);
+  // 25/09: o "na loja R$ X" saiu do card (ordem do dono) — a ordem por preço de loja fica
+  assert.equal(await pagina.locator('[data-teste="preco-na-loja"]').count(), 0, 'o "na loja" voltou');
 
   // 🔴 e o herói não pode aparecer também no carrossel
   assert.ok(!titulos.some((t) => /Playstation/i.test(t)), 'o leilão do hero repetiu no carrossel');

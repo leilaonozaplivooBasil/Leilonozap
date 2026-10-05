@@ -12,7 +12,7 @@ import { plataforma } from "@/api/plataformaClient";
 const Auction = plataforma.entities.Auction;
 const User = { me: () => plataforma.auth.me() };
 const AppUser = plataforma.entities.AppUser;
-import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
+import { Zap, Filter, Package, Smartphone, Plug, Sofa, Home as HomeIcon, Shirt, Car, MessageCircle, DollarSign, ChevronLeft, ChevronRight, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { checkLocation } from "@/functions/checkLocation";
 
@@ -30,6 +30,8 @@ import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 import AuctionSectorLinks from '../components/home/AuctionSectorLinks';
 import DestaquesLeiloes from '../components/home/DestaquesLeiloes';
+import LancesAoVivo from '../components/home/LancesAoVivo';
+import ProvasSociais from '../components/home/ProvasSociais';
 const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { useSectionTracking } from '@/lib/tracking';
@@ -40,6 +42,7 @@ import { useSectionTracking } from '@/lib/tracking';
 import { medirPagina, PIXEL_LEILOES } from '@/lib/metaPixel';
 // 🔎 D4 — a busca precisa PARECER que buscou (áudio do dono, 11/09 às 14h08)
 import { mostrarBlocosDeDescoberta, recadoDaBusca } from '@/lib/buscaDaVitrine';
+import foguinho from '@/assets/foguinho-animado.webp';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -918,17 +921,20 @@ export default function Home() {
                   + contador, tudo numa linha só. Nada de informação perdida. */}
               <div className="flex items-center gap-2.5 flex-nowrap">
                 {/* PONTO 85 — pontinho verde removido: o foguinho já sinaliza que está no ar */}
-                <video
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
+                {/* 🔥 27/09/2026 — o foguinho é o charme da página (dono) e continua
+                    animado: era um VÍDEO (358 KB no iPhone, 225 KB nos outros) e agora é
+                    a MESMA chama em WebP animado (78 KB, 34 quadros, loop de ~3 s), a que
+                    já roda na página Arremate & Devoluções. Imagem animada também não
+                    depende de autoplay de vídeo, que o iPhone corta no modo economia. */}
+                <img
+                  src={foguinho}
+                  alt=""
                   aria-hidden="true"
-                  className="w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 pointer-events-none object-contain">
-                  <source src="/videos/foguinho-animado.mov" type='video/quicktime; codecs="hvc1"' />
-                  <source src="/videos/foguinho-animado.webm" type="video/webm" />
-                  <Flame className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400 animate-fire" />
-                </video>
+                  width={28}
+                  height={28}
+                  decoding="async"
+                  className="w-5 h-5 lg:w-7 lg:h-7 flex-shrink-0 pointer-events-none object-contain"
+                />
                 {/* PONTO 83 — tinta clara de volta, mantendo o peso FINO do PONTO 82 */}
                 <h1 className="truncate text-xl font-medium tracking-[-0.01em] text-white sm:text-2xl lg:text-3xl">
                   Leilões <span className="font-semibold text-emerald-400">Ativos</span>
@@ -1033,6 +1039,9 @@ export default function Home() {
             {/* Glow separator */}
             <div className="glow-line mb-8 mx-4 opacity-50" />
 
+            {/* 🔔 24/09/2026 — o alerta de lances recentes, acima da lista (dono) */}
+            <LancesAoVivo />
+
             {loadError && auctions.length === 0 &&
           <div className="mb-8 glass-card rounded-2xl p-6" style={{ borderColor: 'rgba(234, 179, 8, 0.2)' }}>
                 <div className="flex items-start gap-4">
@@ -1062,7 +1071,7 @@ export default function Home() {
           }
 
             {isLoading ?
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                 {Array(9).fill(0).map((_, i) =>
             <div key={i} className="skeleton-glass rounded-2xl p-4 sm:p-6">
                     <div className="w-full aspect-square skeleton-inner rounded-xl mb-4"></div>
@@ -1094,7 +1103,7 @@ export default function Home() {
               </div> :
 
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr" data-teste="grade-leiloes">
               {paginatedAuctions.map((auction) => {
                 if (!auction || !auction.id) return null;
                 return (
@@ -1195,6 +1204,9 @@ export default function Home() {
             <div className="text-center text-sm text-gray-500 mt-2">
               Mostrando {Math.min(paginatedAuctions.length, ITEMS_PER_PAGE)} de {filteredAuctions.length} leilões
             </div>
+
+            {/* 🏆 24/09/2026 — quem já arrematou + maiores arrematadores (dono) */}
+            <ProvasSociais />
           </>
           }
         </div>

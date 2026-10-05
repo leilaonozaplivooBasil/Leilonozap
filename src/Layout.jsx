@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { preservarDadosSensiveis } from '@/lib/dadosSensiveisDoUsuario';
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ShareAppModal from "@/components/common/ShareAppModal";
@@ -33,15 +34,21 @@ import { limparAceiteParceiro } from "@/lib/parceiroAcesso";
 // 🧭 Lateral de ícones única — entrou no lugar do botão "Voltar" (08/08/2026)
 import NavegacaoLateralGlobal from "@/components/common/NavegacaoLateralGlobal";
 import { buildAdminMenu } from "@/lib/adminMenu";
+// 🔑 26/09/2026 — crachá vencido: avisa na chegada e recarrega depois do novo login
+import { situacaoDoCracha, pedirNovoLogin, CHAVE_RELOGIN } from '@/lib/sessaoCliente';
+import { toast as avisoNaTela } from 'sonner';
 import useSiteMedia from "@/hooks/useSiteMedia";
 import FloatingDock from "@/components/common/FloatingDock";
 import AtalhoTopCollege from "@/components/nav/AtalhoTopCollege";
+import BlocoDeDemandas from "@/components/nav/BlocoDeDemandas";
+import SinoDoCliente from "@/components/nav/SinoDoCliente";
 import BarraDoApp from "@/components/nav/BarraDoApp";
 import { mostraBarraDoApp } from "@/lib/barraDoApp";
 import AcoesTopoSala from "@/components/auction/AcoesTopoSala";
 // 💰 PONTO 84 — carteira flutuante no desktop da sala (no mobile ela fica na navbar)
 import CarteiraFlutuante from "@/components/wallet/CarteiraFlutuante";
 import { lerCarrinho } from '@/lib/storageSeguro';
+import { capturarOrigemDoTrafego } from '@/lib/origemDoTrafego';
 
 const AppUser = plataforma.entities.AppUser;
 const User = { me: () => plataforma.auth.me() };
@@ -110,6 +117,34 @@ const PAGINAS_COM_LATERAL = new Set([
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
+  // 📣 25/09/2026 — o PRIMEIRO toque de tráfego (utm/fbclid/gclid) fica no
+  // aparelho até a pessoa se cadastrar; aí sobe com o cadastro. É o que
+  // responde "quantos leads vieram do Meta Ads".
+  // 📱 DIR-189 (30/09/2026) — A TELA DO NAVEGADOR (html/body) SEGUE A COR DA BARRA.
+  // No iPhone o dono viu um clarão branco em degradê sobre a logo, na área da
+  // barra de status. O body era branco (cor padrão) e a barra do topo, fixa e
+  // com desfoque (backdrop-filter), fica debaixo da barra de status desde o
+  // viewport-fit=cover (DIR-179): o desfoque do WebKit puxa a cor da borda da
+  // tela — branca — e a espalha pelos primeiros pixels. Corpo escuro nas telas
+  // escuras, branco nas claras (index.css lê o atributo), e a faixa do entalhe
+  // fica opaca na própria barra (veja o backgroundImage do <nav>). Fica aqui em
+  // cima, antes de qualquer retorno antecipado, por causa da regra dos hooks.
+  const temaClaroDaBarra = currentPageName === 'Recepcao' || currentPageName === 'LiveShopNoZap' || PAGINAS_TEMA_CLARO.has(currentPageName);
+  useEffect(() => {
+    if (temaClaroDaBarra) document.body.dataset.temaClaro = '1';
+    else delete document.body.dataset.temaClaro;
+    // o esquema de cores da página guia o material da barra de status no Safari
+    const esquema = temaClaroDaBarra ? 'light' : 'dark';
+    document.documentElement.style.colorScheme = esquema;
+    const meta = document.querySelector('meta[name="color-scheme"]');
+    if (meta) meta.setAttribute('content', esquema);
+    const cor = document.querySelector('meta[name="theme-color"]');
+    if (cor) cor.setAttribute('content', temaClaroDaBarra ? '#FFFFFF' : '#21222B');
+  }, [temaClaroDaBarra]);
+
+  useEffect(() => {
+    try { capturarOrigemDoTrafego(window.location.search, { referrer: document.referrer, landing: window.location.pathname }); } catch { /* medição, nunca derruba */ }
+  }, []);
   const navigate = useNavigate();
   // Logo/favicon gerenciados pelo Painel de Mídia (fallback: assets estáticos)
   const { logoUrl } = useSiteMedia();
@@ -156,6 +191,25 @@ export default function Layout({ children, currentPageName }) {
   const [showWelcome, setShowWelcome] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+
+  // 🔴 26/09/2026 — "SUA SESSÃO EXPIROU" NA HORA DO LANCE (chamado do Paim, cliente Lilian).
+  // O crachá vale 30 dias; o localStorage.currentUser não vence. Quem se cadastrou e
+  // nunca mais entrou continua "logado" na tela, deposita (rota em observação) e só
+  // na cotação do frete descobre que precisa entrar de novo. Aqui o site confere o
+  // crachá NA CHEGADA e avisa uma vez por sessão, com o botão de entrar ali mesmo.
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem('currentUser')) return;
+      if (sessionStorage.getItem('nz_aviso_sessao_vencida')) return;
+      const situacao = situacaoDoCracha();
+      if (situacao === 'ok') return;
+      sessionStorage.setItem('nz_aviso_sessao_vencida', '1');
+      avisoNaTela.warning('Sua sessão expirou. Entre de novo para dar lance e comprar.', {
+        duration: 12000,
+        action: { label: 'Entrar de novo', onClick: pedirNovoLogin },
+      });
+    } catch { /* storage bloqueado: a sala ainda oferece o botão */ }
+  }, []);
   const [showRefRegister, setShowRefRegister] = useState(false);
   const [referrerName, setReferrerName] = useState('');
   const [cartCount, setCartCount] = useState(0);
@@ -336,7 +390,8 @@ export default function Layout({ children, currentPageName }) {
       const usersInDB = await AppUser.filter({ id: userFromStorage.id });
 
       if (usersInDB && usersInDB.length > 0) {
-        const freshUser = usersInDB[0];
+        // 🔐 cpf/pix não vêm mais do banco pelo navegador — preserva o que o login trouxe
+        const freshUser = preservarDadosSensiveis(usersInDB[0], userFromStorage);
 
         localStorage.setItem('currentUser', JSON.stringify(freshUser));
         setCurrentUser(freshUser);
@@ -858,6 +913,7 @@ export default function Layout({ children, currentPageName }) {
   // criando um choque visual de "app dentro de outro app". Estendendo a MESMA
   // barra clara da Recepção para toda tela do tema claro do painel (PAGINAS_TEMA_CLARO).
   const isPainelClaro = isRecepcao || PAGINAS_TEMA_CLARO.has(currentPageName);
+  const corDaBarra = isPainelClaro ? '#FFFFFF' : '#21222B';
 
   const shouldShowLoading = isLoading;
 
@@ -937,7 +993,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
 
       <div className="min-h-screen bg-gray-900">
-        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
+        {isLandingPage ? null : <nav className="fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'var(--nz-entalhe)', paddingLeft: 'env(safe-area-inset-left, 0px)', paddingRight: 'env(safe-area-inset-right, 0px)', background: isPainelClaro ? 'rgba(255, 255, 255, 0.9)' : 'rgba(33, 34, 43, 0.86)', backgroundImage: `linear-gradient(to bottom, ${corDaBarra} 0, ${corDaBarra} var(--nz-entalhe), transparent var(--nz-entalhe))`, backdropFilter: 'blur(20px) saturate(1.6)', WebkitBackdropFilter: 'blur(20px) saturate(1.6)', borderBottom: isPainelClaro ? '1px solid #EDF0EE' : '1px solid rgba(153, 193, 152, 0.10)', boxShadow: isPainelClaro ? 'none' : '0 4px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04)', transform: 'translateZ(0)', willChange: 'transform', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className={`relative flex justify-between items-center ${isRecepcao ? 'h-14' : 'h-14 sm:h-16'}`}>
 
@@ -968,6 +1024,8 @@ export default function Layout({ children, currentPageName }) {
                     "mais próxima da logo, sem o quadrado, mais em 3D". Vale no celular
                     e no computador — saiu do NavDesktop e do cluster do menu mobile. */}
                 <AtalhoTopCollege currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1 md:ml-0" />
+                {/* 📝 24/09/2026 — o botão "D": bloco de notas rápido de demandas (só logado). */}
+                <BlocoDeDemandas currentUser={currentUser} temaClaro={isPainelClaro} className="ml-1" />
                 {/* PONTO 91 — na sala de leilão: Favoritar e Compartilhar entre a logo e a Carteira */}
                 {currentPageName === 'AuctionRoom' && <AcoesTopoSala />}
                 {/* AO VIVO AGORA removido da navbar (pedido Gabriel 26/07) */}
@@ -1039,6 +1097,8 @@ export default function Layout({ children, currentPageName }) {
                       <span className="text-[10px] font-bold uppercase tracking-wide text-white">Carteira</span>
                     </button>
                   )}
+                  {/* 🔔 28/09/2026 — o sino do cliente, ao lado do menu (só logado) */}
+                  {isLoggedIn && <SinoDoCliente currentUser={currentUser} temaClaro={isPainelClaro} />}
                   {/* ⭐ A Top College saiu daqui (24/09): mora colada na logo, à esquerda. */}
                   <button
                     type="button"
@@ -1119,6 +1179,16 @@ export default function Layout({ children, currentPageName }) {
             onSuccess={(user) => {
               setCurrentUser(user);
               setShowLoginModal(false);
+
+              // 🔑 26/09/2026 — veio do "Entrar de novo" (sessão vencida): recarrega
+              // a MESMA tela, para a sala/carteira lerem o usuário e o crachá novos.
+              try {
+                if (sessionStorage.getItem(CHAVE_RELOGIN)) {
+                  sessionStorage.removeItem(CHAVE_RELOGIN);
+                  window.location.reload();
+                  return;
+                }
+              } catch { /* sem storage: segue o fluxo normal */ }
 
               // 👑 REGRA DE DONO ÚNICO — quem JÁ TEM dono no cadastro (referred_by_id)
               // não precisa do link: apaga pra não exibir/atribuir a um dono alheio.

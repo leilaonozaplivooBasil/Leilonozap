@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
+import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
+import { garantirScriptGoogle } from '@/lib/googleLogin';
 
 export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, theme }) {
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     try {
       // Entrar com Google também CRIA conta na primeira vez: sem o código do link
       // a pessoa entrava solta e caía no Site Oficial, tirando-a da árvore de quem indicou.
-      const result = await plataforma.functions.invoke('googleLogin', { credential: response.credential, ref_code: getReferral() || '' });
+      const result = await plataforma.functions.invoke('googleLogin', { origem_trafego: lerOrigemDoTrafego(), credential: response.credential, ref_code: getReferral() || '' });
       if (!result?.success) {
         setErrorMessage("❌ " + (result?.error || 'Não foi possível entrar com o Google.'));
         setIsLogging(false);
@@ -81,6 +83,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   useEffect(() => {
     let cancelled = false;
     let attempts = 0;
+    garantirScriptGoogle();
 
     const renderGoogleButton = (clientId) => {
       if (cancelled) return;
@@ -99,8 +102,11 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             locale: 'pt-BR'
           });
         }
-      } else if (attempts < 20) {
+      } else if (attempts < 60) {
+        // 27/09/2026 — o script do Google agora vem sob demanda (src/lib/googleLogin.js):
+        // pede e espera até 15 s, em vez de 5 s, para caber em internet lenta.
         attempts += 1;
+        garantirScriptGoogle();
         setTimeout(() => renderGoogleButton(clientId), 250);
       }
     };

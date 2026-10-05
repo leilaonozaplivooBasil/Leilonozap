@@ -31,7 +31,7 @@ export default function MinhaArvoreRede({ user }) {
 
   const carregar = useCallback(async () => {
     try {
-      const lista = await AppUser.list('-created_date', 1000);
+      const lista = await AppUser.listAll('-created_date');
       setTodos(Array.isArray(lista) ? lista : []);
     } catch {
       setTodos([]);
@@ -99,7 +99,7 @@ export default function MinhaArvoreRede({ user }) {
   if (todos === null) {
     return (
       <div className="flex items-center gap-2 text-gray-400 py-10">
-        <Loader2 className="w-5 h-5 animate-spin" /> Montando sua árvore…
+        <Loader2 className="w-5 h-5 animate-spin" /> Montando seu organograma…
       </div>
     );
   }
@@ -117,15 +117,15 @@ export default function MinhaArvoreRede({ user }) {
     // nz-escuro: a árvore mantém o visual escuro do Painel de Controle mesmo
     // dentro do painel claro (é a MESMA tela, não pode mudar de cara).
     <div className={telaCheia
-      ? 'nz-escuro fixed inset-0 z-[120] bg-gray-950 flex flex-col'
+      ? 'nz-escuro nz-tela-cheia fixed inset-0 z-[120] bg-gray-950 flex flex-col'
       : 'nz-escuro rounded-lg border border-gray-700 bg-gray-800/50 overflow-hidden'}>
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-700 bg-gray-900/60">
         <Network className="w-4 h-4 text-green-400 flex-shrink-0" />
-        <span className="text-[13px] font-semibold text-green-400">Minha Árvore Genealógica</span>
+        <span className="text-[13px] font-semibold text-green-400">Organograma</span>
         <span className="text-[11px] text-gray-500 hidden sm:inline">
           {podeEditar
             ? 'arraste uma pessoa sobre outra para mudar o indicador (pede confirmação)'
-            : 'toda a sua rede, nível por nível — só leitura'}
+            : 'sua operação, nível por nível — só leitura'}
         </span>
         <div className="flex-1" />
         <Button
