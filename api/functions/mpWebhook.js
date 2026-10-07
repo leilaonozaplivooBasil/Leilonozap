@@ -11,6 +11,7 @@ import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 // 🏪 Reposição de estoque do lojista (compra firme): entra estoque, não paga comissão.
 import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
+import { avisarAdmin } from '../_lib/avisarAdmin.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
 import { resumoDoPagamento, resolverPagamentoDoAviso, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
@@ -429,6 +430,8 @@ async function conferirEGuardar(pay, sale, evento) {
       if (b?.success && !b.ja_bloqueado) {
         evento.resultado = 'bloqueado';
         console.error(`[MP] DINHEIRO SAIU — ${resumo.situacao} no pagamento ${pay.id} (venda ${sale.id}, ${sale.buyer_name}, R$ ${resumo.valor}). Bloqueado R$ ${b.bloqueado} na carteira; não recuperado R$ ${b.nao_recuperado}.`);
+        // 🛡️ DIR-204: o dono sabe NA HORA, não só quando abre o painel. Nunca derruba o webhook.
+        avisarAdmin(`🔴 *Dinheiro saiu no gateway*\n\n${sale.buyer_name || 'Cliente'} · depósito de R$ ${Number(resumo.valor || 0).toFixed(2)} · ${resumo.situacao}\n\nO sistema já: bloqueou R$ ${Number(b.bloqueado || 0).toFixed(2)} na carteira${Number(b.nao_recuperado || 0) > 0 ? ` (R$ ${Number(b.nao_recuperado).toFixed(2)} já tinham sido gastos)` : ''}, cortou a comissão de indicação e cancelou o bônus.\n\nOnde ver: Painel do Investidor → Conciliação.`).catch(() => {});
       }
     } else if (sale.gateway?.bloqueio) {
       resumo.bloqueio = sale.gateway.bloqueio;

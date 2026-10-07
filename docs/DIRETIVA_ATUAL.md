@@ -1,3 +1,18 @@
+## 🛡️ DIR-204 — O sistema que vigia o sistema: vigia financeiro, fechamento do dia e aviso na hora quando dinheiro sai (07/10/2026)
+
+**Dono:** "quais automações seriam de fato importantes… tipo Vale do Silício, equipe sênior"; depois: "cirúrgicas, não quebre nada que esteja funcionando, só melhore e deixe o aplicativo 10/10". Fase A das oito aprovadas (as outras — arremate não pago, antifraude de depósito, nutrição, pagamento automático por PIX — vêm em seguida, uma por vez).
+
+**Princípio:** nada aqui mexe em dinheiro. As duas funções novas do banco **só leem**; as rotas novas só leem e avisam; o único registro é a memória em `system_logs`. Se o vigia cair, o aplicativo não sente.
+
+**Feito:**
+1. **Vigia financeiro** (`vigia_financeiro()`, migração `20261007200000`, aplicada em produção; rota `vigiaFinanceiro`, cron de hora em hora). Confere dez regras e, para cada uma que falha, manda UMA mensagem no WhatsApp de administrador (sem repetir o mesmo assunto antes de 6 horas): saldo × extrato, liberação dos 7 dias atrasada, venda paga sem comissão, leilão encerrado sem comissão do martelo, indicação a conferir, crédito que ficou pendente, cupom de bônus sobre depósito não pago, pendência na conciliação, ação no gateway que não andou, webhook mudo há mais de 24h, robô do banco (pg_cron) parado ou com falha. Primeira rodada em produção: **zero alertas** (saldo da rede R$ 1.153,38 = extrato; em espera R$ 1.636; conciliação sem pendência; robôs em dia).
+2. **Fechamento do dia** (`fechamento_diario(dia)`, mesma migração; rota `fechamentoDiario`, todo dia às 07h de Brasília). O resumo de ontem chega no WhatsApp: entrou (depósitos, loja, arremates, líquido no gateway), saiu/travou (avisos de devolução, bloqueios, devoluções feitas), comissões (geradas, em espera, liberadas, pagas na mão, estornadas, empresa), saldos (rede, carteiras, reservado, conta oficial, bônus), movimento (cadastros, lances, leilões, arremates a pagar) e a auditoria do vigia. Uma mensagem por dia; `?dia=AAAA-MM-DD` reemite outro dia para conferência.
+3. **Aviso na hora quando dinheiro sai** (`mpWebhook` e `conciliarMercadoPago`): no momento em que o gateway informa devolução, chargeback ou disputa e o sistema bloqueia a carteira, o administrador recebe no WhatsApp quem, quanto, o que já foi feito (bloqueio, corte da comissão, cancelamento do bônus) e onde ver. Antes só aparecia no log e no painel.
+
+**Para receber:** as mensagens vão para os números em `ALERTA_WHATSAPP` (Vercel). Hoje: Luiz e Avila. A Beatriz precisa ser incluída lá para receber.
+
+**Prova:** `tests/vigiaEFechamento.test.mjs` (6), suíte completa, lint 0 erros, build; `select vigia_financeiro()` e `select fechamento_diario()` rodados em produção.
+
 ## 🧾 DIR-203 — Os 10% de quem indicou: a espera aparece para o indicador, e a indicação que mudou de dono aparece para o dono (07/10/2026)
 
 **Dono:** "não é bônus; é 10% sobre o depósito da indicação. Corrija o que tiver que corrigir e veja se quem indicou está ganhando os 10%."

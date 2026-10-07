@@ -43,6 +43,8 @@
     { "path": "/api/functions/avisoUltimaHora", "schedule": "*/15 * * * *" },
     { "path": "/api/functions/avisoPixPendente", "schedule": "*/15 * * * *" },
     { "path": "/api/functions/nutricaoCadastro", "schedule": "47 13 * * *" },
-    { "path": "/api/functions/conciliarMercadoPago", "schedule": "*/30 * * * *" }
+    { "path": "/api/functions/conciliarMercadoPago", "schedule": "*/30 * * * *" },
+    { "path": "/api/functions/vigiaFinanceiro", "schedule": "23 * * * *" },
+    { "path": "/api/functions/fechamentoDiario", "schedule": "0 10 * * *" }
   ]
 }
