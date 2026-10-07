@@ -140,3 +140,78 @@ test('DIR-180 · período sem parada no dia diz "sem parada", em vez de parecer 
     assert.deepEqual(erros, []);
   } finally { await ctx.close(); }
 });
+
+// ── 👔 DIR-185 — o elenco aparece em TODO aparelho ──
+//
+// Dono, com um print do iPhone e outro do MacBook lado a lado: "na Jornada os
+// bonequinhos que aparecem no desktop não estão aparecendo no mobile. Precisa
+// identificar esse erro imediatamente e fazer toda a experiência ser igual em
+// todos os dispositivos."
+//
+// 🔴 A CAUSA, numa linha só: o `<span>` do boneco carregava `hidden sm:block`
+// — escondido abaixo de 640px, ou seja, em TODO celular, de propósito. Era
+// precaução contra vazar pela lateral numa tela estreita, e ninguém nunca
+// mediu se vazava mesmo. Medido agora: não vaza, nem num aparelho de 320px.
+//
+// Este teste é o que faltava — ele mede os dois lados em três larguras, pra
+// ninguém "proteger" a tela de novo escondendo o elenco sem conferir.
+const LARGURAS = [320, 390, 1280]; // iPhone SE · iPhone moderno · computador
+
+test('👔 DIR-185 · o elenco aparece em TODA largura, e em nenhuma ele vaza pela lateral', { skip: semNavegador }, async () => {
+  for (const largura of LARGURAS) {
+    const nav = await garantirNavegador();
+    const ctx = await nav.newContext({ viewport: { width: largura, height: 800 }, isMobile: largura < 700, hasTouch: largura < 700 });
+    const pagina = await ctx.newPage();
+    const erros = []; pagina.on('pageerror', (e) => erros.push(String(e)));
+    try {
+      await pagina.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await pagina.waitForSelector('[data-teste="rodape-jornada"]', { timeout: 20000 });
+      await pagina.click('[data-teste="rodape-dia-inteiro"]');
+      await pagina.waitForTimeout(700);
+
+      const m = await pagina.evaluate(() => {
+        const bs = [...document.querySelectorAll('[data-teste="boneco-elenco"]')];
+        const doc = document.documentElement;
+        return {
+          quantos: bs.length,
+          vazaEsquerda: bs.filter((b) => b.getBoundingClientRect().left < 0).length,
+          vazaDireita: bs.filter((b) => b.getBoundingClientRect().right > window.innerWidth).length,
+          invisiveis: bs.filter((b) => { const c = b.getBoundingClientRect(); return c.width === 0 || c.height === 0; }).length,
+          rolagemLateral: doc.scrollWidth > doc.clientWidth,
+        };
+      });
+
+      assert.ok(m.quantos > 0, `${largura}px: nenhum boneco na tela — o elenco sumiu neste aparelho`);
+      assert.equal(m.invisiveis, 0, `${largura}px: ${m.invisiveis} boneco(s) com caixa zerada (escondido por CSS)`);
+      assert.equal(m.vazaEsquerda, 0, `${largura}px: ${m.vazaEsquerda} boneco(s) vazando pela esquerda`);
+      assert.equal(m.vazaDireita, 0, `${largura}px: ${m.vazaDireita} boneco(s) vazando pela direita`);
+      assert.equal(m.rolagemLateral, false, `${largura}px: o elenco criou rolagem lateral na página`);
+      assert.deepEqual(erros, []);
+      if (process.env.FOTO_BANCA) await pagina.screenshot({ path: process.env.FOTO_BANCA.replace('.png', `-elenco-${largura}.png`) });
+    } finally { await ctx.close(); }
+  }
+});
+
+test('👔 DIR-185 · o MESMO elenco nas três larguras — o celular não perde ninguém', { skip: semNavegador }, async () => {
+  const porLargura = {};
+  for (const largura of LARGURAS) {
+    const nav = await garantirNavegador();
+    const ctx = await nav.newContext({ viewport: { width: largura, height: 800 }, isMobile: largura < 700, hasTouch: largura < 700 });
+    const pagina = await ctx.newPage();
+    try {
+      await pagina.goto(BASE, { waitUntil: 'domcontentloaded' });
+      await pagina.waitForSelector('[data-teste="rodape-jornada"]', { timeout: 20000 });
+      await pagina.click('[data-teste="rodape-dia-inteiro"]');
+      await pagina.waitForTimeout(700);
+      // 🩹 só os VISÍVEIS: `hidden` deixa o elemento no DOM, então contar
+      // presença faria este teste passar com o defeito de volta — foi o que a
+      // mutação mostrou quando eu repus o `hidden sm:block`.
+      porLargura[largura] = await pagina.$$eval('[data-teste="boneco-elenco"]',
+        (bs) => bs.filter((b) => b.getBoundingClientRect().width > 0)
+          .map((b) => `${b.getAttribute('data-boneco')}:${b.getAttribute('data-pose')}`));
+    } finally { await ctx.close(); }
+  }
+  // o desktop é a referência: o mesmo dia tem que render o mesmo elenco em todo lugar
+  assert.deepEqual(porLargura[390], porLargura[1280], 'o celular de 390px mostra um elenco diferente do computador');
+  assert.deepEqual(porLargura[320], porLargura[1280], 'o celular de 320px mostra um elenco diferente do computador');
+});

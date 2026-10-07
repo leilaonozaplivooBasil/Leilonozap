@@ -1,3 +1,110 @@
+## 🧾 DIR-203 — Os 10% de quem indicou: a espera aparece para o indicador, e a indicação que mudou de dono aparece para o dono (07/10/2026)
+
+**Dono:** "não é bônus; é 10% sobre o depósito da indicação. Corrija o que tiver que corrigir e veja se quem indicou está ganhando os 10%."
+
+**Conferido depósito a depósito desde 26/09:** todo depósito pago gerou a comissão para o indicador da hora do depósito (Verônica, Luciano, Iara, Emannuel, Luis Francisco, paim, Ribeiro). As liberações dos 7 dias estão em dia.
+
+**O caso real:** Marcelo Zaidan Salles foi movido para debaixo do Luciano em 03/10 08h52 (ajuste de rede pelo admin), mas os R$ 4.450 que ele depositou entre 29/09 e 02/10 pagaram o indicador da época, a conta oficial — e essas linhas foram canceladas no DIR-201. O Luciano olhava e não via nada. Outros três clientes movidos desde 27/09 (Herbert → Luis Francisco, Henrique → Beatriz, Leonardo → Luciano) não perderam nada: Herbert já estava com o Luis Francisco quando depositou; os outros dois não depositaram.
+
+**Feito:**
+1. **Passado:** 4 linhas em espera para o Luciano sobre os depósitos do Marcelo (R$ 5 + R$ 30 + R$ 10 + R$ 400 = R$ 445), com o mesmo prazo de 7 dias contado do depósito; liberam entre 07/10 e 09/10 pelo robô. Decisão: o admin reconheceu o Luciano como indicador e a empresa não ficou com nada.
+2. **Extrato de quem indicou** (`getMyCommissions` + `ExtratoComissoes`): a indicação em espera aparece na hora, com "Em espera · libera dd/mm" e o depósito do cliente. Antes só aparecia 7 dias depois, quando virava linha "Gerada" — por 7 dias o indicador não via nada.
+3. **Carteira:** o cartão "A liberar" passou a dizer "A liberar (indicações) · 10% do depósito de quem você indicou · libera 7 dias depois" (a nota antiga falava do escrow de vendas, cancelado em 28/09).
+4. **Relatório de Pagamentos** (`relatorio_comissoes` v3, migração `20261007150000`, aplicada em produção): bloco "Indicações a conferir" com todo depósito na regra cujo indicador atual não recebeu os 10% — a Beatriz vê, o dono decide. Hoje: nenhum.
+
+**Regra mantida:** a comissão é do indicador na hora do depósito. Cliente movido depois não gera comissão retroativa sozinho; aparece no relatório para decisão.
+
+**Prova:** `tests/indicacaoAConferir.test.mjs` (3), suíte completa, lint 0 erros, build.
+
+## 🎟️ DIR-202 — O bônus de 10% (Cupom Passaporte) segue o depósito; a Carteira mostra o guardado (07/10/2026)
+
+**Dono, com print de cliente:** "as pessoas que estão dando lance no leilão não estão recebendo os 10%; desde semana passada; não está constando mais." E: "auditoria extremamente diligente, sem quebrar nada, para não ter mais nenhum erro."
+
+**O que é o "10%":** o Cupom Passaporte — 10% de cada depósito (a partir de R$ 27), que nasce guardado e libera, fatia a fatia, a cada leilão que a pessoa disputa e não ganha; vale só na Loja Virtual. Não é a comissão de indicação.
+
+**Auditado em 07/10 (banco + código):** todo depósito pago desde 17/09 tem o cupom (único sem cupom: R$ 25 de 21/09, abaixo do piso da época); as liberações acontecem no fim de cada leilão (PS5 26/09: 12 fatias; Harley 29/09: 4; iPhone 17 02/10: 15); desde 02/10 só terminou um leilão com um único participante, então nada havia para liberar. R$ 2.716 gastáveis e R$ 884 guardados hoje. Comissões reconferidas no mesmo ato: 0 saldos fora do extrato, 0 liberações atrasadas, os 2 depósitos de 06/10 com a comissão de indicação na espera, a venda de 06/10 com 30% certinho.
+
+**Os dois problemas reais:**
+1. **Tela:** o cartão da Carteira escondia o valor guardado quando a pessoa já tinha algum crédito liberado. Quem depositou R$ 3.000 e tinha R$ 15 liberados via "R$ 15" e nada dos R$ 300 esperando o leilão — é exatamente "não está constando". `PassaporteCard` agora mostra liberado e guardado juntos, com os valores.
+2. **Furo:** depósito devolvido/contestado no gateway bloqueava a carteira e cortava a comissão (DIR-198), mas o cupom ficava de pé: Diogo tinha R$ 310 gastáveis na loja sobre R$ 3.300 que voltaram para ele. Migração `20261007120000` (aplicada em produção): `cancelar_cupom_passaporte_do_deposito` e `bloquear_saldo_contestado` v3 chamando-a sempre. Passado: os 4 cupons do Diogo cancelados (R$ 310 liberados + R$ 20 guardados; nada tinha sido gasto).
+
+**Prova:** `tests/cupomPassaporteSegueODeposito.test.mjs` (3), suíte completa, lint 0 erros, build.
+
+## 🧾 DIR-201 — As decisões da auditoria das comissões (05/10/2026)
+
+**Dono, sobre as 5 decisões do DIR-200:** "QUERO QUE VOCÊ DECIDA ISSO." Decidido e executado (nada aqui muda saldo de ninguém da rede):
+
+1. **Saldo × extrato (R$ 140,26 de 3 contas internas):** o dinheiro foi gasto em compras pagas com saldo de comissão; a linha "Gerada" ficou aberta. Entrou uma linha **negativa** `compra_com_saldo` em cada conta (Luiz −105,09 · Beatriz −20,58 · Luciano −14,59), sale_type `ajuste`. Extrato = saldo, saldo intocado. **Daqui para a frente** `comprar_com_saldo` grava essa linha sozinha (+ `wallet_ledger` `compra_com_comissao`). A tela mostra "Usado em compra"; a linha nunca é pagável (tela e servidor recusam).
+2. **Leilão paga no martelo (mantido):** o lance reserva o saldo, então o martelo já é o pagamento, como está documentado. O único caso em aberto (R$ 73,80) é da conta oficial.
+3. **16 vendas Nexus de 03–15/08 sem comissão (R$ 1.014,42): sem retroativo.** A regra de comissionar venda Nexus começou em 15/08, e as pessoas envolvidas tiveram a comissão zerada por ordem do dono em 28/09.
+4. **A empresa fora dos 10% de indicação:** cliente de cadastro direto aponta para a conta oficial; esses 10% eram "comissão" da empresa para a empresa. `trg_deposito_paga_indicador` agora pula a conta oficial. Passado estornado pela função de estorno: R$ 505 em espera cancelados (6 depósitos) e R$ 2,70 já liberados saíram do saldo da conta oficial e a linha virou "Estornado".
+5. **Cargos de quem foi zerado em 28/09 (Ribeiro, Iara, Elenice): ficam.** Zerar saldo acertou o passado; tirar cargo é tirar da rede, e isso o dono não pediu.
+
+**Migração `20261005230000_decisoes_da_auditoria.sql`** (aplicada em produção e registrada): `trg_deposito_paga_indicador` v2 e `comprar_com_saldo` v2. `src/lib/origemDaComissao.js` ganha `compra_com_saldo` e `ehLinhaDeUso`; `linhaPagavel` exige valor > 0; `payCommissionManually` recusa linha ≤ 0.
+
+**Prova:** `tests/decisoesDaAuditoria.test.mjs` (4), suíte completa, lint 0 erros, build; `relatorio_comissoes()` em produção: "saldos fora do extrato" vazio e indicação da empresa zerada.
+
+## 🧾 DIR-200 — Auditoria financeira das comissões: relatório por origem e licença, liberação dos 7 dias com segurança (05/10/2026)
+
+**Dono:** "auditoria financeira extremamente diligente; atualize os pagamentos após os 7 dias; relatório destrinchando os 10% dos depósitos, os 5% do leilão e a venda da loja por licença (Influenciador, Vendedor, Parceiro etc.); analise todo o sistema financeiro, traga erros e bugs e como funcionam os pagamentos hoje." Depois do "entendi": "PODE FAZER".
+
+**Relatório completo:** `docs/AUDITORIA_COMISSOES_2026-10-05.md` (régua inteira de cada origem, números do dia, o que bate, o que não bate, decisões que ficam com o dono). **Nenhum saldo foi alterado.**
+
+**O que bate:** liberação dos 7 dias (17 liberadas, todas em até 58 min do vencimento; nenhuma vencida parada); 10% exatos em todas as 37 comissões de depósito; nenhum depósito na regra sem comissão; 47 vendas da loja desde 01/08 somam 30% certinho; 52 leilões somam 30%; 14 pagamentos manuais batem; nenhuma duplicata; 20 de 23 saldos iguais ao extrato.
+
+**Achados:** (4.1) saldo menor que o extrato em 3 contas internas, R$ 140,26 (Luiz 105,09 · Beatriz 20,58 · Luciano 14,59) por compras pagas com saldo de comissão — dinheiro gasto, linha "Gerada" ficou aberta; (4.2) compra com saldo não deixa rastro na linha; (4.3) liberação dos 7 dias não olhava se o depósito continuava de pé; (4.4) estorno do depósito não estornava a linha "Gerada"; (4.5) 5%/10% do leilão pagos no martelo antes do arrematante pagar (1 caso, R$ 73,80, conta oficial); (4.6) R$ 125 do Luciano liberados 5 dias antes em 28/09, fora do robô; (4.7) 16 vendas Nexus de 03–15/08 sem comissão (R$ 1.014,42); (4.8) a conta oficial entrava no "total das pessoas"; (4.9) a empresa recebe 10% dos depósitos de clientes que ela mesma indicou (R$ 505 em espera); (4.10) quem foi zerado em 28/09 segue nos pools; (4.11) `recalculateCommissionBalances` criaria R$ 140,26 se rodasse.
+
+**Feito (migração `20261005200000`, aplicada em produção):** `liberar_saldos_maturados` só libera depósito ainda pago e sem devolução/chargeback (vira `cancelado` se o dinheiro saiu; retido/disputa/alterado não tratado fica em espera); `estornar_comissoes_do_deposito` marca a linha `indicacao_deposito` como estornada e devolve `ja_pagas`; nova `relatorio_comissoes()` (só servidor). Rota `relatorioComissoes` (admin, crachá). Tela: bloco "Relatório por origem e licença" (em espera · a receber · pago · estornado por origem; tabela por cargo; empresa à parte; próximas liberações; alerta se o robô atrasar), "Auditoria viva · saldo × extrato", empresa fora do total das pessoas, resumo por origem e cargo em português em cada cartão. `src/lib/origemDaComissao.js` é a tabela única papel → origem/rótulo.
+
+**Fica com o dono (nada mexe em saldo sem o "sim"):** marcar as linhas usadas em compra (4.1); leilão pagar no martelo ou no pagamento (4.5); retroativo das 16 vendas Nexus (4.7); tirar a conta oficial dos 10% (4.9); tirar os cargos de quem foi zerado (4.10).
+
+**Prova:** `tests/auditoriaComissoes.test.mjs` (6), suíte completa, lint 0 erros, build; `select relatorio_comissoes()` em produção.
+## 👔 DIR-185 — O elenco sumia no celular (05/10/2026)
+
+**Dono, com um print do iPhone e outro do MacBook lado a lado:** "na Jornada os
+bonequinhos que aparecem no desktop não estão aparecendo no mobile. Precisa
+identificar esse erro imediatamente e fazer toda a experiência ser igual em
+todos os dispositivos."
+
+**🔴 A causa, numa linha só** (`XGameJornada.jsx`, o `<span>` do boneco):
+
+```
+hidden sm:block
+```
+
+Escondido abaixo de 640px — ou seja, em **todo celular**, de propósito. Era
+precaução contra o boneco vazar pela lateral numa tela estreita, e **ninguém
+nunca mediu se vazava mesmo**.
+
+**Medido agora, em Chromium real, em três larguras:**
+
+| largura | bonecos | vaza esquerda | vaza direita | rolagem lateral |
+|---|---|---|---|---|
+| 320px (iPhone SE) | 3 | 0 | 0 | não |
+| 390px (iPhone atual) | 3 | 0 | 0 | não |
+| 1280px (computador) | 3 | 0 | 0 | não |
+
+A 390px as caixas ficam entre 174px e 295px numa tela de 390 — sobra larga dos
+dois lados. A precaução escondia um elenco que sempre coube.
+
+**Provas:** `tests/navegador/rodapeJornada.spec.mjs` (+2) — um mede os dois
+lados e a rolagem nas três larguras; o outro compara o elenco do celular com o
+do computador e exige que sejam **idênticos** (mesmo boneco, mesma pose).
+
+**🩹 A mutação achou um defeito no MEU teste:** repus o `hidden sm:block` e o
+segundo teste PASSOU — porque `hidden` deixa o elemento no DOM, e eu estava
+contando presença, não visibilidade. Corrigido pra filtrar por caixa com
+largura > 0. Com a correção, a mutação derruba os dois. Um teste que não cai
+com o defeito de volta não é prova de nada.
+
+**Varredura:** zero `hidden sm:` / `sm:hidden` / `useEhCelular` sobrando em
+`XGameJornada`, `XGameCapas`, `ElencoBoneco`, `PlacarDoDia`, `BarraDaVisao`,
+`PortasDasVisoes` e `RodapeDaJornada`. A experiência é a mesma em todo aparelho.
+
+Suíte **3691/3691** · lint 0 erro · build OK.
+
+---
+
 ## 📱 DIR-199 — Mapa do painel no iPhone: "Fechar" nunca mais debaixo do relógio (03/10/2026)
 
 **Dono, com vídeo:** "os botões de fechar estão subindo muito e não está aparecendo; essas coisas não podem acontecer de jeito nenhum."

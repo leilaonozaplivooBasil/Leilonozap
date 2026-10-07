@@ -88,7 +88,8 @@ export function historicoOrdenado(pagamentos = []) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Linha que ainda pode ser marcada como paga. */
-export const linhaPagavel = (c) => c && (c.status === 'pending' || c.status === 'confirmed');
+// DIR-201: linha negativa ('compra_com_saldo', comissão usada em compra) nunca é pagável
+export const linhaPagavel = (c) => !!c && (c.status === 'pending' || c.status === 'confirmed') && Number(c.amount) > 0;
 
 /** Soma, em centavos exatos, das linhas selecionadas (só as pagáveis contam). */
 export function somaDasSelecionadas(comissoes = [], ids = []) {

@@ -579,7 +579,7 @@ export default function XGameJornada({ tarefas: tarefasRecebidas = [], nome, pct
                       <div className="relative" style={{ transform: `translateX(${offset}px)` }}>
                         {morador && (
                           <span
-                            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 hidden sm:block ${offset > 0 ? 'right-full mr-1' : 'left-full ml-1'}`}
+                            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 ${offset > 0 ? 'right-full mr-1' : 'left-full ml-1'}`}
                             aria-hidden="true"
                           >
                             <ElencoBoneco

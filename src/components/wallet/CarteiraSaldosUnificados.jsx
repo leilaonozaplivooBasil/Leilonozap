@@ -11,7 +11,8 @@ export default function CarteiraSaldosUnificados({ w }) {
     // 💰 número REAL do lance travado é saldo_reservado (usado por reserveBidBalance /
     // releaseBidHold). saldo_alocado é a coluna do investidor — não é lance.
     { label: 'Reservado em lances', valor: w?.saldo_reservado, nota: 'Travado enquanto você é o líder' },
-    { label: 'A liberar (suas vendas)', valor: w?.saldo_a_liberar, nota: 'Libera na confirmação (PIX 7d · cartão 14d)' },
+    // 🧾 DIR-203: desde 28/09 o único "a liberar" é a indicação de depósito (10%, 7 dias)
+    { label: 'A liberar (indicações)', valor: w?.saldo_a_liberar, nota: '10% do depósito de quem você indicou · libera 7 dias depois' },
   ];
 
   return (

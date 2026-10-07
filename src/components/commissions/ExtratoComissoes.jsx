@@ -34,7 +34,16 @@ const fmtPrazo = (iso) => {
   if (!iso) return '';
   try { return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch { return ''; }
 };
-const rotulo = (c) => CARGO_LABEL[c] || c;
+// 🧾 DIR-203: os papéis das origens novas, pra linha nunca sair com o nome cru
+const CARGO_EXTRA = {
+  indicacao_deposito: 'Indicação de depósito (10%)',
+  leilao_indicador: 'Indicador do arremate (5%)',
+  leilao_executivo: 'Executivo do arremate (10%)',
+  leilao_retido: 'Retido pela empresa (leilão)',
+  compra_com_saldo: 'Usado em compra na loja',
+  empresa_rollup: 'Empresa (fatia sem dono)',
+};
+const rotulo = (c) => CARGO_LABEL[c] || CARGO_EXTRA[c] || c;
 
 export default function ExtratoComissoes({ user, isSaiDeBaixo = false }) {
   const [dados, setDados] = useState(null);
@@ -182,9 +191,9 @@ export default function ExtratoComissoes({ user, isSaiDeBaixo = false }) {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className={`text-sm font-semibold ${txt} truncate`}>{i.produto}</p>
-                        {i.is_venda && i.status === 'a_liberar' && (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 whitespace-nowrap">
-                            🔒 A liberar{i.release_at ? ` · ${fmtPrazo(i.release_at)}` : ''}
+                        {i.status === 'a_liberar' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 whitespace-nowrap" data-teste="pilula-a-liberar">
+                            🔒 {i.is_indicacao ? 'Em espera · libera' : 'A liberar'}{i.release_at ? ` ${fmtPrazo(i.release_at)}` : ''}
                           </span>
                         )}
                         {i.is_venda && i.status === 'disponivel' && (
@@ -196,13 +205,15 @@ export default function ExtratoComissoes({ user, isSaiDeBaixo = false }) {
                         {' · '}{i.origem}
                       </p>
                       <p className={`text-[11px] ${sub} mt-1`}>
-                        {i.is_venda
+                        {i.is_indicacao
+                          ? <>Depósito de <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{money(i.valor_venda)}</strong> de quem você indicou · 10% em espera por 7 dias</>
+                          : i.is_venda
                           ? <>Sua venda {i.comprador ? <>para <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{i.comprador}</strong></> : ''}</>
                           : <>Vendido por <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{i.vendedor}</strong>{' · '}venda de <strong className={isSaiDeBaixo ? 'text-gray-800' : 'text-gray-300'}>{money(i.valor_venda)}</strong></>}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-base font-black ${i.is_venda && i.status === 'a_liberar' ? 'text-blue-300' : 'text-green-400'}`}>+{money(i.ganho)}</p>
+                      <p className={`text-base font-black ${i.status === 'a_liberar' ? 'text-blue-300' : 'text-green-400'}`}>+{money(i.ganho)}</p>
                       <p className={`text-[11px] ${sub}`}>
                         {i.is_venda ? 'Venda' : `${rotulo(i.cargo)} · ${Number(i.percentual).toFixed(2).replace(/\.?0+$/, '')}%`}
                       </p>

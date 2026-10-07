@@ -9,6 +9,8 @@ import ComissaoUsuarioCard from '@/components/comissoes/ComissaoUsuarioCard';
 import { AVISO_COMISSAO, LINK_APROVACAO } from '@/lib/comissaoSoConsulta';
 import { jaPagoDaPessoa } from '@/lib/pagamentoManualDeComissao';
 import { cabecalhosSessao } from '@/lib/sessaoCliente';
+import RelatorioComissoes from '@/components/comissoes/RelatorioComissoes';
+import { ehContaDaEmpresa } from '@/lib/origemDaComissao';
 
 // 🏦 PAGAMENTOS DE COMISSÕES — extrato por pessoa (23/09/2026 → 24/09/2026)
 // Nasceu em 12/08 como "banco interno" pra pagar PIX na mão e marcar pago. O
@@ -31,6 +33,10 @@ export default function PagamentosComissoes() {
   const [pagamentosManuais, setPagamentosManuais] = useState([]);
   // ⏳ 28/09/2026 — comissão de indicação de depósito nos 7 dias de espera
   const [emEspera, setEmEspera] = useState([]);
+  // 🧾 05/10/2026 (DIR-200) — relatório por origem e licença, calculado no banco
+  const [relatorio, setRelatorio] = useState(null);
+  const [relatorioErro, setRelatorioErro] = useState('');
+  const [relatorioCarregando, setRelatorioCarregando] = useState(true);
   const [busca, setBusca] = useState('');
   const [aba, setAba] = useState('a_pagar'); // a_pagar | pago | todos
   const [admin] = useState(() => { try { return JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { return null; } });
@@ -51,6 +57,15 @@ export default function PagamentosComissoes() {
         const j = await r.json().catch(() => null);
         setEmEspera(j?.success && Array.isArray(j.rows) ? j.rows : []);
       } catch { setEmEspera([]); }
+      // 🧾 relatório por origem: também do servidor; se falhar, a tela segue.
+      try {
+        setRelatorioCarregando(true);
+        const r = await fetch('/api/functions/relatorioComissoes', { method: 'POST', headers: cabecalhosSessao({ 'Content-Type': 'application/json' }), body: '{}' });
+        const j = await r.json().catch(() => null);
+        setRelatorio(j?.success && j.relatorio ? j.relatorio : null);
+        setRelatorioErro(j?.success ? '' : String(j?.error || 'sem resposta'));
+      } catch (e) { setRelatorio(null); setRelatorioErro(String(e?.message || e)); }
+      finally { setRelatorioCarregando(false); }
       setPagamentosManuais(manuais || []);
       const map = {};
       (users || []).forEach((u) => { map[u.id] = u; });
@@ -78,6 +93,9 @@ export default function PagamentosComissoes() {
         user_id: userId,
         user_name: nome || u?.full_name || 'Sem nome',
         kyc_status: u?.kyc_status || 'nao_iniciado',
+        // 🧾 DIR-200: a conta oficial da empresa não é "pessoa a receber" — fica
+        // fora dos totais e vai para o fim da lista, com a própria etiqueta.
+        empresa: ehContaDaEmpresa(u),
         commissions: [],
         pendentes: [],
         totalPendente: Math.max(0, Number(u?.commission_balance) || 0),
@@ -109,23 +127,25 @@ export default function PagamentosComissoes() {
     Object.values(byUser).forEach((g) => {
       g.totalPago = jaPagoDaPessoa(g.commissions, g.pagamentosManuais);
     });
-    return Object.values(byUser).sort((a, b) => b.totalPendente - a.totalPendente);
+    return Object.values(byUser).sort((a, b) => (Number(a.empresa) - Number(b.empresa)) || (b.totalPendente - a.totalPendente));
   }, [commissions, usersById, manuaisByUser, emEspera]);
 
   const filtrados = useMemo(() => {
     return grupos
       .filter((g) => {
-        if (aba === 'a_pagar') return g.totalPendente > 0 || g.totalEmEspera > 0;
+        if (aba === 'a_pagar') return !g.empresa && (g.totalPendente > 0 || g.totalEmEspera > 0);
         if (aba === 'pago') return g.totalPago > 0;
         return true;
       })
       .filter((g) => !busca.trim() || (g.user_name || '').toLowerCase().includes(busca.trim().toLowerCase()));
   }, [grupos, aba, busca]);
 
-  const totalGeralPendente = grupos.reduce((s, g) => s + g.totalPendente, 0);
-  const totalGeralPago = grupos.reduce((s, g) => s + g.totalPago, 0);
-  const totalGeralEmEspera = grupos.reduce((s, g) => s + (g.totalEmEspera || 0), 0);
-  const pessoasAPagar = grupos.filter((g) => g.totalPendente > 0).length;
+  // 🧾 DIR-200: totais só das PESSOAS — a conta da empresa tem o próprio bloco no relatório.
+  const pessoas = grupos.filter((g) => !g.empresa);
+  const totalGeralPendente = pessoas.reduce((s, g) => s + g.totalPendente, 0);
+  const totalGeralPago = pessoas.reduce((s, g) => s + g.totalPago, 0);
+  const totalGeralEmEspera = pessoas.reduce((s, g) => s + (g.totalEmEspera || 0), 0);
+  const pessoasAPagar = pessoas.filter((g) => g.totalPendente > 0).length;
 
   if (loading) {
     return (
@@ -153,9 +173,13 @@ export default function PagamentosComissoes() {
           </Link>
         </div>
 
+        <div className="mb-6">
+          <RelatorioComissoes relatorio={relatorio} carregando={relatorioCarregando} erro={relatorioErro} />
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
           <div className="bg-gray-900 border border-amber-900/50 rounded-xl p-4">
-            <div className="text-xs text-amber-400">Total no saldo das pessoas</div>
+            <div className="text-xs text-amber-400">Total no saldo das pessoas <span className="text-gray-500">(sem a conta da empresa)</span></div>
             <div className="text-2xl font-black text-amber-400">R$ {fmtBR(totalGeralPendente)}</div>
             {totalGeralEmEspera > 0 && (
               <div className="text-xs text-gray-400 mt-1" data-teste="total-em-espera">+ R$ {fmtBR(totalGeralEmEspera)} em espera (liberam sozinhas)</div>
