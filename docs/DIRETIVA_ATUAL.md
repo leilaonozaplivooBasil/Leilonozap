@@ -1,3 +1,17 @@
+## 🎟️ DIR-202 — O bônus de 10% (Cupom Passaporte) segue o depósito; a Carteira mostra o guardado (07/10/2026)
+
+**Dono, com print de cliente:** "as pessoas que estão dando lance no leilão não estão recebendo os 10%; desde semana passada; não está constando mais." E: "auditoria extremamente diligente, sem quebrar nada, para não ter mais nenhum erro."
+
+**O que é o "10%":** o Cupom Passaporte — 10% de cada depósito (a partir de R$ 27), que nasce guardado e libera, fatia a fatia, a cada leilão que a pessoa disputa e não ganha; vale só na Loja Virtual. Não é a comissão de indicação.
+
+**Auditado em 07/10 (banco + código):** todo depósito pago desde 17/09 tem o cupom (único sem cupom: R$ 25 de 21/09, abaixo do piso da época); as liberações acontecem no fim de cada leilão (PS5 26/09: 12 fatias; Harley 29/09: 4; iPhone 17 02/10: 15); desde 02/10 só terminou um leilão com um único participante, então nada havia para liberar. R$ 2.716 gastáveis e R$ 884 guardados hoje. Comissões reconferidas no mesmo ato: 0 saldos fora do extrato, 0 liberações atrasadas, os 2 depósitos de 06/10 com a comissão de indicação na espera, a venda de 06/10 com 30% certinho.
+
+**Os dois problemas reais:**
+1. **Tela:** o cartão da Carteira escondia o valor guardado quando a pessoa já tinha algum crédito liberado. Quem depositou R$ 3.000 e tinha R$ 15 liberados via "R$ 15" e nada dos R$ 300 esperando o leilão — é exatamente "não está constando". `PassaporteCard` agora mostra liberado e guardado juntos, com os valores.
+2. **Furo:** depósito devolvido/contestado no gateway bloqueava a carteira e cortava a comissão (DIR-198), mas o cupom ficava de pé: Diogo tinha R$ 310 gastáveis na loja sobre R$ 3.300 que voltaram para ele. Migração `20261007120000` (aplicada em produção): `cancelar_cupom_passaporte_do_deposito` e `bloquear_saldo_contestado` v3 chamando-a sempre. Passado: os 4 cupons do Diogo cancelados (R$ 310 liberados + R$ 20 guardados; nada tinha sido gasto).
+
+**Prova:** `tests/cupomPassaporteSegueODeposito.test.mjs` (3), suíte completa, lint 0 erros, build.
+
 ## 🧾 DIR-201 — As decisões da auditoria das comissões (05/10/2026)
 
 **Dono, sobre as 5 decisões do DIR-200:** "QUERO QUE VOCÊ DECIDA ISSO." Decidido e executado (nada aqui muda saldo de ninguém da rede):
