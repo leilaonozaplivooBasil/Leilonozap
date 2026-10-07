@@ -15,6 +15,8 @@
 // 🔒 NÃO ESCREVE em tabela de dinheiro nenhuma. Só lê e avisa.
 import { avisarAdminUmaVezPorDia } from '../_lib/avisarAdmin.js';
 import { alertasParaAvisar, textoDoAlerta } from '../_lib/textosDoVigia.js';
+// 🔭 DIR-206: o que entrou no gateway e não existe aqui (PIX direto na conta, QR de fora).
+import { varrerGateway, alertaDoPagamentoSemVenda } from '../_lib/varreduraGateway.js';
 
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -43,18 +45,30 @@ export default async function handler(req, res) {
       const envio = await avisarAdminUmaVezPorDia(`vigia_${a.codigo}`, textoDoAlerta(a), { sb, horas: HORAS_SEM_REPETIR });
       avisos.push({ codigo: a.codigo, gravidade: a.gravidade, ...envio });
     }
+    // 🔭 DIR-206 — o gateway recebeu algo que não tem venda aqui? Um aviso por
+    // pagamento, sem repetir por 7 dias. Falha na consulta ao gateway vira
+    // número no log, nunca derruba a rodada.
+    const varredura = await varrerGateway({ sb, token: process.env.MP_ACCESS_TOKEN }).catch((e) => ({ ok: false, erro: String(e?.message || e), sem_venda: [] }));
+    for (const p of varredura.sem_venda || []) {
+      const a = alertaDoPagamentoSemVenda(p);
+      if (!a) continue;
+      const envio = await avisarAdminUmaVezPorDia(`vigia_${a.codigo}`, textoDoAlerta(a), { sb, horas: 24 * 7 });
+      avisos.push({ codigo: a.codigo, gravidade: a.gravidade, valor: p.valor, ...envio });
+      alertas.push(a);
+    }
+
     // memória do que o vigia viu, mesmo quando não avisou (a tela e o fechamento leem daqui)
     await sb('system_logs', {
       method: 'POST',
       body: JSON.stringify({
         component_name: 'vigiaFinanceiro', step: 'RODADA', status: alertas.length ? 'warning' : 'info',
         message: alertas.length ? `${alertas.length} alerta(s): ${alertas.map((a) => a.codigo).join(', ')}` : 'Tudo bate.',
-        payload: { numeros: vigia.numeros, alertas: alertas.map((a) => ({ codigo: a.codigo, gravidade: a.gravidade, titulo: a.titulo })), avisos },
+        payload: { numeros: vigia.numeros, alertas: alertas.map((a) => ({ codigo: a.codigo, gravidade: a.gravidade, titulo: a.titulo })), avisos, varredura: { ...varredura, sem_venda: (varredura.sem_venda || []).map((p) => p.id) } },
         created_at: new Date().toISOString(),
       }),
     }).catch(() => {});
     console.log(`[VIGIA] ${alertas.length} alerta(s) · ${avisos.filter((x) => x.enviado).length} aviso(s) enviado(s)`);
-    return res.status(200).json({ ok: true, alertas: alertas.length, avisos, numeros: vigia.numeros });
+    return res.status(200).json({ ok: true, alertas: alertas.length, avisos, numeros: vigia.numeros, varredura });
   } catch (e) {
     return res.status(200).json({ ok: false, error: String(e?.message || e).slice(0, 200) });
   }

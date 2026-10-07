@@ -1,3 +1,18 @@
+## 🔭 DIR-206 — O que entrou no gateway e não existe aqui: varredura de hora em hora (07/10/2026)
+
+**Dono:** "analise isso urgentemente… acho que teve depósito e não foi constado. Isso não pode falhar." Conferido: o painel estava certo (o depósito de R$ 850 do Vinicius chegou às 16:30, depois da foto das 15:45, e já aparece). Mas a análise mostrou um ponto cego real: a conciliação (DIR-195) confere pagamento por pagamento só dos que **nasceram no aplicativo**. Um PIX mandado direto para a conta do gateway, sem gerar o QR aqui, entrava lá e não aparecia em lugar nenhum. O dono: "pode fazer".
+
+**Feito** (`api/_lib/varreduraGateway.js`, dentro do vigia de hora em hora):
+1. Pergunta ao gateway tudo o que ele recebeu da meia-noite de ontem (Brasília) até agora, página a página.
+2. Fica só com o que teve dinheiro (liberado, retido, devolvido, chargeback, disputa, alterado); pendente e cancelado nunca entraram.
+3. Casa cada pagamento com as nossas vendas de dois jeitos: pelo id do pagamento gravado na venda, ou pela referência da venda que mandamos ao gateway (cobre QR regerado).
+4. O que sobrou vira alerta vermelho no WhatsApp de administrador, **um por pagamento, sem repetir por 7 dias**: valor, hora, situação, meio, primeiro nome do pagador, descrição e o id do pagamento. "Ninguém foi creditado por isso aqui. Conferir no gateway e decidir: a quem pertence?"
+5. A rodada do vigia guarda em `system_logs` quantos pagamentos o gateway devolveu, quantos tinham dinheiro e quais ficaram sem venda. Gateway fora do ar: vira número no log, não derruba a rodada.
+
+**Nada é criado nem creditado sozinho.** Dinheiro sem dono é decisão de gente.
+
+**Prova:** `tests/varreduraGateway.test.mjs` (5), suíte completa, lint 0 erros, build.
+
 ## 🏷️ DIR-205 — Arremate sem saldo não é silêncio: o vencedor é lembrado (1h e 24h) e o admin vê no vigia (07/10/2026)
 
 **Dono:** item 4 das automações aprovadas ("arremate não pago"), com a regra "cirúrgicas, não quebre nada".
