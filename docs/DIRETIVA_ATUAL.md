@@ -1,3 +1,21 @@
+## 🧾 DIR-203 — Os 10% de quem indicou: a espera aparece para o indicador, e a indicação que mudou de dono aparece para o dono (07/10/2026)
+
+**Dono:** "não é bônus; é 10% sobre o depósito da indicação. Corrija o que tiver que corrigir e veja se quem indicou está ganhando os 10%."
+
+**Conferido depósito a depósito desde 26/09:** todo depósito pago gerou a comissão para o indicador da hora do depósito (Verônica, Luciano, Iara, Emannuel, Luis Francisco, paim, Ribeiro). As liberações dos 7 dias estão em dia.
+
+**O caso real:** Marcelo Zaidan Salles foi movido para debaixo do Luciano em 03/10 08h52 (ajuste de rede pelo admin), mas os R$ 4.450 que ele depositou entre 29/09 e 02/10 pagaram o indicador da época, a conta oficial — e essas linhas foram canceladas no DIR-201. O Luciano olhava e não via nada. Outros três clientes movidos desde 27/09 (Herbert → Luis Francisco, Henrique → Beatriz, Leonardo → Luciano) não perderam nada: Herbert já estava com o Luis Francisco quando depositou; os outros dois não depositaram.
+
+**Feito:**
+1. **Passado:** 4 linhas em espera para o Luciano sobre os depósitos do Marcelo (R$ 5 + R$ 30 + R$ 10 + R$ 400 = R$ 445), com o mesmo prazo de 7 dias contado do depósito; liberam entre 07/10 e 09/10 pelo robô. Decisão: o admin reconheceu o Luciano como indicador e a empresa não ficou com nada.
+2. **Extrato de quem indicou** (`getMyCommissions` + `ExtratoComissoes`): a indicação em espera aparece na hora, com "Em espera · libera dd/mm" e o depósito do cliente. Antes só aparecia 7 dias depois, quando virava linha "Gerada" — por 7 dias o indicador não via nada.
+3. **Carteira:** o cartão "A liberar" passou a dizer "A liberar (indicações) · 10% do depósito de quem você indicou · libera 7 dias depois" (a nota antiga falava do escrow de vendas, cancelado em 28/09).
+4. **Relatório de Pagamentos** (`relatorio_comissoes` v3, migração `20261007150000`, aplicada em produção): bloco "Indicações a conferir" com todo depósito na regra cujo indicador atual não recebeu os 10% — a Beatriz vê, o dono decide. Hoje: nenhum.
+
+**Regra mantida:** a comissão é do indicador na hora do depósito. Cliente movido depois não gera comissão retroativa sozinho; aparece no relatório para decisão.
+
+**Prova:** `tests/indicacaoAConferir.test.mjs` (3), suíte completa, lint 0 erros, build.
+
 ## 🎟️ DIR-202 — O bônus de 10% (Cupom Passaporte) segue o depósito; a Carteira mostra o guardado (07/10/2026)
 
 **Dono, com print de cliente:** "as pessoas que estão dando lance no leilão não estão recebendo os 10%; desde semana passada; não está constando mais." E: "auditoria extremamente diligente, sem quebrar nada, para não ter mais nenhum erro."

@@ -125,6 +125,43 @@ export default async function handler(req, res) {
         itens.sort((a, b) => new Date(b.data) - new Date(a.data));
       }
     } catch { /* coluna status/role ainda não existe → ignora */ }
+    // 🧾 DIR-203 (07/10/2026) — a INDICAÇÃO DE DEPÓSITO em espera (7 dias) também
+    // entra no extrato de quem indicou. Antes só aparecia depois de liberar (vira
+    // commission_records), e por 7 dias o indicador olhava o extrato e não via
+    // nada: "os 10% não estão constando". A linha mostra o depósito, de quem,
+    // e o dia em que libera; o dinheiro só soma no saldo na liberação.
+    try {
+      const esp = await (await sb(`commission_ledger?select=id,sale_id,amount,pct,status,release_at,created_at&beneficiary_id=eq.${encodeURIComponent(userId)}&role_in_sale=eq.indicacao_deposito&status=eq.a_liberar&order=release_at.asc&limit=300`)).json();
+      if (Array.isArray(esp) && esp.length) {
+        const dids = [...new Set(esp.map((r) => r.sale_id).filter((x) => x && !vendas[x]))];
+        if (dids.length) {
+          const ds = await (await sb(`catalog_sales?select=id,payment_method,buyer_name,total_amount,created_at&id=in.(${dids.map((x) => `"${x}"`).join(',')})`)).json();
+          (Array.isArray(ds) ? ds : []).forEach((v) => { vendas[v.id] = v; });
+        }
+        for (const r of esp) {
+          const v = vendas[r.sale_id] || {};
+          const nome = String(v.buyer_name || '').trim().split(/\s+/).filter(Boolean);
+          const cliente = nome.length === 0 ? 'cliente' : nome.length === 1 ? nome[0] : `${nome[0]} ${nome[1][0].toUpperCase()}.`;
+          saldo_a_liberar += Number(r.amount) || 0;
+          itens.push({
+            id: `indicacao-${r.id}`,
+            data: r.created_at,
+            produto: `Indicação de depósito — ${cliente}`,
+            vendedor: cliente,
+            comprador: v.buyer_name || null,
+            origem: 'Depósito na carteira',
+            valor_venda: Number(v.total_amount) || 0,
+            cargo: 'indicacao_deposito',
+            percentual: Number(r.pct) || 10,
+            ganho: Number(r.amount) || 0,
+            status: 'a_liberar',
+            release_at: r.release_at || null,
+            is_indicacao: true,
+          });
+        }
+        itens.sort((a, b) => new Date(b.data) - new Date(a.data));
+      }
+    } catch { /* ledger indisponível → extrato segue sem a espera */ }
     saldo_a_liberar = round2(saldo_a_liberar);
 
     return res.status(200).json({

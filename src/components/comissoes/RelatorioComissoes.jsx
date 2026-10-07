@@ -44,6 +44,7 @@ export default function RelatorioComissoes({ relatorio, carregando, erro }) {
   const proximas = Array.isArray(relatorio.proximas_liberacoes) ? relatorio.proximas_liberacoes : [];
   const empresa = relatorio.empresa || {};
   const vencidas = Number(relatorio.em_espera_vencidas) || 0;
+  const aConferir = Array.isArray(relatorio.indicacoes_a_conferir) ? relatorio.indicacoes_a_conferir : [];
 
   return (
     <section className="space-y-4" data-teste="relatorio-comissoes">
@@ -146,6 +147,31 @@ export default function RelatorioComissoes({ relatorio, carregando, erro }) {
           </div>
         </div>
       </div>
+
+      {aConferir.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/5 p-4" data-teste="indicacoes-a-conferir">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Indicações a conferir · depósito cujo indicador atual não recebeu os 10%</div>
+          <p className="text-xs text-gray-400 mb-2">
+            A comissão vai para quem era o indicador na hora do depósito. Se o cliente foi movido para outra pessoa depois, o depósito aparece aqui para o dono decidir se a comissão vai para o indicador atual.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-gray-500 text-xs"><tr><th className="text-left px-2 py-1">Depósito</th><th className="text-left px-2 py-1">Cliente</th><th className="text-left px-2 py-1">Indicador atual</th><th className="text-left px-2 py-1">Quem recebeu</th><th className="text-right px-2 py-1">10%</th></tr></thead>
+              <tbody>
+                {aConferir.map((d) => (
+                  <tr key={d.sale_id} className="border-t border-gray-800/60">
+                    <td className="px-2 py-1 text-gray-300 whitespace-nowrap">{dataCurta(d.depositado_em)} · R$ {fmtBR(d.valor)}</td>
+                    <td className="px-2 py-1 text-gray-200">{d.cliente}</td>
+                    <td className="px-2 py-1 text-amber-200">{d.indicador}</td>
+                    <td className="px-2 py-1 text-gray-400">{d.quem_recebeu || 'ninguém'}</td>
+                    <td className="px-2 py-1 text-right font-bold text-white">R$ {fmtBR(d.dez_pct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className={`rounded-xl border p-4 ${fora.length ? 'border-amber-500/40 bg-amber-500/5' : 'border-gray-800 bg-gray-900'}`} data-teste="saldos-fora-do-extrato">
         <div className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Auditoria viva · saldo × extrato</div>
