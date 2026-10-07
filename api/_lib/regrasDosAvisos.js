@@ -94,3 +94,19 @@ export function pixMereceLembrete(venda, outrasDaPessoa = []) {
   if (!venda?.id || !Number.isFinite(t)) return false;
   return !outrasDaPessoa.some((o) => o && o.id !== venda.id && new Date(o.created_date).getTime() > t);
 }
+
+/**
+ * Arremate sem saldo (07/10/2026, DIR-205): o cron de liquidação tenta a cada
+ * 10 min e, enquanto falta saldo, o vencedor recebe e-mail 1h depois do
+ * encerramento e de novo 24h depois — 1x cada (chave = `${leilao}:${etapa}`).
+ * Devolve a etapa que vale agora ('1h' | '24h') ou null se ainda é cedo.
+ */
+export function etapaDoLembreteDeArremate(encerrouEm, agora = Date.now()) {
+  if (!encerrouEm) return null; // new Date(null) seria a época zero — e lembraria de tudo
+  const t = new Date(encerrouEm).getTime();
+  if (!Number.isFinite(t)) return null;
+  const horas = (agora - t) / 3600000;
+  if (horas >= 24) return '24h';
+  if (horas >= 1) return '1h';
+  return null;
+}

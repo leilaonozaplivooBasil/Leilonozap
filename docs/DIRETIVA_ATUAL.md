@@ -1,3 +1,19 @@
+## 🏷️ DIR-205 — Arremate sem saldo não é silêncio: o vencedor é lembrado (1h e 24h) e o admin vê no vigia (07/10/2026)
+
+**Dono:** item 4 das automações aprovadas ("arremate não pago"), com a regra "cirúrgicas, não quebre nada".
+
+**O que foi medido antes de mexer:** no Leilão NoZap o arremate não tem "pagar depois": o valor sai da Carteira sozinho (`liquidarArrematesPendentes`, a cada 10 min). Nos últimos 60 dias, 52 arremates fecharam assim. O único caso parado é real e é da conta do próprio dono (vale-do-recreio): cadeira presidente, R$ 246, encerrado em 11/09, com R$ 169,80 na Carteira (faltam R$ 76,20). O cron tentou a cada 10 minutos por 26 dias ("1 sem saldo") e ninguém foi avisado — nem o vencedor, nem o admin. As duas comissões do martelo (R$ 12,30 indicador + R$ 61,50 retido) ficaram com a conta oficial; nenhuma pessoa da rede recebeu por esse arremate.
+
+**Feito:**
+1. **E-mail ao vencedor** (`arremate_sem_saldo`, categoria leilão): 1 hora depois do encerramento, "falta saldo para fechar o seu arremate" com quanto tem, quanto falta e o botão da Carteira; 24 horas depois, a segunda via — "ainda está esperando saldo", abrindo a porta para desistir respondendo o e-mail. Uma vez cada (chave = leilão + etapa). Quem desligou avisos de leilão não recebe. Quem manda é o próprio cron de liquidação, no momento em que o banco responde "saldo insuficiente" — nada é mexido no dinheiro nem no leilão.
+2. **Vigia financeiro v2** (`vigia_financeiro()`, migração `20261007230000`, aplicada em produção): regra 11, "arremate parado por falta de saldo do vencedor" — amarelo até 48h, vermelho a partir de 48h com "decidir: cobrar ou cancelar". Mesmo filtro do cron (fora plano, investimento e teste). Número novo `arremates_sem_saldo`.
+
+**Decidido NÃO automatizar (por enquanto):** cancelar o arremate e reofertar o produto em 48h, com estorno da comissão do martelo. Com 1 caso em 60 dias (e sendo da conta do dono), cancelar o arremate de um cliente sem gente no meio é risco sem ganho. O vigia leva o caso ao admin em 48h; o cancelamento com estorno e reoferta pode virar botão de admin quando o dono pedir.
+
+**Pendência para o dono:** a cadeira de R$ 246 na conta vale-do-recreio — colocar R$ 76,20 na Carteira (o pedido fecha sozinho) ou mandar cancelar.
+
+**Prova:** `tests/arremateSemSaldo.test.mjs` (4), `tests/textosDosAvisos.test.mjs` atualizado (14 tipos), suíte completa, lint 0 erros, build.
+
 ## 🛡️ DIR-204 — O sistema que vigia o sistema: vigia financeiro, fechamento do dia e aviso na hora quando dinheiro sai (07/10/2026)
 
 **Dono:** "quais automações seriam de fato importantes… tipo Vale do Silício, equipe sênior"; depois: "cirúrgicas, não quebre nada que esteja funcionando, só melhore e deixe o aplicativo 10/10". Fase A das oito aprovadas (as outras — arremate não pago, antifraude de depósito, nutrição, pagamento automático por PIX — vêm em seguida, uma por vez).

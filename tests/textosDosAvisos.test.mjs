@@ -4,9 +4,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { montarAviso, TIPOS_DE_AVISO, CATEGORIA_POR_TIPO, reais, quandoBR, faltaBR, SITE } from '../api/_lib/textosDosAvisos.js';
 
-test('os 13 tipos (8 gatilhos, dois deles com 2 e-mails, + pagamento manual + PIX pendente + retirada) e a categoria de cada um', () => {
-  assert.deepEqual(TIPOS_DE_AVISO, ['cadastro', 'entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora', 'deposito', 'compra_confirmada', 'compra_enviada', 'kyc_aprovado', 'saque_pago', 'comissao_paga_manual', 'pix_pendente', 'retirada_confirmada']);
-  assert.deepEqual(TIPOS_DE_AVISO.filter((t) => CATEGORIA_POR_TIPO[t] === 'leilao'), ['entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora']);
+test('os 14 tipos (8 gatilhos, dois deles com 2 e-mails, + pagamento manual + PIX pendente + retirada + arremate sem saldo) e a categoria de cada um', () => {
+  assert.deepEqual(TIPOS_DE_AVISO, ['cadastro', 'entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora', 'deposito', 'compra_confirmada', 'compra_enviada', 'kyc_aprovado', 'saque_pago', 'comissao_paga_manual', 'pix_pendente', 'retirada_confirmada', 'arremate_sem_saldo']);
+  assert.deepEqual(TIPOS_DE_AVISO.filter((t) => CATEGORIA_POR_TIPO[t] === 'leilao'), ['entrou_no_leilao', 'superado', 'arrematou', 'ultima_hora', 'arremate_sem_saldo']);
   assert.equal(montarAviso('inventado', {}), null);
 });
 
