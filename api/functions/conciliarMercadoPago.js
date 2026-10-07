@@ -22,6 +22,7 @@
 // O que NUNCA faz: mudar status de venda, creditar carteira, devolver dinheiro.
 // Isso continua sendo decisão humana (ou do webhook, no fluxo normal de pagamento).
 import { exigirSessao } from '../_lib/sessao.js';
+import { avisarAdmin } from '../_lib/avisarAdmin.js';
 import { buscarPagamento, resumoDoPagamento, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
 import { executarAcoesPendentes } from '../_lib/gatewayAcoes.js';
 
@@ -66,6 +67,8 @@ export async function conferirVenda(sale, { fonte = 'conciliacao', origem = 'con
     bloqueio = await rb.json().catch(() => null);
     if (bloqueio?.success && !bloqueio.ja_bloqueado) {
       console.error(`[CONCILIAÇÃO] DINHEIRO SAIU — ${resumo.situacao} no pagamento ${sale.mp_payment_id} (venda ${sale.id}, ${sale.buyer_name}, R$ ${resumo.valor}). Bloqueado R$ ${bloqueio.bloqueado} na carteira; não recuperado R$ ${bloqueio.nao_recuperado}.`);
+      // 🛡️ DIR-204: aviso na hora no WhatsApp de administrador. Nunca derruba a conferência.
+      avisarAdmin(`🔴 *Dinheiro saiu no gateway*\n\n${sale.buyer_name || 'Cliente'} · depósito de R$ ${Number(resumo.valor || 0).toFixed(2)} · ${resumo.situacao}\n\nO sistema já: bloqueou R$ ${Number(bloqueio.bloqueado || 0).toFixed(2)} na carteira${Number(bloqueio.nao_recuperado || 0) > 0 ? ` (R$ ${Number(bloqueio.nao_recuperado).toFixed(2)} já tinham sido gastos)` : ''}, cortou a comissão de indicação e cancelou o bônus.\n\nOnde ver: Painel do Investidor → Conciliação.`).catch(() => {});
     }
     resumo.bloqueio = bloqueio ? { success: !!bloqueio.success, bloqueado: bloqueio.bloqueado ?? 0, nao_recuperado: bloqueio.nao_recuperado ?? 0, ja_bloqueado: !!bloqueio.ja_bloqueado, error: bloqueio.error || null, em: new Date().toISOString() } : null;
   } else if (sale.gateway?.bloqueio) {
