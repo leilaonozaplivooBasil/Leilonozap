@@ -51,6 +51,9 @@
 // e NÃO pode ser debitado da carteira. São 44 registros hoje — o filtro abaixo é
 // o mesmo que MyWinnings.jsx já usa pra não listá-los.
 import { emitirSessao } from '../_lib/sessao.js';
+// 📣 DIR-205 (07/10/2026): sem saldo não é silêncio — o vencedor é lembrado por e-mail.
+import { enviarAviso } from '../_lib/avisosPorEmail.js';
+import { etapaDoLembreteDeArremate } from '../_lib/regrasDosAvisos.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -100,7 +103,7 @@ export default async function handler(req, res) {
     // que não confunde "Planotec" nem "Mesa Planejada" — o ilike do PostgREST
     // confundiria e deixaria produto legítimo de fora.
     const rows = await (await sb(
-      'auctions?select=id,title,winner_id,winner_name,current_price,is_investment_plan,is_test_auction' +
+      'auctions?select=id,title,winner_id,winner_name,current_price,end_time,is_investment_plan,is_test_auction' +
       '&order_status=eq.awaiting_payment&winner_id=not.is.null&status=in.(ended,sold,processing)' +
       '&is_investment_plan=not.is.true&is_test_auction=not.is.true' +
       `&order=end_time.asc&limit=${LOTE}`
@@ -138,6 +141,26 @@ export default async function handler(req, res) {
         });
         const d = await r.json().catch(() => null);
 
+        // 📣 DIR-205 (07/10/2026) — SEM SALDO NÃO É SILÊNCIO. Medido em produção:
+        // um arremate de R$ 246 ficou 26 dias em awaiting_payment, o cron tentou
+        // a cada 10 min ("1 sem saldo") e ninguém — nem o vencedor — foi avisado.
+        // Agora o vencedor recebe e-mail 1h depois do encerramento e outro 24h
+        // depois (1x cada; a trava é a de enviarAviso). O admin vê no vigia.
+        // Nada aqui mexe em dinheiro nem no leilão.
+        let lembrete = null;
+        if (d?.insufficient === true) {
+          const etapa = etapaDoLembreteDeArremate(a.end_time);
+          if (etapa) {
+            const saldo = (Number(d.balance) || 0) + (Number(d.reserved) || 0);
+            const precisa = Number(d.needed) || Number(a.current_price) || 0;
+            const env = await enviarAviso({
+              tipo: 'arremate_sem_saldo', userId: a.winner_id, chave: `${a.id}:${etapa}`,
+              dados: { produto: a.title, valor: a.current_price, saldo, falta: Math.max(0, Math.round((precisa - saldo) * 100) / 100), segunda: etapa === '24h' },
+            }).catch(() => ({ enviado: false, motivo: 'falha' }));
+            lembrete = { etapa, enviado: !!env?.enviado, motivo: env?.motivo };
+          }
+        }
+
         resultados.push({
           auction_id: a.id,
           titulo: a.title,
@@ -145,6 +168,7 @@ export default async function handler(req, res) {
           ok: d?.success === true,
           ja_pago: d?.already_paid === true,
           sem_saldo: d?.insufficient === true,
+          lembrete,
           erro: d?.success === true ? undefined : (d?.error || `http ${r.status}`),
         });
       } catch (e) {

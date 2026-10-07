@@ -32,6 +32,9 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   pix_pendente: 'conta',
   // 📦 30/09/2026 — o comprovante da retirada no balcão (retiradaNaLoja.js)
   retirada_confirmada: 'conta',
+  // 🏷️ 07/10/2026 (DIR-205) — arremate com vencedor e saldo insuficiente: o cron
+  // de liquidação tenta a cada 10 min; o vencedor fica sabendo 1h e 24h depois.
+  arremate_sem_saldo: 'leilao',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -158,6 +161,17 @@ export function montarAviso(tipo, d = {}) {
       linhas = [`${oi} A retirada do seu pedido #${d.pedido} foi registrada em ${quandoBR(d.quando)}, no local: ${d.local}.${d.terceiro ? ` Quem retirou: ${d.terceiro}.` : ''}`,
         'O comprovante com o termo assinado fica guardado no seu pedido. Se não foi você nem alguém autorizado por você, responda este e-mail agora.'];
       botao = { rotulo: 'Ver meu pedido', url: `${SITE}/${d.arremate ? 'MyWinnings' : 'MyCatalogOrders'}` };
+      break;
+    case 'arremate_sem_saldo':
+      // O dinheiro do arremate sai da Carteira sozinho (liquidarArrematesPendentes,
+      // a cada 10 min). Se falta saldo, nada acontece — e o vencedor precisa saber.
+      assunto = d.segunda ? `Seu arremate de ${d.produto} ainda está esperando saldo` : `Falta saldo para fechar o seu arremate: ${d.produto}`;
+      linhas = [`${oi} Você arrematou ${d.produto} por ${reais(d.valor)}, e a sua Carteira tem ${reais(d.saldo)} — faltam ${reais(d.falta)} para fechar o pedido.`,
+        'É só colocar saldo na Carteira: o pedido fecha sozinho em até 10 minutos depois que o depósito cair, sem precisar fazer mais nada.',
+        d.segunda
+          ? 'Se não for mais do seu interesse, responda este e-mail para a gente liberar o produto para outra pessoa.'
+          : 'Se você já depositou, pode ignorar este e-mail: o pedido fecha assim que o saldo entrar.'];
+      botao = { rotulo: 'Colocar saldo na Carteira', url: `${SITE}/Carteira` };
       break;
     default:
       return null;
