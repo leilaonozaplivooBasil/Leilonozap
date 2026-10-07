@@ -89,3 +89,14 @@ test('o alerta é vermelho, um por pagamento, e o vigia manda sem repetir por 7 
   const M = ler('../api/_lib/varreduraGateway.js');
   assert.ok(!/method:\s*'(POST|PATCH|DELETE|PUT)'/.test(M), 'a varredura só lê');
 });
+
+test('em tempo real: o webhook avisa no ato quando o pagamento aprovado não tem venda aqui (e no estorno sem referência)', () => {
+  const W = ler('../api/functions/mpWebhook.js');
+  assert.ok(W.includes('function avisarPagamentoSemVenda(pay, motivo) {'));
+  assert.match(W, /avisarAdmin\(`🔴 \*Pagamento no gateway sem venda no aplicativo\*[\s\S]*?\)\.catch\(\(\) => \{\}\);/, 'nunca derruba o webhook');
+  assert.ok(W.includes("avisarPagamentoSemVenda(pay, saleId ? `referência ${saleId} não existe aqui` : 'sem referência de venda (PIX direto na conta?)');"));
+  assert.ok(W.includes("if (['charged_back', 'refunded'].includes(String(pay.status))) avisarPagamentoSemVenda(pay, 'estorno sem referência de venda');"));
+  // as respostas ao gateway continuam as mesmas (200, idempotentes)
+  assert.ok(W.includes('return res.status(200).json({ ok: true, sale_notfound: true });'));
+  assert.ok(W.includes('return res.status(200).json({ ok: true, status: pay.status, sem_referencia: true });'));
+});
