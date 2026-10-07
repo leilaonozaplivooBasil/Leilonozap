@@ -9,9 +9,11 @@
 4. O que sobrou vira alerta vermelho no WhatsApp de administrador, **um por pagamento, sem repetir por 7 dias**: valor, hora, situação, meio, primeiro nome do pagador, descrição e o id do pagamento. "Ninguém foi creditado por isso aqui. Conferir no gateway e decidir: a quem pertence?"
 5. A rodada do vigia guarda em `system_logs` quantos pagamentos o gateway devolveu, quantos tinham dinheiro e quais ficaram sem venda. Gateway fora do ar: vira número no log, não derruba a rodada.
 
+**Em tempo real também** (dono: "cada pagamento entra em tempo real, né? Isso precisa funcionar independente de hora em hora"): o caminho normal do depósito é o webhook, e é instantâneo (o de R$ 850 de hoje: aviso do gateway 16:31:24, carteira creditada 16:31:25). O webhook tinha duas saídas mudas para o caso sem venda (pagamento aprovado cuja venda não existe; estorno sem referência). Agora as duas avisam o administrador no ato, sem mudar a resposta ao gateway. A varredura de hora em hora fica como rede para o aviso que o gateway não mandar.
+
 **Nada é criado nem creditado sozinho.** Dinheiro sem dono é decisão de gente.
 
-**Prova:** `tests/varreduraGateway.test.mjs` (5), suíte completa, lint 0 erros, build.
+**Prova:** `tests/varreduraGateway.test.mjs` (6), suíte completa, lint 0 erros, build.
 
 ## 🏷️ DIR-205 — Arremate sem saldo não é silêncio: o vencedor é lembrado (1h e 24h) e o admin vê no vigia (07/10/2026)
 

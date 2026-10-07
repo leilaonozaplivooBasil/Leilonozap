@@ -15,6 +15,23 @@ import { avisarAdmin } from '../_lib/avisarAdmin.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
 import { resumoDoPagamento, resolverPagamentoDoAviso, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
+
+// 🔭 DIR-206 (07/10/2026) — DINHEIRO NO GATEWAY SEM VENDA AQUI AVISA NA HORA.
+// Dono: "cada pagamento entra em tempo real, né? Isso precisa funcionar
+// independente de hora em hora." O webhook já tinha duas saídas mudas para o
+// caso: pagamento aprovado cuja venda não existe (sale_notfound) e estorno de
+// pagamento sem referência (sem_referencia). Continuam respondendo 200 ao
+// gateway (não é erro nosso), mas agora o administrador fica sabendo no ato.
+// A varredura de hora em hora (varreduraGateway.js) é a rede para o aviso que
+// o gateway não mandar. Nunca derruba o webhook.
+function avisarPagamentoSemVenda(pay, motivo) {
+  try {
+    const valor = Number(pay?.transaction_amount) || 0;
+    const quem = String(pay?.payer?.first_name || '').trim();
+    const desc = String(pay?.description || '').slice(0, 80);
+    avisarAdmin(`🔴 *Pagamento no gateway sem venda no aplicativo*\n\nR$ ${valor.toFixed(2)} · ${pay?.status || '?'}${pay?.payment_method_id ? ` · ${pay.payment_method_id}` : ''}${quem ? ` · ${quem}` : ''}${desc ? ` · "${desc}"` : ''}\nPagamento ${pay?.id} · ${motivo}\n\nNinguém foi creditado por isso aqui. Conferir no gateway e decidir a quem pertence.`).catch(() => {});
+  } catch { /* aviso é cortesia */ }
+}
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -536,7 +553,11 @@ async function processar(req, res, evento) {
     if (ESTORNADOS.includes(String(pay.status))) {
       const idVenda = pay.external_reference;
       console.error(`[MP] ESTORNO RECEBIDO (${pay.status}) — pagamento ${pay.id}, venda ${idVenda}. Desfazendo comissão e escrow.`);
-      if (!idVenda) return res.status(200).json({ ok: true, status: pay.status, sem_referencia: true });
+      if (!idVenda) {
+        // estorno/chargeback de dinheiro que ENTROU sem venda aqui = dinheiro sem dono se mexendo
+        if (['charged_back', 'refunded'].includes(String(pay.status))) avisarPagamentoSemVenda(pay, 'estorno sem referência de venda');
+        return res.status(200).json({ ok: true, status: pay.status, sem_referencia: true });
+      }
       // 🔴 PONTO 107 (21/08/2026) — `_devolver_ao_comprador: false`, EXPLÍCITO.
       // O valor já é o padrão da função, mas está escrito aqui de propósito pra
       // ninguém "consertar" isso por engano depois.
@@ -577,7 +598,10 @@ async function processar(req, res, evento) {
     const saleId = pay.external_reference;
     const rows = await (await sb(`catalog_sales?select=*&or=(id.eq.${saleId},mp_payment_id.eq.${pay.id})&limit=1`)).json();
     const sale = Array.isArray(rows) ? rows[0] : null;
-    if (!sale) return res.status(200).json({ ok: true, sale_notfound: true });
+    if (!sale) {
+      avisarPagamentoSemVenda(pay, saleId ? `referência ${saleId} não existe aqui` : 'sem referência de venda (PIX direto na conta?)');
+      return res.status(200).json({ ok: true, sale_notfound: true });
+    }
     if (sale.status === 'paid') return res.status(200).json({ ok: true, already_paid: true }); // idempotência rápida
 
     // 🔒 FLIP ATÔMICO: o webhook do MP dispara VÁRIAS vezes. A checagem acima (ler-status →
