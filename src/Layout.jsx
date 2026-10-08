@@ -1180,8 +1180,19 @@ export default function Layout({ children, currentPageName }) {
               setCurrentUser(user);
               setShowLoginModal(false);
 
-              // 🔑 26/09/2026 — veio do "Entrar de novo" (sessão vencida): recarrega
-              // a MESMA tela, para a sala/carteira lerem o usuário e o crachá novos.
+              // 👑 REGRA DE DONO ÚNICO — quem JÁ TEM dono no cadastro (referred_by_id)
+              // não precisa do link: apaga pra não exibir/atribuir a um dono alheio.
+              // ⚠️ Quem NÃO tem dono mantém o link intacto: ele é o carimbo da primeira
+              // atribuição e apagar aqui tiraria a comissão do vendedor que trouxe o cliente.
+              // 🔑 08/10/2026 — vem ANTES do recarregar abaixo: no caso Renan, o link
+              // da Maira ficava guardado porque o reload saía antes desta limpeza.
+              if (user?.referred_by_id) {
+                clearReferral();
+              }
+
+              // 🔑 26/09/2026 — veio do "Entrar de novo" (sessão vencida) ou do
+              // "Já tem conta? Entrar" do convite: recarrega a MESMA tela, para a
+              // sala/carteira/cartão da Loja lerem o usuário e o crachá novos.
               try {
                 if (sessionStorage.getItem(CHAVE_RELOGIN)) {
                   sessionStorage.removeItem(CHAVE_RELOGIN);
@@ -1189,14 +1200,6 @@ export default function Layout({ children, currentPageName }) {
                   return;
                 }
               } catch { /* sem storage: segue o fluxo normal */ }
-
-              // 👑 REGRA DE DONO ÚNICO — quem JÁ TEM dono no cadastro (referred_by_id)
-              // não precisa do link: apaga pra não exibir/atribuir a um dono alheio.
-              // ⚠️ Quem NÃO tem dono mantém o link intacto: ele é o carimbo da primeira
-              // atribuição e apagar aqui tiraria a comissão do vendedor que trouxe o cliente.
-              if (user?.referred_by_id) {
-                clearReferral();
-              }
               
               // 🔧 CRÍTICO: Reforça URL se usuário é vendedor
               if (user?.is_seller === true && user?.referral_code) {
