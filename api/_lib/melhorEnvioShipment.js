@@ -410,6 +410,14 @@ async function tentarGerarEnvio(sale) {
         weight: Math.max(0.1, Number(p.peso) || 0.3),
       };
     });
+    // 📦 DIR-207 (08/10/2026) — etiqueta comprada com caixa padrão fica no log
+    // com o id do produto (antes era invisível: a conta não muda, só o rastro).
+    const semMedida = items.map((it) => {
+      const p = dims[String(it.id || it.product_id)] || {};
+      const faltou = ['peso', 'altura', 'largura', 'comprimento'].filter((c) => !(Number(p[c]) > 0));
+      return faltou.length ? `${it.id || it.product_id || '?'}:${faltou.join('/')}` : null;
+    }).filter(Boolean);
+    if (semMedida.length) console.warn(`[MELHOR ENVIO] venda ${sale.id}: produto(s) sem medida ${semMedida.join(', ')} — etiqueta com caixa padrão (0,3 kg / 11x4x16 cm)`);
     // volume único agregado (o mesmo padrão da cotação: caixa mínima dos Correios)
     const volume = items.reduce((acc, it) => {
       const p = dims[String(it.id || it.product_id)] || {};
@@ -468,7 +476,9 @@ async function tentarGerarEnvio(sale) {
     const protocol = checkoutData?.purchase?.orders?.[0]?.protocol || cartData?.protocol || null;
     await sb(`catalog_sales?id=eq.${sale.id}`, {
       method: 'PATCH', headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ raw_base44: { ...raw, melhor_envio: { order_id: orderId, protocol, label_url: labelUrl, ambiente, criado_em: new Date().toISOString() } } }),
+      // 📦 DIR-207 — o pacote efetivamente comprado (medidas e peso por item e o
+      // volume) fica gravado na venda, para auditar depois o que foi declarado.
+      body: JSON.stringify({ raw_base44: { ...raw, melhor_envio: { order_id: orderId, protocol, label_url: labelUrl, ambiente, criado_em: new Date().toISOString(), pacote: { products: cartBody.products, volumes: cartBody.volumes, sem_medida: semMedida } } } }),
     });
 
     return { ok: true, order_id: orderId, protocol, label_url: labelUrl };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fmtBR } from '@/lib/money';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { plataforma } from '@/api/plataformaClient';
@@ -13,7 +13,14 @@ import 'react-quill/dist/quill.snow.css';
 import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 import { CONDICOES, normalizarCondicao } from '@/lib/condicaoProduto';
 import { ORIGENS } from '@/lib/origemProduto';
-import { separarFotos } from '@/lib/imagemExterna';
+// 📷 08/10/2026 (DIR-207) — a cópia de foto de fora virou helper único
+// (src/lib/fotosParaNosso.js): esta tela, o editor do leilão e o buscador
+// manual usam a MESMA função. A cópia local que vivia aqui foi retirada.
+import { trazerFotosParaNosso } from '@/lib/fotosParaNosso';
+// 📦 08/10/2026 (DIR-207) — a régua única de medidas: vazio vira null (nunca 0),
+// fora da faixa é recusado, e a tela mostra a caixa que o frete VAI usar.
+import { normalizarMedidas, caixaDoFrete, resumoDaCaixa, faltamMedidas, textoDoCampo, ORIGENS_MEDIDA } from '@/lib/medidasDoProduto';
+import { toast } from '@/components/ui/use-toast';
 // 🔍 PONTO 77 CAMADA 5 — MESMO buscador já validado no leilão (busca pela FOTO via
 // Google Lens + busca pelo NOME). Reaproveitado, não duplicado.
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
@@ -21,6 +28,12 @@ import CampoDeVideo from '@/components/catalog/CampoDeVideo';
 import { videosValidos } from '@/lib/videoDoProduto';
 // 📸 Grade de fotos com botões "Principal" e excluir sempre visíveis
 import GradeFotosProduto from '@/components/admin/GradeFotosProduto';
+
+// 📦 O formulário fala inglês (weight/height/width/length) e a régua única fala
+// as colunas do banco (peso/altura/largura/comprimento). A tradução mora aqui,
+// num lugar só, para a tela e o pacote de gravação lerem a MESMA coisa.
+const medidasDoForm = (fd) => ({ peso: fd.weight, altura: fd.height, largura: fd.width, comprimento: fd.length });
+const CAMPOS_DE_MEDIDA_DO_FORM = ['weight', 'height', 'width', 'length'];
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
@@ -118,44 +131,98 @@ export default function AddCatalogProduct() {
   const [autoImportStatus, setAutoImportStatus] = useState('');
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFillStatus, setAutoFillStatus] = useState('');
+  // 📦 08/10/2026 (DIR-207) — de onde veio a medida que está na tela: 'manual'
+  // (a pessoa digitou), 'pagina' (lida da página do produto) ou 'estimativa_ia'
+  // (a IA chutou — conferir). null = nenhuma medida ainda. Vai para
+  // products.medidas_origem junto com as medidas.
+  const [medidasOrigem, setMedidasOrigem] = useState(null);
+  // O produto como veio do banco ao abrir — é com ele que o salvar compara para
+  // saber se alguma medida MUDOU (e só então carimbar medidas_em).
+  const [produtoCarregado, setProdutoCarregado] = useState(null);
+  // Espelho do formData para quem roda fora do render (a IA, 1,2 s depois de
+  // abrir): o closure dela veria o formulário VAZIO da primeira renderização.
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
+
+  // 🔴 08/10/2026 (DIR-207) — O QUE A TELA ESQUECIA DE CARREGAR.
+  // Esta tela é o "Editar" da gestão de produtos, do card da loja e do lápis da
+  // vitrine. Até hoje ela abria com `description: ''` e sem category_id,
+  // condicao, estado_conservacao, product_source, is_featured e purchase_order
+  // — e o salvar gravava null/false POR CIMA do que estava no banco. A pessoa
+  // abria para trocar uma foto e saía sem categoria, sem destaque e com a
+  // descrição da loja reescrita pela IA. Agora carrega tudo o que a tela sabe
+  // gravar; a medida passa por textoDoCampo (0 e null viram campo vazio).
+  const aplicarProdutoFonte = (product) => {
+    const existingImages = (product.image_urls || []).filter(u => u && u.trim());
+    setFormData(prev => ({
+      ...prev,
+      title: product.description || '',
+      description: product.notes || '',
+      category: product.category_id || '',
+      condicao: normalizarCondicao(product.condicao) || '',
+      estado_conservacao: product.estado_conservacao || '',
+      product_source: product.product_source || '',
+      is_featured: !!product.is_featured,
+      purchase_order: product.purchase_order || '',
+      image_urls: existingImages,
+      // sem carregar o que já está gravado, salvar aqui apagaria o vídeo
+      video_urls: Array.isArray(product.video_urls) ? product.video_urls : [],
+      price: product.price_catalog || product.selling_price_retail || '',
+      cost_price: product.cost_price || '',
+      compare_price: product.market_value || '',
+      sku: product.lot || '',
+      weight: textoDoCampo(product.peso),
+      length: textoDoCampo(product.comprimento),
+      height: textoDoCampo(product.altura),
+      width: textoDoCampo(product.largura),
+      quantity: product.quantity || 1,
+      catalog_active: product.catalog_active || false
+    }));
+    setMedidasOrigem(product.medidas_origem || null);
+    setProdutoCarregado(product);
+  };
 
   // Preenche automaticamente com dados do produto fonte
   useEffect(() => {
-    if (location.state?.sourceProduct) {
-      const product = location.state.sourceProduct;
+    const base = location.state?.sourceProduct;
+    if (!base) return undefined;
+    let vivo = true;
+    // Mostra já o que veio no state (a tela não espera a rede)...
+    aplicarProdutoFonte(base);
+    (async () => {
+      // ...mas o state pode vir do cache velho da gestão (sessionStorage
+      // products_cache_v3, até 1 min) — foi assim que o vídeo recém-gravado
+      // "não estava disponível quando clico em Editar". Busca o produto fresco
+      // por id e usa o fresco quando vier; se a rede falhar, segue com o cache.
+      let product = base;
+      if (base.id) {
+        try {
+          const achados = await plataforma.entities.Product.filter({ id: base.id });
+          if (Array.isArray(achados) && achados[0]) product = achados[0];
+        } catch { /* sem rede: o cache serve */ }
+      }
+      if (!vivo) return;
+      if (product !== base) aplicarProdutoFonte(product);
+
       const existingImages = (product.image_urls || []).filter(u => u && u.trim());
-
-      setFormData(prev => ({
-        ...prev,
-        title: product.description || '',
-        description: '',
-        image_urls: existingImages,
-        // sem carregar o que já está gravado, salvar aqui apagaria o vídeo
-        video_urls: Array.isArray(product.video_urls) ? product.video_urls : [],
-        price: product.price_catalog || product.selling_price_retail || '',
-        cost_price: product.cost_price || '',
-        compare_price: product.market_value || '',
-        sku: product.lot || '',
-        weight: product.peso || '',
-        length: product.comprimento || '',
-        height: product.altura || '',
-        width: product.largura || '',
-        quantity: product.quantity || 1,
-        catalog_active: product.catalog_active || false
-      }));
-
-      // Sempre auto-gera descrição de catálogo via IA (ignora notes do estoque)
       if (product.description) {
-        setTimeout(() => autoGenerateDescription(product.description), 800);
-        // Auto-preenche detalhes técnicos em paralelo
-        setTimeout(() => autoFillProductDetails(product.description), 1200);
+        // A IA só escreve a descrição sozinha quando NÃO há nada gravado — o
+        // botão "🪄 Usar IA" continua lá para regenerar sob clique.
+        if (!String(product.notes || '').replace(/<[^>]*>/g, '').trim()) {
+          setTimeout(() => autoGenerateDescription(product.description), 800);
+        }
+        // E só preenche detalhes quando falta categoria OU alguma medida.
+        if (!product.category_id || faltamMedidas(product)) {
+          setTimeout(() => autoFillProductDetails(product.description), 1200);
+        }
       }
 
       // Auto-busca imagens se não tiver (igual ao CreateAuction)
       if (existingImages.length === 0 && product.description) {
         autoFetchImages(product);
       }
-    }
+    })();
+    return () => { vivo = false; };
   }, [location.state]);
 
   const autoGenerateDescription = async (title) => {
@@ -210,7 +277,9 @@ INSTRUÇÕES:
 - Modelo: extraia do nome do produto. Se não houver, retorne null  
 - Condição: "Recondicionado" para arremates/devoluções, "Novo" para produtos novos. Default: "Recondicionado"
 - Peso e dimensões: baseie-se em especificações técnicas reais do produto. Se não souber, retorne 0
+- Os números devem ser do PRODUTO (não da embalagem), em kg e cm, e só se você tiver certeza razoável; na dúvida, 0
 - Todos os números devem ser em formato decimal (ex: 1.58, não "1,58")
+- confianca: "alta" quando as medidas vêm de ficha técnica conhecida, "media" quando são do modelo genérico, "baixa" quando chutou
 
 Retorne APENAS o JSON, sem markdown, sem explicações:
 {
@@ -222,7 +291,8 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
   "peso_kg": 0,
   "altura_cm": 0,
   "comprimento_cm": 0,
-  "largura_cm": 0
+  "largura_cm": 0,
+  "confianca": "alta|media|baixa"
 }`,
         response_json_schema: {
           type: "object",
@@ -235,12 +305,15 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
             peso_kg: { type: "number" },
             altura_cm: { type: "number" },
             comprimento_cm: { type: "number" },
-            largura_cm: { type: "number" }
+            largura_cm: { type: "number" },
+            confianca: { type: "string", enum: ["alta", "media", "baixa"] }
           }
         }
       });
 
-      if (!response) throw new Error('IA não retornou dados');
+      // 🛡️ 08/10/2026 — a rota devolve {ok:false, error} quando a IA cai; isso é
+      // objeto, passava pelo `!response` e a tela dizia "Categoria: undefined".
+      if (!response || response.ok === false) throw new Error('IA não retornou dados');
 
       const data = typeof response === 'string' ? JSON.parse(response) : response;
 
@@ -285,6 +358,17 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         setFilteredSubcategories(updatedSubs.filter(s => s.parent_category_id === targetCat.id));
       }
 
+      // 📦 08/10/2026 (DIR-207) — MEDIDA: a IA NUNCA passa por cima do que está
+      // preenchido. Só entra em campo vazio, e só o que a régua única aceita
+      // (fora da faixa é descartado: uma IA que diz 1500 "kg" não grava nada).
+      // Se preencheu alguma, a origem vira 'estimativa_ia' — o selo "conferir".
+      const { valores: medidasIA } = normalizarMedidas({
+        peso: data.peso_kg, altura: data.altura_cm, comprimento: data.comprimento_cm, largura: data.largura_cm,
+      });
+      const antes = medidasDoForm(formDataRef.current);
+      const iaPreencheuMedida = Object.keys(medidasIA)
+        .some((campo) => medidasIA[campo] !== null && textoDoCampo(antes[campo]) === '');
+
       // Preenche todos os campos de uma vez
       setFormData(prev => ({
         ...prev,
@@ -293,11 +377,12 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
         brand: data.marca || prev.brand,
         model: data.modelo || prev.model,
         condicao: normalizarCondicao(data.condicao) || prev.condicao,
-        weight: data.peso_kg > 0 ? String(data.peso_kg) : prev.weight,
-        height: data.altura_cm > 0 ? String(data.altura_cm) : prev.height,
-        length: data.comprimento_cm > 0 ? String(data.comprimento_cm) : prev.length,
-        width: data.largura_cm > 0 ? String(data.largura_cm) : prev.width,
+        weight: prev.weight || textoDoCampo(medidasIA.peso),
+        height: prev.height || textoDoCampo(medidasIA.altura),
+        length: prev.length || textoDoCampo(medidasIA.comprimento),
+        width: prev.width || textoDoCampo(medidasIA.largura),
       }));
+      if (iaPreencheuMedida) setMedidasOrigem('estimativa_ia');
 
       setAutoFillStatus(`✅ Preenchido automaticamente! Categoria: ${data.categoria} › ${data.subcategoria}`);
       setTimeout(() => setAutoFillStatus(''), 5000);
@@ -323,24 +408,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
   // Agora toda foto que vem de fora é COPIADA para o nosso servidor antes de
   // entrar no formulário. Foto que não vier a gente NÃO guarda pelo endereço:
   // guardar o link de fora "porque a cópia falhou" é justamente o bug.
-  const trazerParaNosso = async (urls, descricao) => {
-    const { nossas, externas } = separarFotos(urls);
-    if (!externas.length) return { fotos: nossas, falharam: 0 };
-    try {
-      let eu = null;
-      try { eu = JSON.parse(localStorage.getItem('currentUser') || 'null'); } catch { /* sem cache */ }
-      const r = await plataforma.functions.invoke('copiarImagensParaNosso', {
-        actorId: eu?.id || '', urls: externas, descricao,
-      });
-      const d = r?.data || r;
-      const copiadas = (d?.fotos || []).filter((f) => f.ok).map((f) => f.url);
-      return { fotos: [...nossas, ...copiadas], falharam: (d?.fotos || []).length - copiadas.length };
-    } catch {
-      // Rota fora do ar: melhor o produto ficar sem foto de fora do que com uma
-      // foto que pode virar outra coisa amanhã.
-      return { fotos: nossas, falharam: externas.length };
-    }
-  };
+  //
+  // 08/10/2026 (DIR-207): a função que fazia isso aqui virou
+  // src/lib/fotosParaNosso.js (trazerFotosParaNosso), a mesma do editor do
+  // leilão — mesmo comportamento, uma cópia só.
+  const trazerParaNosso = trazerFotosParaNosso;
 
   const autoFetchImages = async (product) => {
     setIsAutoImporting(true);
@@ -443,7 +515,10 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
   
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+    // 📦 digitou em qualquer um dos 4 campos de medida → é medida informada à
+    // mão, seja qual fosse a origem antes (IA ou página).
+    if (CAMPOS_DE_MEDIDA_DO_FORM.includes(field)) setMedidasOrigem('manual');
+
     // Se mudou a categoria, limpa a subcategoria
     if (field === 'category') {
       setFormData(prev => ({ ...prev, subcategory: '' }));
@@ -673,6 +748,20 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
   // Salva de fato o produto (criar ou editar) com o catalog_active final decidido.
   // Extraído pra poder chamar tanto no fluxo direto quanto após a guarda de publicação.
   const performSave = async (catalogActive) => {
+    // 📦 08/10/2026 (DIR-207) — a régua única decide o que vira medida gravada.
+    // Vazio vira null (NUNCA 0: o frete lia 0 como "sem medida" e cotava uma
+    // geladeira na caixa de 300 g). Fora da faixa não grava e não salva nada —
+    // a pessoa corrige o campo (1500 no peso quase sempre era grama).
+    const medidas = normalizarMedidas(medidasDoForm(formData));
+    if (medidas.avisos.length) {
+      toast({ title: 'Confira as medidas antes de salvar', description: medidas.avisos.join(' '), variant: 'destructive' });
+      setShowPublishConfirm(false);
+      return;
+    }
+    const temMedida = Object.values(medidas.valores).some((v) => v !== null);
+    const antes = normalizarMedidas(produtoCarregado || {}).valores;
+    const medidaMudou = temMedida && Object.keys(medidas.valores).some((c) => medidas.valores[c] !== antes[c]);
+
     setIsSubmitting(true);
     setShowPublishConfirm(false);
     try {
@@ -689,10 +778,14 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         catalog_active: catalogActive,
         is_featured: formData.is_featured,
         quantity: parseInt(formData.quantity) || 1,
-        peso: parseFloat(formData.weight) || 0,
-        comprimento: parseFloat(formData.length) || 0,
-        altura: parseFloat(formData.height) || 0,
-        largura: parseFloat(formData.width) || 0,
+        peso: medidas.valores.peso,
+        comprimento: medidas.valores.comprimento,
+        altura: medidas.valores.altura,
+        largura: medidas.valores.largura,
+        // de onde veio a medida (null quando não há nenhuma); medidas_em só vai
+        // quando alguma medida existe E mudou em relação ao produto carregado.
+        medidas_origem: temMedida ? medidasOrigem : null,
+        ...(medidaMudou ? { medidas_em: new Date().toISOString() } : {}),
         lot: formData.sku || formData.lot,
         purchase_order: formData.purchase_order,
         // 🏷️ 01/09/2026 — ESTA LINHA FALTAVA. A tela tem os seletores de Categoria
@@ -788,6 +881,10 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
     }
   };
   
+  // 📦 Avisos de faixa AO VIVO e a caixa que o frete vai usar com o que está digitado.
+  const { avisos: avisosMedidas } = normalizarMedidas(medidasDoForm(formData));
+  const caixaDoFreteAgora = caixaDoFrete(medidasDoForm(formData));
+
   const sections = [
     { id: 'geral', label: 'Informação Gerais' },
     { id: 'variacoes', label: 'Estrutura e variações' },
@@ -1213,55 +1310,85 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                       Essas informações influenciam no cálculo do frete. Medir com precisão evita erros no envio.
                     </p>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4" data-teste="medidas-do-produto">
                       <div>
-                        <Label className="text-sm text-gray-700 mb-1.5 block">Peso (Kg)</Label>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Peso (kg)</Label>
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.001"
                           value={formData.weight}
                           onChange={(e) => handleInputChange('weight', e.target.value)}
-                          placeholder="0cm"
+                          placeholder="0,000"
                           className="bg-white border-gray-300"
                         />
                       </div>
-                      
+
                       <div>
                         <Label className="text-sm text-gray-700 mb-1.5 block">Altura (cm)</Label>
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.1"
                           value={formData.height}
                           onChange={(e) => handleInputChange('height', e.target.value)}
-                          placeholder="0cm"
+                          placeholder="0"
                           className="bg-white border-gray-300"
                         />
                       </div>
-                      
+
                       <div>
                         <Label className="text-sm text-gray-700 mb-1.5 block">Comprimento (cm)</Label>
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.1"
                           value={formData.length}
                           onChange={(e) => handleInputChange('length', e.target.value)}
-                          placeholder="0cm"
+                          placeholder="0"
                           className="bg-white border-gray-300"
                         />
                       </div>
-                      
+
                       <div>
                         <Label className="text-sm text-gray-700 mb-1.5 block">Largura (cm)</Label>
                         <Input
                           type="number"
-                          step="0.01"
+                          step="0.1"
                           value={formData.width}
                           onChange={(e) => handleInputChange('width', e.target.value)}
-                          placeholder="0cm"
+                          placeholder="0"
                           className="bg-white border-gray-300"
                         />
                       </div>
                     </div>
+
+                    {/* 📦 08/10/2026 (DIR-207) — a verdade do frete, AO VIVO: faixa
+                        recusada vira aviso aqui (e o salvar não passa), e a linha
+                        abaixo mostra a caixa que o frete vai cotar com o que está
+                        digitado — "caixa padrão" em vermelho é o frete chutando. */}
+                    {avisosMedidas.length > 0 && (
+                      <ul className="mt-3 space-y-1" data-teste="avisos-de-medida">
+                        {avisosMedidas.map((a) => (
+                          <li key={a} className="text-xs text-red-600">⚠️ {a}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-3 text-sm text-gray-700" data-teste="frete-caixa">
+                      O frete vai cotar com: <strong>{resumoDaCaixa(caixaDoFreteAgora)}</strong>
+                      {caixaDoFreteAgora.padrao && (
+                        <span className="ml-2 font-semibold text-red-600">⚠️ caixa padrão</span>
+                      )}
+                    </p>
+                    {medidasOrigem && ORIGENS_MEDIDA[medidasOrigem] && (
+                      <span
+                        data-teste="origem-da-medida"
+                        className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-xs ${
+                          medidasOrigem === 'estimativa_ia'
+                            ? 'border-amber-300 bg-amber-50 text-amber-800'
+                            : 'border-gray-300 bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        {ORIGENS_MEDIDA[medidasOrigem]}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
@@ -1450,11 +1577,21 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           productName={formData.title}
                           imagemBase={formData.image_urls[0] || ''}
                           jaTem={formData.image_urls.length}
-                          onSelect={(urls) => {
+                          onSelect={async (urls) => {
+                            // 📷 08/10/2026 (DIR-207) — o buscador manual era a única
+                            // porta que ainda gravava foto pelo endereço de fora (a
+                            // lição do LAVAJATO). Agora copia para o nosso Storage antes
+                            // de somar, e avisa quantas não vieram.
+                            setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
+                            const { fotos, falharam } = await trazerFotosParaNosso(urls, formData.title);
                             setFormData(prev => ({
                               ...prev,
-                              image_urls: [...prev.image_urls, ...urls.filter(u => !prev.image_urls.includes(u))]
+                              image_urls: [...prev.image_urls, ...fotos.filter(u => !prev.image_urls.includes(u))]
                             }));
+                            setAutoImportStatus(falharam
+                              ? `⚠️ ${falharam} foto(s) não puderam ser copiadas e ficaram de fora — suba manualmente`
+                              : `✅ ${fotos.length} foto(s) copiadas para o nosso servidor`);
+                            setTimeout(() => setAutoImportStatus(''), 4000);
                           }}
                         />
                       </div>

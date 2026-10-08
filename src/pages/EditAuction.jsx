@@ -26,6 +26,12 @@ import { capOf, withCap } from '@/lib/fotoLegenda';
 import ModoChamadaCard from '@/components/auction/ModoChamadaCard';
 import BidHistoryCard from '@/components/auction/BidHistoryCard';
 import BuscadorFotos from '@/components/admin/BuscadorFotos';
+// 📦 08/10/2026 DIR-207 — produto, medidas e vídeo do leilão (vivem em products,
+// não em auctions); toda foto de fora passa pelo nosso Storage antes de entrar.
+import ProdutoDoLeilaoCard from '@/components/auction/ProdutoDoLeilaoCard';
+import { trazerFotosParaNosso } from '@/lib/fotosParaNosso';
+// 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
+import { textoDaIA, MSG_IA_INDISPONIVEL } from '@/lib/descricaoIA';
 import { precoArremateAgora, normalizarArremateAgora } from '@/lib/arremateAgora';
 import { supabase } from '@/api/supabaseClient';
 import { mapaDePosicoes, POSICOES_DO_DESTAQUE } from '@/lib/posicoesDoDestaque';
@@ -139,6 +145,12 @@ export default function EditAuction() {
     const [confirmTyped, setConfirmTyped] = useState('');
     // Editor de texto sobre a foto: { index, text }
     const [captionEdit, setCaptionEdit] = useState(null);
+    // 📦 08/10/2026 DIR-207 — card de produto/medidas/vídeo: o Salvar do leilão
+    // pede a ele que grave o que estiver pendente ANTES de gravar em auctions.
+    const produtoRef = useRef(null);
+    // ✨ descrição por IA SÓ por clique — nunca em useEffect (no editor, um
+    // efeito que reescreve a descrição 1 s depois de montar é destrutivo).
+    const [gerandoDescricao, setGerandoDescricao] = useState(false);
 
     // 🌟 Destaque na página de Leilões (até 6 posições fixas)
     const [featuredId, setFeaturedId] = useState(null);
@@ -320,6 +332,9 @@ export default function EditAuction() {
                 manual_market_price: formData.manual_market_price ? parseFloat(formData.manual_market_price) : null,
                 buy_now_price: normalizarArremateAgora(formData.buy_now_price, formData.starting_price),
                 permite_retirada: formData.permite_retirada === true,
+                // 📦 08/10/2026 DIR-207 — a cópia herda o produto: sem isto ela nascia
+                // desvinculada, sem vídeo e sem medidas, e o frete cotava a caixa padrão.
+                product_id: auction?.product_id || null,
             });
             notify.ok('Leilão duplicado', 'Você está na cópia — agende ou reative quando quiser.');
             navigate(createPageUrl('EditAuction') + `?id=${novo.id}`, { replace: false });
@@ -727,6 +742,88 @@ export default function EditAuction() {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    // 📦 08/10/2026 DIR-207 — descrição vinda da importação pelo link. Se já há
+    // descrição, pede confirmação no modal da página (não no confirm() nativo,
+    // que o Brave bloqueia — ver o aviso no topo do arquivo).
+    const aplicarDescricaoImportada = (texto) => {
+        const novo = String(texto || '').trim();
+        if (!novo) return;
+        if ((formData.description || '').trim()) {
+            setConfirmAction({
+                title: 'Substituir a descrição atual?',
+                lines: ['A descrição digitada será trocada pelo texto importado', 'Você ainda pode editar antes de salvar'],
+                confirmLabel: 'Substituir',
+                danger: false,
+                onConfirm: () => handleInputChange('description', novo),
+            });
+            return;
+        }
+        handleInputChange('description', novo);
+    };
+
+    // 📦 08/10/2026 DIR-207 — fotos importadas pelo link SOMAM ao leilão (nunca
+    // substituem, nunca duplicam). Já chegam copiadas para o nosso Storage.
+    const somarFotosImportadas = (novas) => {
+        const lista = (Array.isArray(novas) ? novas : []).filter((u) => typeof u === 'string' && u.trim());
+        if (!lista.length) return;
+        setImageUrls((prev) => [...prev, ...lista.filter((u) => !prev.includes(u))]);
+    };
+
+    // ✨ 08/10/2026 DIR-207 — "Gerar descrição com IA" SÓ por clique. O mesmo
+    // prompt de AddCatalogProduct (catálogo), adaptado: texto corrido, sem HTML,
+    // porque a sala do leilão mostra a descrição como texto puro.
+    const gerarDescricaoComIA = async () => {
+        const titulo = (formData.title || '').trim();
+        if (!titulo) {
+            notify.aviso('Preencha o título', 'A IA escreve a descrição a partir do título do produto.');
+            return;
+        }
+        const gerar = async () => {
+            setGerandoDescricao(true);
+            try {
+                const resposta = await plataforma.integrations.Core.InvokeLLM({
+                    prompt: `Você é um redator especializado em e-commerce e está criando a descrição de um produto para um leilão online.
+
+PRODUTO: ${titulo}
+
+INSTRUÇÕES:
+• Crie uma descrição atraente e persuasiva com 100-200 palavras
+• Destaque os principais benefícios e diferenciais do produto
+• Use linguagem profissional mas acessível ao público geral
+• Inclua características técnicas quando relevantes
+• Organize em parágrafos curtos, em texto corrido — SEM HTML, SEM markdown
+• Não mencione preço nem use exageros como "melhor do mundo"
+
+IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, títulos ou comentários adicionais.`,
+                });
+                // 🛡️ PONTO 74: campo permanece intacto quando a IA falha
+                const texto = textoDaIA(resposta);
+                if (texto) {
+                    handleInputChange('description', texto);
+                    notify.ok('Descrição gerada com IA', 'Revise o texto antes de salvar.');
+                } else {
+                    notify.erro(MSG_IA_INDISPONIVEL);
+                }
+            } catch (error) {
+                console.error('Erro ao gerar descrição com IA:', error);
+                notify.erro('Erro ao gerar descrição', error?.message || 'Tente novamente.');
+            } finally {
+                setGerandoDescricao(false);
+            }
+        };
+        if ((formData.description || '').trim()) {
+            setConfirmAction({
+                title: 'Substituir a descrição atual pela da IA?',
+                lines: ['A descrição digitada será trocada pelo texto gerado', 'Você ainda pode editar antes de salvar'],
+                confirmLabel: 'Gerar e substituir',
+                danger: false,
+                onConfirm: gerar,
+            });
+            return;
+        }
+        await gerar();
+    };
+
     // 🆕 HANDLER PARA UPLOAD DE LOGO
     const handleSupplierLogoUpload = async (file) => {
         if (!file) return;
@@ -876,6 +973,11 @@ export default function EditAuction() {
             }
             
             console.log(`💾 [SAVE] Salvando com payload:`, updatePayload);
+            // 📦 08/10/2026 DIR-207 — medidas e vídeo moram em products (auctions não
+            // tem essas colunas; entityWrite as removeria em silêncio). O card grava o
+            // que estiver pendente ANTES do leilão, e a falha dele NUNCA bloqueia este save.
+            const p = await produtoRef.current?.salvarSePendente();
+            if (p && !p.ok) notify.aviso('Medidas/vídeo não salvos', p.erro);
             await Auction.update(auctionId, updatePayload);
             presetAtivoRef.current = null;
 
@@ -1215,7 +1317,13 @@ export default function EditAuction() {
                                 productName={formData.title}
                                 imagemBase={imageUrls[0]}
                                 jaTem={imageUrls.length}
-                                onSelect={(urls) => setImageUrls((prev) => [...prev, ...urls.filter((u) => !prev.includes(u))])}
+                                // 📷 08/10/2026 DIR-207 — lição do lavajato: a foto de fora é copiada
+                                // para o nosso Storage ANTES de entrar; a que não copiou não entra.
+                                onSelect={async (urls) => {
+                                    const { fotos, falharam } = await trazerFotosParaNosso(urls, formData.title);
+                                    if (falharam) notify.aviso(`${falharam} foto(s) não puderam ser copiadas`, 'Só entram fotos copiadas para o nosso servidor.');
+                                    setImageUrls((prev) => [...prev, ...fotos.filter((u) => !prev.includes(u))]);
+                                }}
                             />
                         </div>
 
@@ -1244,6 +1352,23 @@ export default function EditAuction() {
                     </CardContent>
                 </Card>
 
+                {/* 📦 08/10/2026 DIR-207 — produto, medidas, vídeo e importação pelo link.
+                    Grava em products (via salvarProdutoDoLeilao), nunca em auctions. */}
+                <ProdutoDoLeilaoCard
+                    ref={produtoRef}
+                    auctionId={auctionId}
+                    auction={auction}
+                    titulo={formData.title}
+                    descricaoAtual={formData.description}
+                    imageUrls={imageUrls}
+                    cardStyle={CARD_STYLE}
+                    inputCls={INPUT_CLS}
+                    labelCls={LABEL_CLS}
+                    onDescricao={aplicarDescricaoImportada}
+                    onFotos={somarFotosImportadas}
+                    onProdutoVinculado={(productId) => setAuction((a) => ({ ...a, product_id: productId }))}
+                />
+
                 <Card className="rounded-2xl border-white/[0.06]" style={CARD_STYLE}>
                   <CardHeader className="pb-4">
                     <div className="flex items-start gap-3">
@@ -1268,7 +1393,21 @@ export default function EditAuction() {
                     </div>
                     
                     <div>
-                      <Label htmlFor="description" className={LABEL_CLS}>Descrição</Label>
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor="description" className={LABEL_CLS}>Descrição</Label>
+                        {/* ✨ SÓ por clique — ver gerarDescricaoComIA */}
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={gerarDescricaoComIA}
+                          disabled={gerandoDescricao || isSaving}
+                          className="h-7 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs px-2.5"
+                          data-teste="gerar-descricao-ia"
+                        >
+                          {gerandoDescricao ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+                          {gerandoDescricao ? 'Gerando…' : 'Gerar descrição com IA'}
+                        </Button>
+                      </div>
                       <Textarea
                         id="description"
                         value={formData.description}

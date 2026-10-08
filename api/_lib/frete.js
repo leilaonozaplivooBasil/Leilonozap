@@ -50,6 +50,15 @@ export async function cotarOpcoes({ cep, items }) {
     };
   });
   if (!products.length) return { ok: false, error: 'Itens inválidos para cotação de frete.' };
+  // 📦 DIR-207 (08/10/2026) — a caixa padrão (0,3 kg / 11x4x16) entrava em
+  // SILÊNCIO: 2.819 de 2.858 produtos sem peso, e uma geladeira cotava como
+  // 300 g. A conta não muda (os testes fixam os pisos); agora fica no log
+  // QUEM caiu nela, para a auditoria achar pelo id do produto.
+  for (const it of lista) {
+    const p = dims[String(it.product_id || it.id)] || {};
+    const faltou = ['peso', 'altura', 'largura', 'comprimento'].filter((c) => !(Number(p[c]) > 0));
+    if (faltou.length) console.warn(`[FRETE] produto ${it.product_id || it.id || '?'} sem ${faltou.join('/')} — cotando com caixa padrão (0,3 kg / 11x4x16 cm)`);
+  }
 
   // 🩺 DIAGNÓSTICO (22/08/2026) — achado em produção: cliente real preso com
   // "cotacao_indisponivel" e nenhuma pista de por quê. A calculadora do painel da
