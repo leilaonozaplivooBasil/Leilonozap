@@ -19,6 +19,7 @@
  *      administrador e segue com a tela antiga para quem não é admin;
  *   9. a ferramenta do pop-up do leilão mostra a prévia do leilão ESCOLHIDO e, ao
  *      salvar, limpa a imagem antiga guardada (caso Hoverboard × PS5);
+ *  11. 🔴 programar um banner DESLIGADO: salvar as datas o LIGA, e ele só aparece na data de entrada;
  *  10. cada banner pode ser LIGADO a um leilão (some sozinho quando ele encerrar), e o painel
  *      mostra o que vai acontecer — inclusive o banner cujo leilão já encerrou.
  *
@@ -302,5 +303,64 @@ test('sem a coluna no banco, o painel avisa e não deixa ligar a leilão', { ski
   try {
     assert.match(await pagina.locator('[data-banner="geral"] [data-teste="leilao-do-banner"]').innerText(), /falta aplicar a atualização do banco/);
     assert.equal(await pagina.locator('[data-campo="leilao-do-banner"]').count(), 0, 'o seletor apareceu sem a coluna');
+  } finally { await ctx.close(); }
+});
+
+test('🔴 programar um banner DESLIGADO: avisa, e salvar as datas o LIGA — ele fica "Entra em" até a data', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?desligado=1');
+  try {
+    const cartao = pagina.locator('[data-banner="desligado"]');
+    assert.equal(await cartao.locator('[data-estado]').first().getAttribute('data-estado'), 'desligado');
+    await cartao.locator('[data-teste="abrir-programacao"]').click();
+    assert.match(await cartao.locator('[data-teste="aviso-desligado"]').innerText(), /Ao salvar as datas ele é ligado/);
+    const botao = cartao.locator('[data-teste="salvar-programacao"]');
+    assert.equal((await botao.innerText()).trim(), 'Salvar datas e ligar');
+
+    await cartao.locator('[data-campo="inicio"]').fill('2099-01-01T00:00');
+    await cartao.locator('[data-campo="fim"]').fill('2099-01-02T00:00');
+    await botao.click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'desligado'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'desligado');
+    assert.deepEqual(u.dados, { starts_at: '2099-01-01T03:00:00.000Z', ends_at: '2099-01-02T03:00:00.000Z', is_active: true });
+    // o painel relê: o banner está LIGADO e aguardando a data
+    await pagina.waitForFunction(() => document.querySelector('[data-banner="desligado"] [data-estado]')?.getAttribute('data-estado') === 'agendado');
+    assert.match(await cartao.locator('[data-estado]').first().innerText(), /^Entra em 01\/01 às 00:00$/);
+  } finally { await ctx.close(); }
+});
+
+test('banner que já está LIGADO não ganha o aviso nem o "e ligar"; só as datas são gravadas', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const cartao = pagina.locator('[data-banner="geral"]');
+    await cartao.locator('[data-teste="abrir-programacao"]').click();
+    assert.equal(await cartao.locator('[data-teste="aviso-desligado"]').count(), 0);
+    assert.equal((await cartao.locator('[data-teste="salvar-programacao"]').innerText()).trim(), 'Salvar datas');
+    await cartao.locator('[data-campo="inicio"]').fill('2099-01-01T00:00');
+    await cartao.locator('[data-teste="salvar-programacao"]').click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'geral'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral');
+    assert.deepEqual(u.dados, { starts_at: '2099-01-01T03:00:00.000Z', ends_at: null }, 'não mexe em is_active de quem já está ligado');
+  } finally { await ctx.close(); }
+});
+
+test('🔴 só DATA DE SAÍDA (sem entrada): banner ligado continua ligado e não ganha is_active; saída que já passou é recusada', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const cartao = pagina.locator('[data-banner="geral"]');
+    await cartao.locator('[data-teste="abrir-programacao"]').click();
+
+    // saída no passado: o banner sumiria na hora — recusa e NÃO grava
+    await cartao.locator('[data-campo="fim"]').fill('2000-01-01T00:00');
+    await cartao.locator('[data-teste="salvar-programacao"]').click();
+    assert.match(await cartao.locator('[role="alert"]').innerText(), /já passou: o banner sairia do ar agora/);
+    assert.equal((await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral').length, 0, 'gravou uma saída que já passou');
+
+    // saída futura, sem entrada: só ends_at; o banner segue ligado e no ar até lá
+    await cartao.locator('[data-campo="fim"]').fill('2099-01-02T00:00');
+    await cartao.locator('[data-teste="salvar-programacao"]').click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'geral'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral');
+    assert.deepEqual(u.dados, { starts_at: null, ends_at: '2099-01-02T03:00:00.000Z' });
+    await pagina.waitForFunction(() => document.querySelector('[data-banner="geral"] [data-estado]')?.getAttribute('data-estado') === 'no_ar_com_fim');
   } finally { await ctx.close(); }
 });

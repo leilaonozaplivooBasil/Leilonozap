@@ -132,6 +132,15 @@ test('leilão já encerrado ou apagado: o banner nem aparece', { skip: semNavega
   }
 });
 
+test('🏁 programado + ligado a leilão: ENTRA na data marcada e SAI quando o leilão encerra, sozinho', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=janela`);
+  try {
+    assert.deepEqual(await noAr(pagina), ['A', 'C'], 'antes da data de entrada o banner está fora do ar');
+    await esperar(pagina, ['A', 'C', 'T']); // ~1,2 s: chegou a data e o banner entrou
+    await esperar(pagina, ['A', 'C']);      // ~3,2 s: o leilão acabou e o banner saiu
+  } finally { await ctx.close(); }
+});
+
 test('leilão AGENDADO: o banner aparece (é a arte "faltam 3 dias")', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=agendado`);
   try { assert.deepEqual(await noAr(pagina), ['A', 'C', 'T']); } finally { await ctx.close(); }

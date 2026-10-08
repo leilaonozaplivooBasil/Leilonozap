@@ -15,6 +15,8 @@
  *       encerrado   o leilão já está vendido
  *       agendado    o leilão ainda não começou (a arte "faltam 3 dias")
  *       sumiu       o leilão foi apagado
+ *       janela      entra em ~1,2 s (starts_at) E sai quando o leilão acaba, ~3,2 s: "entra na data e
+ *                   sai com o leilão" num banner só
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -38,6 +40,7 @@ const leiloes = leilaoCenario ? ({
   encerrado: [{ id: 'lt', status: 'sold', end_time: fimDoLeilao(-60000) }],
   agendado: [{ id: 'lt', status: 'scheduled', end_time: fimDoLeilao(3 * 24 * 3600 * 1000) }],
   sumiu: [],
+  janela: [{ id: 'lt', status: 'active', end_time: fimDoLeilao(3200) }],
 }[leilaoCenario] || []) : [];
 if (leilaoCenario === 'prorrogado') {
   // o lance de última hora: o banco passa a dizer que o leilão acaba mais tarde
@@ -47,7 +50,7 @@ if (leilaoCenario === 'prorrogado') {
 window.__entidadesFalsas = {
   Auction: leiloes,
   BannerImage: [
-    ...(leilaoCenario ? [b('T', 'home', { order: 3, auction_id: 'lt' })] : []),
+    ...(leilaoCenario ? [b('T', 'home', { order: 3, auction_id: 'lt', ...(leilaoCenario === 'janela' ? { starts_at: iso(Date.now() + 1200) } : {}) })] : []),
     b('A', 'home', { order: 0 }),
     b('B', 'home', { order: 1, starts_at: entra }),
     b('C', 'home', { order: 2, ends_at: sai }),

@@ -27,7 +27,7 @@ import SimuladorDeData from '../components/admin/SimuladorDeData';
 import LeilaoDoBanner from '../components/admin/LeilaoDoBanner';
 import { filtrarPorLeilao } from '@/lib/bannerDoLeilao';
 import { CONTEXTO_CONFIG, chavesAlteradas, lerFileiras, ligarFileira } from '@/lib/fileirasDeBanners';
-import { dentroDaJanela, paraISOBrasilia, validarJanela } from '@/lib/janelaDoBanner';
+import { dentroDaJanela, paraISOBrasilia, rotuloDeData, validarJanela } from '@/lib/janelaDoBanner';
 import { convertToWebP } from '@/lib/convertToWebP';
 import { invalidateSiteMediaCache, LOGO_FALLBACK, FAVICON_FALLBACK } from '@/hooks/useSiteMedia';
 
@@ -276,7 +276,7 @@ export default function PainelMidia({ embutido = false }) {
   const handleAddBanner = (location, device) => {
     // 🕛 se o dono já programou o próximo, confere ANTES de subir a imagem
     const prog = programarProximo[location.key] || {};
-    const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim));
+    const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim), Date.now());
     if (problema) { toast.error(problema); return; }
     if ((prog.inicio || prog.fim) && !suportaProgramacao) { toast.error('Datas indisponíveis: falta aplicar a atualização do banco.'); return; }
     if (prog.leilao && !suportaLeilao) { toast.error('Ligar a um leilão está indisponível: falta aplicar a atualização do banco.'); return; }
@@ -348,7 +348,8 @@ export default function PainelMidia({ embutido = false }) {
   const handleSalvarJanela = async (banner, janela) => {
     try {
       await plataforma.entities.BannerImage.update(banner.id, janela);
-      toast.success(janela.starts_at || janela.ends_at ? 'Datas salvas' : 'Datas removidas');
+      const entra = janela.starts_at && new Date(janela.starts_at).getTime() > Date.now() ? ` Entra em ${rotuloDeData(janela.starts_at)}.` : '';
+      toast.success(janela.is_active ? `Banner programado e ligado.${entra}` : (janela.starts_at || janela.ends_at ? 'Datas salvas' : 'Datas removidas'));
       loadAll();
     } catch {
       toast.error('Erro ao salvar as datas');
