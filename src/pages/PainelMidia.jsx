@@ -150,7 +150,9 @@ function DimensionBadge({ url, target }) {
   );
 }
 
-export default function PainelMidia() {
+// `embutido`: o painel dentro de outra tela (aba Banners do Gerenciamento de Conteúdo, 08/10/2026) —
+// sem o cabeçalho com "voltar", sem fundo/altura de página inteira. Tudo o mais é idêntico.
+export default function PainelMidia({ embutido = false }) {
   const navigate = useNavigate();
   const [banners, setBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -488,19 +490,20 @@ export default function PainelMidia() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className={`flex items-center justify-center ${embutido ? 'min-h-[40vh]' : 'min-h-screen bg-gray-900'}`}>
         <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-4 md:p-6">
+    <div className={embutido ? '' : 'min-h-screen bg-gray-900 p-4 md:p-6'} data-teste="painel-de-midia">
       {/* input de arquivo único, reutilizado por todos os botões de upload */}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onFilePicked} />
 
       <div className="max-w-6xl mx-auto">
         {/* ===== Cabeçalho ===== */}
+        {!embutido && (
         <div className="flex items-center gap-3 mb-2">
           <button
             onClick={() => navigate(-1)}
@@ -522,6 +525,7 @@ export default function PainelMidia() {
             </p>
           </div>
         </div>
+        )}
 
         {isSaving && (
           <div className="mb-4 flex items-center gap-2 text-sm text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-4 py-2">
