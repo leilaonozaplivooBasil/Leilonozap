@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { plataforma } from '@/api/plataformaClient';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,22 @@ import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageCropEditor from '../components/admin/ImageCropEditor';
 import { convertToWebP } from '@/lib/convertToWebP';
+
+// 🖼️ 08/10/2026 — a aba "Banners" deste Gerenciamento de Conteúdo era uma SEGUNDA tela, mais
+// antiga que o Painel de Mídia, gravando na mesma tabela sem conhecer as três fileiras
+// (Leilão, Loja, Unificada) nem as datas de entrada e saída. Para o administrador ela agora
+// MOSTRA o Painel de Mídia — uma só tela, uma só regra. Quem não é administrador segue vendo a
+// tela antiga, exatamente como estava.
+const PainelMidia = React.lazy(() => import('./PainelMidia'));
+
+function usuarioEhAdmin() {
+  try {
+    const u = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    return ['admin', 'super_admin'].includes(u?.role);
+  } catch {
+    return false;
+  }
+}
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -448,7 +464,13 @@ export default function BannerManagement() {
           </Button>
         </div>
 
-        {activeTab === 'banners' && (
+        {activeTab === 'banners' && usuarioEhAdmin() && (
+          <Suspense fallback={<div className="py-16 text-center text-gray-400">Carregando…</div>}>
+            <PainelMidia embutido />
+          </Suspense>
+        )}
+
+        {activeTab === 'banners' && !usuarioEhAdmin() && (
           <>
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-white">Gerenciar Banners</h2>

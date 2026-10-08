@@ -14,7 +14,9 @@
  *      e fim antes do início é recusado sem gravar;
  *   6. "pré-visualizar uma data" esmaece quem não estaria no ar, sem gravar nada;
  *   7. sem as colunas de data no banco, o painel AVISA e não deixa programar
- *      (a gravação do servidor descartaria a data e o banner iria ao ar na hora).
+ *      (a gravação do servidor descartaria a data e o banner iria ao ar na hora);
+ *   8. a aba "Banners" do Gerenciamento de Conteúdo mostra este painel para o
+ *      administrador e segue com a tela antiga para quem não é admin.
  *
  * COMO RODAR
  *   npm run test:navegador
@@ -192,5 +194,27 @@ test('sem as colunas de data no banco, o painel avisa e não deixa programar', {
   try {
     assert.match(await pagina.locator('[data-banner="geral"]').innerText(), /falta aplicar a atualização do banco/);
     assert.equal(await pagina.locator('[data-teste="abrir-programacao"]').count(), 0, 'nenhum botão Programar');
+  } finally { await ctx.close(); }
+});
+
+test('a aba Banners do Gerenciamento de Conteúdo mostra o painel novo para o admin', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?pagina=conteudo&perfil=admin');
+  try {
+    assert.equal(await pagina.locator('[data-teste="painel-de-midia"]').count(), 1);
+    assert.equal(await pagina.getByText('Gerenciar Banners').count(), 0, 'a tela antiga não aparece');
+    assert.equal(await pagina.getByRole('heading', { name: 'Painel de Mídia' }).count(), 0, 'sem o cabeçalho de página inteira');
+    assert.equal(await pagina.getByRole('switch', { name: 'Fileira Unificada' }).count(), 1);
+    assert.equal(await pagina.locator('[data-banner="tv2"] [data-estado]').getAttribute('data-estado'), 'no_ar_com_fim');
+  } finally { await ctx.close(); }
+});
+
+test('quem não é admin segue com a tela antiga, sem mudança', { skip: semNavegador }, async () => {
+  const ctx = await (await garantirNavegador()).newContext({ viewport: { width: 1280, height: 900 }, proxy: { server: 'http://127.0.0.1:1', bypass: '127.0.0.1' } });
+  const pagina = await ctx.newPage();
+  try {
+    await pagina.goto(`${BASE}?pagina=conteudo&perfil=lojista`, { waitUntil: 'networkidle' });
+    await pagina.getByText('Gerenciar Banners').waitFor();
+    assert.equal(await pagina.locator('[data-teste="fileiras-de-banners"]').count(), 0);
+    assert.equal(await pagina.getByText('Novo Banner Desktop').count(), 1);
   } finally { await ctx.close(); }
 });

@@ -7,12 +7,14 @@
  * banco de mentira semeado com a esteira de uma TV (3, 2 e 1 dia), em relação ao
  * "agora" do navegador:
  *   ?semcolunas=1  → linhas sem starts_at/ends_at (migração ainda não aplicada)
+ *   ?pagina=conteudo&perfil=admin|lojista → a tela "Gerenciamento de Conteúdo" (aba Banners)
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import '@/index.css';
 import PainelMidia from '@/pages/PainelMidia';
+import BannerManagement from '@/pages/BannerManagement';
 
 const HORA = 3600 * 1000;
 // próxima meia-noite de Brasília (03:00 UTC), a partir de agora
@@ -28,7 +30,8 @@ const arte = (texto, cor) => `data:image/svg+xml;utf8,${encodeURIComponent(
   `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="${cor}"/><text x="320" y="190" font-family="Arial" font-weight="700" font-size="40" fill="#fff" text-anchor="middle">${texto}</text></svg>`,
 )}`;
 
-const semColunas = new URLSearchParams(window.location.search).get('semcolunas') === '1';
+const q = new URLSearchParams(window.location.search);
+const semColunas = q.get('semcolunas') === '1';
 const janela = (ini, fim) => (semColunas ? {} : { starts_at: ini ? iso(ini) : null, ends_at: fim ? iso(fim) : null });
 
 const linha = (id, context, texto, cor, order, extra = {}) => ({
@@ -46,6 +49,13 @@ window.__entidadesFalsas = {
   ],
 };
 
+// 🖼️ 08/10/2026 — a aba Banners do Gerenciamento de Conteúdo: admin vê o Painel de Mídia,
+// quem não é admin segue com a tela antiga
+const conteudo = q.get('pagina') === 'conteudo';
+if (conteudo) {
+  localStorage.setItem('currentUser', JSON.stringify({ id: 'u1', email: 'a@b.c', role: q.get('perfil') || 'admin' }));
+}
+
 createRoot(document.getElementById('raiz')).render(
-  <MemoryRouter><PainelMidia /></MemoryRouter>,
+  <MemoryRouter>{conteudo ? <BannerManagement /> : <PainelMidia />}</MemoryRouter>,
 );
