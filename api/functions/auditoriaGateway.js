@@ -47,6 +47,9 @@ export default async function handler(req, res) {
     if (!ator || !['admin', 'super_admin'].includes(ator.role)) return res.status(403).json({ ok: false, error: 'Acesso restrito a administradores' });
 
     const janela = janelaDaAuditoria({ de: body.de, ate: body.ate, dias: body.dias });
+    // quem somos no gateway: pagamento cujo recebedor não é a nossa conta é a conta PAGANDO alguém
+    const eu = await fetch('https://api.mercadopago.com/users/me', { headers: { Authorization: `Bearer ${MP_TOKEN}` } }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const nossoId = eu?.id != null ? String(eu.id) : null;
     const lista = await listarPagamentosDoGateway({ de: janela.de, ate: janela.ate, token: MP_TOKEN });
     if (!lista.ok) return res.status(200).json({ ok: false, error: `gateway: ${lista.erro}`, janela });
     const pagamentos = lista.pagamentos;
@@ -61,10 +64,10 @@ export default async function handler(req, res) {
     // o outro lado: tudo que foi pago aqui pelo gateway no mesmo período
     const vendasPagas = await lerLista(`catalog_sales?select=${CAMPOS}&mp_payment_id=not.is.null&status=in.(${PAGOS.join(',')})&created_date=gte.${encodeURIComponent(janela.de)}&created_date=lte.${encodeURIComponent(janela.ate)}&order=created_date.desc&limit=2000`);
 
-    const { linhas, totais } = classificarPagamentos(pagamentos, vendas);
+    const { linhas, totais } = classificarPagamentos(pagamentos, vendas, { nossoId });
     const semPagamento = vendasPagasSemPagamento(vendasPagas, pagamentos);
     return res.status(200).json({
-      ok: true, janela, truncado: pagamentos.length >= TETO_PAGAMENTOS,
+      ok: true, janela, truncado: pagamentos.length >= TETO_PAGAMENTOS, conta: nossoId,
       totais: { ...totais, vendas_pagas_aqui: vendasPagas.length, pago_aqui_sem_pagamento_la: semPagamento.length },
       pago_aqui_sem_pagamento_la: semPagamento,
       linhas,
