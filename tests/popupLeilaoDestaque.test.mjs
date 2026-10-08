@@ -14,7 +14,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   podeMostrar, configValida, leilaoAindaAberto, idDoLeilao, dadosDoPopup,
-  paginaOndeFechou, marcarVisto, fotoDoLeilao, PAGINAS_PROIBIDAS, Z_INDEX, CHAVE_SESSAO,
+  lerAtividade, registrarAtividade, acessoJaAtendido, JANELA_DE_ACESSO_MS, fotoDoLeilao, PAGINAS_PROIBIDAS, Z_INDEX, CHAVE_SESSAO,
   contagemRegressiva,
 } from '../src/lib/popupLeilaoDestaque.js';
 
@@ -29,7 +29,7 @@ const criarStorage = (inicial = {}) => {
 };
 const base = (over = {}) => ({
   config: CONFIG, leilao: ABERTO, paginaAtual: 'Home',
-  paginaJaVista: '', agora: AGORA, ...over,
+  acessoAtendido: false, agora: AGORA, ...over,
 });
 
 // ───────────────────── o caminho feliz ─────────────────────
@@ -108,48 +108,70 @@ test('a camada fica abaixo do consentimento e do pagamento', () => {
   assert.ok(Z_INDEX > 201, 'ficaria atrás do carrinho');
 });
 
-// ──────────── uma vez por PÁGINA (a demanda de 20/09) ────────────
+// ──────────── UMA VEZ POR ACESSO (ordem do dono, 08/10/2026) ────────────
 //
-// O dono pediu: "cada vez que o usuário entrar em uma página é necessário que
-// estoure o pop-up". Antes era uma vez por SESSÃO. Estes testes são a diferença
-// entre as duas coisas — e o de "volta na página seguinte" é o que falharia se
-// alguém restaurasse o portão de sessão sem perceber.
+// 20/09 o dono pediu "toda vez que entrar em uma página, estoura o pop-up". Em
+// 08/10 mandou acabar: o cliente trocava de página e levava o pop-up de novo e de
+// novo. "Só quando o usuário ENTRA, novo ou antigo; depois que fechar, não aparece
+// mais." Estes testes são a diferença entre as duas regras — o de "trocar de
+// página não traz de volta" é o que falharia se alguém restaurasse o pedido antigo.
 
-test('fechado numa página, some naquela página', () => {
-  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: '' })).mostrar, true);
-  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: 'Home' })).motivo, 'ja_viu_nesta_pagina');
+test('acesso novo: aparece', () => {
+  assert.equal(podeMostrar(base({ acessoAtendido: false })).mostrar, true);
 });
 
-test('🔴 entrar em OUTRA página traz o pop-up de volta', () => {
-  // O coração do pedido. Fechou na Home, foi para a Loja: aparece de novo.
-  const v = podeMostrar(base({ paginaAtual: 'Loja-Virtual', paginaJaVista: 'Home' }));
-  assert.equal(v.mostrar, true, 'trocou de página e não voltou — virou uma-vez-por-sessão de novo');
+test('🔴 já apareceu neste acesso: trocar de página NÃO traz de volta', () => {
+  for (const pagina of ['Home', 'Loja-Virtual', 'leiloes', 'Carteira']) {
+    const v = podeMostrar(base({ paginaAtual: pagina, acessoAtendido: true }));
+    assert.equal(v.mostrar, false, `voltou na página ${pagina} — o cliente é estressado a cada troca`);
+    assert.equal(v.motivo, 'ja_viu_neste_acesso');
+  }
 });
 
-test('voltar para a página onde fechou também traz de volta', () => {
-  // Home → (fecha) → Loja → Home. Ao voltar, a marca é 'Loja-Virtual'.
-  assert.equal(podeMostrar(base({ paginaAtual: 'Home', paginaJaVista: 'Loja-Virtual' })).mostrar, true);
+test('o acesso é atendido enquanto há atividade e VENCE depois de 30 minutos parado', () => {
+  const t0 = 1_000_000;
+  assert.equal(JANELA_DE_ACESSO_MS, 30 * 60 * 1000);
+  assert.equal(acessoJaAtendido({ ultimaAtividade: 0, agora: t0 }), false, 'sem registro é acesso novo');
+  assert.equal(acessoJaAtendido({ ultimaAtividade: t0, agora: t0 + 1000 }), true);
+  assert.equal(acessoJaAtendido({ ultimaAtividade: t0, agora: t0 + JANELA_DE_ACESSO_MS - 1 }), true, 'no último segundo da janela ainda é o mesmo acesso');
+  assert.equal(acessoJaAtendido({ ultimaAtividade: t0, agora: t0 + JANELA_DE_ACESSO_MS }), false, 'passou a janela: acesso novo');
+  assert.equal(acessoJaAtendido(), false);
 });
 
-test('a marca guarda o NOME da página, não um booleano', () => {
+test('a marca guarda a HORA da atividade, e o valor antigo (nome de página) vira "sem registro"', () => {
   const ss = criarStorage();
-  marcarVisto(ss, 'Loja-Virtual');
-  assert.equal(paginaOndeFechou(ss), 'Loja-Virtual');
-  assert.equal(ss._dados[CHAVE_SESSAO], 'Loja-Virtual', 'gravou outra coisa no lugar do nome da página');
+  assert.equal(lerAtividade(ss), 0);
+  registrarAtividade(ss, 1234567);
+  assert.equal(lerAtividade(ss), 1234567);
+  assert.equal(ss._dados[CHAVE_SESSAO], '1234567');
+  // quem ainda tem o valor da regra antiga ('Home') não trava: é lido como acesso novo
+  assert.equal(lerAtividade(criarStorage({ [CHAVE_SESSAO]: 'Home' })), 0);
+  assert.equal(lerAtividade(criarStorage({ [CHAVE_SESSAO]: '-5' })), 0);
 });
 
-test('storage bloqueado (aba anônima) não derruba nem trava o fechamento', () => {
+test('storage bloqueado (aba anônima) não derruba a página', () => {
   const travado = { getItem() { throw new Error('bloqueado'); }, setItem() { throw new Error('bloqueado'); } };
-  assert.equal(paginaOndeFechou(travado), '', 'sem storage a lib não pode inventar página');
-  assert.doesNotThrow(() => marcarVisto(travado, 'Home'));
-  assert.doesNotThrow(() => marcarVisto(null, 'Home'));
+  assert.equal(lerAtividade(travado), 0);
+  assert.doesNotThrow(() => registrarAtividade(travado, 1));
+  assert.doesNotThrow(() => registrarAtividade(null, 1));
+  assert.equal(lerAtividade(null), 0);
+});
+
+test('o componente marca o acesso quando decide e NÃO guarda mais "página onde fechou"', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../src/components/common/PopupLeilaoDestaque.jsx', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(src, /acessoJaAtendido\(/, 'o componente consulta a regra do acesso');
+  assert.match(src, /tocar\(\)/, 'o componente anda a hora da atividade');
+  assert.match(src, /visibilitychange/, 'ao voltar de segundo plano o acesso pode vencer');
+  assert.ok(!/paginaJaVista|paginaOndeFechou|marcarVisto|ondeFoiFechado/.test(src), 'sobrou a regra por página');
 });
 
 test('🔴 as páginas de dinheiro continuam proibidas, mesmo com a frequência maior', () => {
   // Subir a frequência NÃO pode cobrir quem está dando lance ou pagando.
   for (const pag of ['AuctionRoom', 'Cart', 'Checkout', 'CatalogCheckout', 'Payment', 'PagamentoPix']) {
     assert.equal(
-      podeMostrar(base({ paginaAtual: pag, paginaJaVista: '' })).motivo,
+      podeMostrar(base({ paginaAtual: pag, acessoAtendido: false })).motivo,
       'pagina_proibida',
       `${pag} deixou o pop-up passar`,
     );

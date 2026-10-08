@@ -4,8 +4,8 @@ import { X, Gavel, ArrowRight, Clock } from 'lucide-react';
 import { plataforma } from '@/api/plataformaClient';
 import { fmtBR } from '@/lib/money';
 import {
-  podeMostrar, dadosDoPopup, idDoLeilao, marcarVisto, paginaOndeFechou,
-  contagemRegressiva, Z_INDEX, CHAVE_CONSENTIMENTO,
+  podeMostrar, dadosDoPopup, idDoLeilao, lerAtividade, registrarAtividade, acessoJaAtendido,
+  contagemRegressiva, JANELA_DE_ACESSO_MS, Z_INDEX, CHAVE_CONSENTIMENTO,
 } from '@/lib/popupLeilaoDestaque';
 import { urgenciaDoLeilao, pilulaDaUrgencia, recadoDaUrgencia } from '@/lib/urgenciaDoLeilao';
 
@@ -34,44 +34,83 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
   const [entrou, setEntrou] = useState(false);
   /** Texto da contagem. Estado, não cálculo na renderização, porque ele ANDA. */
   const [contagem, setContagem] = useState('');
-  /** Última página em que a consulta rodou. Muda de página, tenta de novo. */
-  const ultimaPaginaTentada = useRef(null);
+  /** Última tentativa (página + rodada). Redesenhos da mesma página não refazem a consulta. */
+  const ultimaTentativa = useRef(null);
+  /** Sobe quando o acesso VENCE (app parado por mais de 30 min e de volta): força nova decisão. */
+  const [rodada, setRodada] = useState(0);
   /**
-   * Espelho em RAM da página onde foi fechado.
+   * Espelho em RAM da hora da última atividade.
    *
-   * 🔴 Existe por causa do modo privativo. Com o sessionStorage bloqueado,
-   * `paginaOndeFechou` devolve '' para sempre — e aí fechar o pop-up não
-   * gravaria nada, a página se redesenharia e ele voltaria na cara de quem
-   * acabou de fechar. Pop-up que não fecha é armadilha. Este ref não depende
-   * de storage nenhum e segura esse caso.
+   * 🔴 Existe por causa do modo privativo. Com o sessionStorage bloqueado, a marca
+   * nunca seria lida de volta — e o pop-up voltaria a cada troca de página, que é
+   * exatamente o que o dono mandou acabar. Este ref não depende de storage nenhum.
    */
-  const fechadoEm = useRef('');
+  const atividadeRam = useRef(0);
 
-  const fechar = useCallback(() => {
-    setEntrou(false);
-    const onde = String(currentPageName || '');
-    fechadoEm.current = onde;
-    marcarVisto(typeof window !== 'undefined' ? window.sessionStorage : null, onde);
-    // some depois da animação; se o timer não rodar, o estado já saiu do ar
-    setTimeout(() => setDados(null), 180);
-  }, [currentPageName]);
-
-  /** A página onde foi fechado, com o storage e a RAM concordando. */
-  const ondeFoiFechado = useCallback(() => {
-    const doStorage = paginaOndeFechou(typeof window !== 'undefined' ? window.sessionStorage : null);
-    return doStorage || fechadoEm.current || '';
+  const lerAtividadeAgora = useCallback(() => {
+    const doStorage = lerAtividade(typeof window !== 'undefined' ? window.sessionStorage : null);
+    return Math.max(doStorage, atividadeRam.current);
   }, []);
 
+  /** Anda a hora da atividade: enquanto a pessoa está usando, o acesso não vence. */
+  const tocar = useCallback(() => {
+    const t = Date.now();
+    atividadeRam.current = t;
+    registrarAtividade(typeof window !== 'undefined' ? window.sessionStorage : null, t);
+  }, []);
+
+  const fechar = useCallback(() => {
+    // Nada a gravar: o acesso já foi marcado no instante em que o pop-up abriu.
+    setEntrou(false);
+    // some depois da animação; se o timer não rodar, o estado já saiu do ar
+    setTimeout(() => setDados(null), 180);
+  }, []);
+
+  // 🔴 UMA VEZ POR ACESSO (08/10/2026). Enquanto a pessoa usa o site/app a hora da
+  // atividade anda (toque, tecla, rolagem) — e o acesso só "vence" depois de
+  // JANELA_DE_ACESSO_MS parado. Ao voltar de um app que ficou em segundo plano
+  // por mais que isso, é um acesso novo e o pop-up pode aparecer de novo.
   useEffect(() => {
-    // Uma tentativa por PÁGINA. Entrar em outra página refaz a consulta — que é
-    // o pedido. Redesenhos da mesma página não refazem: sem esta guarda, uma
-    // troca de estado qualquer reabriria o pop-up em cima de quem já fechou.
+    let ultimoToque = 0;
+    const aoUsar = () => {
+      const agora = Date.now();
+      if (agora - ultimoToque < 20000) return;          // no máximo uma gravação a cada 20 s
+      ultimoToque = agora;
+      if (lerAtividadeAgora()) tocar();                 // só anda um acesso que já existe
+    };
+    const aoVoltar = () => {
+      if (document.visibilityState === 'hidden') return;
+      const ultima = lerAtividadeAgora();
+      if (ultima && Date.now() - ultima >= JANELA_DE_ACESSO_MS) setRodada((n) => n + 1);
+    };
+    window.addEventListener('pointerdown', aoUsar, { passive: true });
+    window.addEventListener('keydown', aoUsar);
+    window.addEventListener('scroll', aoUsar, { passive: true });
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => {
+      window.removeEventListener('pointerdown', aoUsar);
+      window.removeEventListener('keydown', aoUsar);
+      window.removeEventListener('scroll', aoUsar);
+      document.removeEventListener('visibilitychange', aoVoltar);
+    };
+  }, [lerAtividadeAgora, tocar]);
+
+  useEffect(() => {
+    // Uma decisão por PÁGINA e por RODADA. Redesenhos da mesma página não refazem.
     const pagina = String(currentPageName || '');
-    if (ultimaPaginaTentada.current === pagina) return;
-    ultimaPaginaTentada.current = pagina;
+    const chave = `${pagina}#${rodada}`;
+    if (ultimaTentativa.current === chave) return;
+    ultimaTentativa.current = chave;
     setDados(null);
     setEntrou(false);
     let vivo = true;
+
+    // Este acesso já teve o pop-up? Então trocar de página não traz de volta —
+    // só anda a hora da atividade e sai.
+    if (acessoJaAtendido({ ultimaAtividade: lerAtividadeAgora(), agora: Date.now() })) {
+      tocar();
+      return undefined;
+    }
 
     (async () => {
       try {
@@ -79,13 +118,14 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
           try { return !localStorage.getItem(CHAVE_CONSENTIMENTO); } catch { return false; }
         })();
 
-        // Corte barato ANTES de falar com o banco: se a página é proibida, se já
-        // viu nesta sessão ou se o consentimento está na tela, nem consulta.
+        // Corte barato ANTES de falar com o banco: se a página é proibida ou se o
+        // consentimento está na tela, nem consulta — e NÃO marca o acesso: o
+        // pop-up ainda pode aparecer na próxima página permitida deste acesso.
         const previa = podeMostrar({
           config: { is_active: true, link_url: 'x' },  // só para passar do 1º portão
           leilao: { status: 'active', end_time: new Date(Date.now() + 60000).toISOString() },
           paginaAtual: currentPageName, consentimentoPendente,
-          paginaJaVista: ondeFoiFechado(),
+          acessoAtendido: false,
         });
         if (!previa.mostrar) return;
 
@@ -103,8 +143,12 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
 
         const veredito = podeMostrar({
           config, leilao, paginaAtual: currentPageName, consentimentoPendente,
-          paginaJaVista: ondeFoiFechado(),
+          acessoAtendido: false,
         });
+        // Decidido neste acesso — apareceu ou não (sem configuração, leilão
+        // encerrado): marca, para as próximas páginas não repetirem a consulta
+        // e, se apareceu, nunca mais aparecer até o próximo acesso.
+        tocar();
         if (!vivo || !veredito.mostrar) return;
 
         setDados(dadosDoPopup(config, leilao));
@@ -116,7 +160,7 @@ export default function PopupLeilaoDestaque({ currentPageName }) {
     })();
 
     return () => { vivo = false; };
-  }, [currentPageName, ondeFoiFechado]);
+  }, [currentPageName, rodada, lerAtividadeAgora, tocar]);
 
   /**
    * ⏱ O relógio anda de segundo em segundo, e só enquanto há pop-up na tela.
