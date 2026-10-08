@@ -7,6 +7,7 @@ import AuctionCard from '@/components/auction/AuctionCard';
 // a régua do cartaz (estaEmCartaz) mora dentro de destaquesEmCartaz
 import { destaquesEmCartaz } from '@/lib/posicoesDoDestaque';
 import { videoDoProduto } from '@/lib/videoDoProduto';
+import MaestroDeVideos from '@/components/video/MaestroDeVideos';
 
 // 🌟 Seção "Destaques" — até 6 leilões marcados manualmente em Editar Leilão,
 // mostrados na ordem escolhida. Some silenciosamente se nenhum leilão estiver marcado.
@@ -116,6 +117,9 @@ export default function DestaquesLeiloes({ currentUser }) {
         <Sparkles className="w-5 h-5 text-amber-400" />
         <h2 className="text-lg sm:text-xl font-bold text-white">Destaques</h2>
       </div>
+      {/* 🎬 08/10/2026 — UM maestro para a grade inteira: um vídeo toca por vez, os outros ficam na
+          foto, o som só liga pelo ícone (src/lib/maestroDeVideos.js). */}
+      <MaestroDeVideos>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6 auto-rows-fr" data-teste="grade-destaques">
         {destaques.map((auction, posicao) => (
           <AuctionCard
@@ -136,6 +140,7 @@ export default function DestaquesLeiloes({ currentUser }) {
           />
         ))}
       </div>
+      </MaestroDeVideos>
     </div>
   );
 }

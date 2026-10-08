@@ -23,6 +23,7 @@ import LojaShopeeHeader from '../components/loja/LojaShopeeHeader';
 import OfertasRelampago from '../components/loja/OfertasRelampago';
 import PagePerformanceTracker from '../components/system/PagePerformanceTracker';
 import { getReferral, saveReferral } from '@/lib/referral';
+import MaestroDeVideos from '@/components/video/MaestroDeVideos';
 import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
 import { useSectionTracking } from '@/lib/tracking';
@@ -746,6 +747,9 @@ export default function Catalog() {
             </div>
           )}
 
+          {/* 🎬 08/10/2026 — UM maestro para as DUAS grades (destaques e lista): um vídeo toca por vez
+              em toda a tela, os outros cards ficam na foto, o som só liga pelo ícone. */}
+          <MaestroDeVideos>
           {/* Produtos em Destaque */}
            {featuredProducts.length > 0 && !modoBusca && (
              <div className="mb-8">
@@ -1002,6 +1006,7 @@ export default function Catalog() {
               })}
             </div>
           }
+          </MaestroDeVideos>
 
           {/* Carregar mais — só na navegação (sem busca de texto) */}
           {!searchTerm && !reachedEnd && filteredProducts.length >= 12 && (

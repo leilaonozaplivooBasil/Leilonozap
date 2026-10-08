@@ -93,7 +93,9 @@ export function entenderVideo(bruto) {
   if (!/^https?:$/i.test(u.protocol)) return { ok: false, motivo: 'protocolo_nao_permitido' };
 
   const yt = idDoYoutube(u);
-  if (yt) return { ok: true, url: s, tipo: 'youtube', embed: `https://www.youtube.com/embed/${yt}` };
+  // `id` e `vertical` (Shorts) servem ao player dos cards (API oficial do YouTube): o id
+  // vai direto para o player e o formato decide o enquadramento (9:16 dentro do quadrado)
+  if (yt) return { ok: true, url: s, tipo: 'youtube', embed: `https://www.youtube.com/embed/${yt}`, id: yt, vertical: /^\/shorts\//.test(u.pathname) };
 
   const vm = idDoVimeo(u);
   if (vm) return { ok: true, url: s, tipo: 'vimeo', embed: `https://player.vimeo.com/video/${vm}` };

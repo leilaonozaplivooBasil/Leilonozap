@@ -20,6 +20,16 @@
  * próxima visita. O padrão, para quem nunca mexeu, é COM som.
  *
  * ══════════════════════════════════════════════════════════════════════════
+ * 🔴 08/10/2026 — ESTA REGRA NÃO VALE MAIS DENTRO DO MAESTRO
+ * ══════════════════════════════════════════════════════════════════════════
+ * Dono: "a música não toca automaticamente, só se o cliente tocar no ícone do som".
+ * O "primeiro toque em qualquer lugar liga o som" foi o que fez a vitrine falar sozinha.
+ * Os cards dentro de <MaestroDeVideos> (Destaques e Loja) nascem MUDOS e o som só liga
+ * pelo ícone do próprio card (src/lib/maestroDeVideos.js). `calarARadio` e o evento de
+ * silêncio continuam valendo: ligar o som de um vídeo cala a rádio X-Music.
+ * Este arquivo segue valendo só para o card fora do maestro (o comportamento antigo).
+ *
+ * ══════════════════════════════════════════════════════════════════════════
  * POR QUE A RÁDIO PRECISA CALAR
  * ══════════════════════════════════════════════════════════════════════════
  * O X-MUSIC toca no canto da tela. Sem isto, o som do vídeo entraria POR CIMA
