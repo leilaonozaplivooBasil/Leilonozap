@@ -4,11 +4,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { semComentarios } from './_ajuda.mjs';
-import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, MAX_DIAS, PAGOS, CLASSES } from '../api/_lib/auditoriaGateway.js';
+import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, MAX_DIAS, PAGOS, CLASSES, ENTRADAS_DO_APP, TAXA_CARTAO } from '../api/_lib/auditoriaGateway.js';
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const pago = (id, extra = {}) => ({
-  id, status: 'approved', transaction_amount: 850, money_release_status: 'released', payment_method_id: 'pix', payment_type_id: 'bank_transfer',
+  id, status: 'approved', transaction_amount: 850, money_release_status: 'released', payment_method_id: 'pix', payment_type_id: 'bank_transfer', collector_id: 555,
   date_created: '2026-10-07T19:30:22.000-04:00', date_approved: '2026-10-07T19:31:24.000-04:00',
   transaction_details: { net_received_amount: 841.58 }, fee_details: [{ amount: 8.42 }], ...extra,
 });
@@ -34,48 +34,66 @@ test('janela: últimos 30 dias por padrão, dias de Brasília, teto de 62 dias, 
   assert.equal(janelaDaAuditoria({ de: '2026-10-09', agora }).de, '2026-09-09T03:00:00.000Z', 'de depois de agora: padrão');
 });
 
-test('cada pagamento cai numa das caixas; totais por caixa, situação e meio; líquido e taxa só do liberado', () => {
-  assert.deepEqual([...CLASSES], ['bate', 'dinheiro_saiu', 'sem_venda', 'pago_la_nao_pago_aqui', 'valor_diferente', 'sem_dinheiro']);
+test('cada pagamento cai numa das caixas; totais por caixa, situação e meio; bruto/líquido/taxa só do que entrou para o app', () => {
+  assert.deepEqual([...CLASSES], ['bate', 'dinheiro_saiu', 'pago_la_nao_pago_aqui', 'valor_diferente', 'saida_conta', 'venda_fora_do_app', 'sem_venda', 'sem_dinheiro']);
+  assert.deepEqual([...ENTRADAS_DO_APP], ['bate', 'pago_la_nao_pago_aqui', 'valor_diferente']);
+  assert.equal(TAXA_CARTAO, 0.0499, 'a mesma taxa de createMPWalletDeposit.js');
   assert.ok(PAGOS.includes('paid') && PAGOS.includes('entregue'));
   const vendas = [
     { id: 'v-pix', mp_payment_id: '1', kind: 'wallet_deposit', status: 'paid', buyer_name: 'Ana', total_amount: 850, created_date: '2026-10-07T22:30:00Z' },
-    { id: 'v-cartao', mp_payment_id: '2', kind: 'loja', status: 'paid', buyer_name: 'Bia', total_amount: 133.38, amount_charged: '140.46' }, // taxa por fora: o gateway vê 140,46
+    { id: 'v-cartao', mp_payment_id: '2', kind: 'loja', status: 'paid', buyer_name: 'Bia', total_amount: 133.38, amount_charged: '140.46' }, // taxa por fora gravada: o gateway vê 140,46
     { id: 'v-dif', mp_payment_id: '3', kind: 'wallet_deposit', status: 'paid', buyer_name: 'Caio', total_amount: 500 },
     { id: 'v-pend', mp_payment_id: '4', kind: 'wallet_deposit', status: 'pending_payment', buyer_name: 'Dani', total_amount: 850 },
     { id: 'v-dev', mp_payment_id: '5', kind: 'wallet_deposit', status: 'paid', buyer_name: 'Edu', total_amount: 850 },
     { id: 'v-ref', mp_payment_id: null, kind: 'wallet_deposit', status: 'paid', buyer_name: 'Fê', total_amount: 850 },
+    { id: 'v-cartao2', mp_payment_id: '10', kind: 'wallet_deposit', status: 'paid', buyer_name: 'Lia', total_amount: 2000 }, // taxa por fora NÃO gravada (depósito antigo)
   ];
+  const cartao = (valor, net, fee) => ({ transaction_amount: valor, payment_method_id: 'master', payment_type_id: 'credit_card', transaction_details: { net_received_amount: net }, fee_details: [{ amount: fee }] });
   const { linhas, totais } = classificarPagamentos([
     pago(1),                                                                                   // bate
-    pago(2, { transaction_amount: 140.46, payment_method_id: 'master', payment_type_id: 'credit_card', transaction_details: { net_received_amount: 133.4 }, fee_details: [{ amount: 7.06 }] }), // bate pelo cobrado
-    pago(3, { transaction_amount: 480 }),                                                      // valor diferente
+    pago(2, cartao(140.46, 133.4, 7.06)),                                                      // bate pelo cobrado gravado
+    pago(3, { transaction_amount: 480 }),                                                      // valor diferente (PIX, 480 ≠ 500)
     pago(4),                                                                                   // pago lá, pendente aqui
     pago(5, { status: 'refunded', transaction_amount_refunded: 850 }),                         // dinheiro saiu
     pago(6, { external_reference: 'v-ref' }),                                                  // casa pela referência → bate
-    pago(7, { payer: { first_name: 'Zé' }, description: 'Transferência Pix' }),                // sem venda
+    pago(7, { payer: { first_name: 'Zé' }, description: 'Transferência Pix' }),                // sem venda, e é a nossa conta recebendo
     pago(8, { status: 'pending', money_release_status: null }),                                // sem dinheiro
     pago(9, { status: 'cancelled' }),                                                          // sem dinheiro
+    pago(10, cartao(2099.8, 1995.22, 104.58)),                                                 // 2000 × 1,0499: bate com a taxa por fora
+    pago(11, { transaction_amount: 880.07, payment_method_id: 'account_money', payment_type_id: 'account_money', collector_id: 999, description: 'Light' }), // a conta pagou a luz
+    pago(12, { transaction_amount: 2199, payment_method_id: 'account_money', payment_type_id: 'account_money', order: { type: 'mercadolibre', id: 2000018867261554 }, description: 'Ar Condicionado' }), // venda no Mercado Livre
     null, {},
-  ], vendas);
+  ], vendas, { nossoId: '555' });
   const porId = Object.fromEntries(linhas.map((l) => [l.id, l]));
-  assert.equal(porId['1'].classe, 'bate'); assert.equal(porId['1'].venda.buyer_name, 'Ana');
-  assert.equal(porId['2'].classe, 'bate'); assert.equal(porId['2'].venda.cobrado, 140.46);
+  assert.equal(porId['1'].classe, 'bate'); assert.equal(porId['1'].venda.buyer_name, 'Ana'); assert.equal(porId['1'].taxa_por_fora, false);
+  assert.equal(porId['2'].classe, 'bate'); assert.equal(porId['2'].venda.cobrado, 140.46); assert.equal(porId['2'].taxa_por_fora, true);
   assert.equal(porId['3'].classe, 'valor_diferente');
   assert.equal(porId['4'].classe, 'pago_la_nao_pago_aqui');
   assert.equal(porId['5'].classe, 'dinheiro_saiu'); assert.equal(porId['5'].situacao, 'devolvido');
   assert.equal(porId['6'].classe, 'bate'); assert.equal(porId['6'].venda.id, 'v-ref');
   assert.equal(porId['7'].classe, 'sem_venda'); assert.equal(porId['7'].pagador, 'Zé'); assert.equal(porId['7'].venda, null);
   assert.equal(porId['8'].classe, 'sem_dinheiro'); assert.equal(porId['9'].classe, 'sem_dinheiro');
-  assert.equal(totais.pagamentos, 9); assert.equal(totais.com_dinheiro, 7);
-  assert.deepEqual(totais.por_classe.bate, { n: 3, valor: 1840.46 });
+  assert.equal(porId['10'].classe, 'bate'); assert.equal(porId['10'].taxa_por_fora, true);
+  assert.equal(porId['11'].classe, 'saida_conta'); assert.equal(porId['11'].recebedor, '999');
+  assert.equal(porId['12'].classe, 'venda_fora_do_app'); assert.deepEqual(porId['12'].pedido, { tipo: 'mercadolibre', id: '2000018867261554' });
+  assert.equal(totais.pagamentos, 12); assert.equal(totais.com_dinheiro, 10);
+  assert.deepEqual(totais.por_classe.bate, { n: 4, valor: 3940.26 });
   assert.deepEqual(totais.por_classe.sem_dinheiro, { n: 2, valor: 0 });
   assert.deepEqual(totais.por_classe.dinheiro_saiu, { n: 1, valor: 850 });
-  assert.equal(totais.bruto_liberado, 4020.46);   // 6 liberados: 850 + 140,46 + 480 + 850 + 850 + 850
-  assert.equal(totais.liquido_liberado, 4341.3);  // 5 × 841,58 + 133,40 (centavos arredondados, nunca 0,30000000004)
-  assert.equal(totais.taxas_liberado, 49.16);     // 5 × 8,42 + 7,06
+  assert.deepEqual(totais.por_classe.saida_conta, { n: 1, valor: 880.07 });
+  assert.deepEqual(totais.por_classe.venda_fora_do_app, { n: 1, valor: 2199 });
+  assert.deepEqual(totais.por_classe.sem_venda, { n: 1, valor: 850 });
+  // só o que entrou PARA O APP e foi liberado: 1, 2, 3, 4, 6 e 10
+  assert.equal(totais.bruto_liberado, 5270.26);   // 850 + 140,46 + 480 + 850 + 850 + 2099,80
+  assert.equal(totais.liquido_liberado, 5494.94); // 4 × 841,58 + 133,40 + 1995,22 (centavos arredondados, nunca 0,30000000004)
+  assert.equal(totais.taxas_liberado, 145.32);    // 4 × 8,42 + 7,06 + 104,58
   assert.equal(totais.saiu, 850);
-  assert.deepEqual(totais.por_meio.master, { n: 1, valor: 140.46 });
-  assert.equal(totais.por_situacao.devolvido.n, 1);
+  assert.equal(totais.saidas_conta, 880.07); assert.equal(totais.vendas_fora_do_app, 2199); assert.equal(totais.sem_venda, 850);
+  assert.deepEqual(totais.por_meio.master, { n: 2, valor: 2240.26 });
+  assert.deepEqual(totais.por_meio.account_money, { n: 2, valor: 3079.07 });
+  assert.equal(totais.por_situacao.devolvido.n, 1); assert.equal(totais.por_situacao.liberado.n, 9);
+  // sem o nosso id, ninguém vira "saída da conta" (não dá para saber quem recebeu)
+  assert.equal(classificarPagamentos([pago(11, { collector_id: 999 })], []).linhas[0].classe, 'sem_venda');
   // sem nada: não lança
   assert.deepEqual(classificarPagamentos([], []).linhas, []);
 });
@@ -102,6 +120,7 @@ test('a rota é só de administrador, só POST e só leitura; reaproveita a list
   assert.ok(R.includes("['admin', 'super_admin'].includes(ator.role)"), 'papel conferido no banco');
   assert.ok(R.includes("if (req.method !== 'POST')"));
   assert.ok(R.includes("import { listarPagamentosDoGateway } from '../_lib/varreduraGateway.js';"));
+  assert.ok(R.includes("fetch('https://api.mercadopago.com/users/me'") && R.includes('classificarPagamentos(pagamentos, vendas, { nossoId })'), 'sabe quem somos no gateway para separar o que a conta pagou');
   assert.ok(!/method:\s*'(POST|PATCH|DELETE|PUT)'/.test(R), 'a rota não grava nada');
   const L = ler('../api/_lib/auditoriaGateway.js');
   assert.ok(!/fetch\(/.test(L), 'a régua é pura: não fala com rede');
