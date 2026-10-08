@@ -61,6 +61,8 @@ window.__entidadesFalsas = {
     linha('tv1', 'home', 'TV · FALTA 1 DIA', '#7c2d12', 2, janela(meiaNoite, meiaNoite + 24 * HORA)),
     linha('geral', 'home', 'LEILÃO NOZAP', '#0f172a', 3, janela(null, null)),
     linha('loja1', 'catalog', 'LOJA VIRTUAL', '#4c1d95', 0, janela(null, null)),
+    // 🔴 `?desligado=1`: um banner DESLIGADO (o Ar da sua conta) para programar a entrada
+    ...(q.get('desligado') === '1' ? [linha('desligado', 'home', 'BANNER DESLIGADO', '#334155', 6, { is_active: false })] : []),
     ...(q.get('leilao') === '1' ? [
       linha('tv-banner', 'home', 'TV VENDIDA', '#78350f', 5, { ...janela(null, null), ...(semColunas ? {} : { auction_id: 'tv-vendida' }) }),
     ] : []),

@@ -42,7 +42,14 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
     const problema = validarJanela(a, b);
     if (problema) { setErro(problema); return; }
     setErro('');
-    await onSalvar({ starts_at: a, ends_at: b });
+    // 🔴 08/10/2026 — PROGRAMAR UM BANNER DESLIGADO. Dono: "quando o banner está desativado não
+    // tenho como programar a data dele entrar e sair; só consigo com ele ativado. Preciso que ele
+    // ative justamente na data que eu coloquei." Programar É ligar com hora marcada: salvar datas
+    // num banner desligado o LIGA, e ele só aparece dentro do período (antes da data de entrada
+    // fica fora do ar, mostrando "Entra em …"). O interruptor continua mandando: desligar de novo
+    // tira o banner, com ou sem data.
+    const ligarJunto = banner?.is_active === false && Boolean(a || b);
+    await onSalvar({ starts_at: a, ends_at: b, ...(ligarJunto ? { is_active: true } : {}) });
     setAberto(false);
   };
 
@@ -77,9 +84,16 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
             </label>
           </div>
           <p className="mt-1.5 text-[10px] text-gray-500">Horário de Brasília. Deixe em branco o lado que não precisa. À meia-noite em que uma arte sai, a próxima já entra.</p>
+          {banner?.is_active === false && (
+            <p data-teste="aviso-desligado" className="mt-1.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-200">
+              Este banner está desligado. Ao salvar as datas ele é <b>ligado</b> e só aparece dentro do período: antes da data de entrada ele fica fora do ar e entra sozinho na hora marcada.
+            </p>
+          )}
           {erro && <p role="alert" className="mt-1 text-[11px] font-semibold text-amber-300">{erro}</p>}
           <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={() => salvar(inicio, fim)} data-teste="salvar-programacao" className="h-7 bg-emerald-600 hover:bg-emerald-700 text-xs">Salvar datas</Button>
+            <Button size="sm" onClick={() => salvar(inicio, fim)} data-teste="salvar-programacao" className="h-7 bg-emerald-600 hover:bg-emerald-700 text-xs">
+              {banner?.is_active === false ? 'Salvar datas e ligar' : 'Salvar datas'}
+            </Button>
             {temJanela && (
               <Button size="sm" variant="outline" onClick={() => { setInicio(''); setFim(''); salvar('', ''); }} data-teste="limpar-programacao" className="h-7 border-white/15 text-gray-300 hover:text-white text-xs">
                 Tirar as datas
