@@ -110,3 +110,50 @@ export function etapaDoLembreteDeArremate(encerrouEm, agora = Date.now()) {
   if (horas >= 1) return '1h';
   return null;
 }
+
+/**
+ * 🏷️ DIR-210 (08/10/2026) — depois dos lembretes, o prazo: passadas 48h do
+ * encerramento sem saldo, o próprio cron de liquidação cancela o arremate
+ * (cancelar_arremate_nao_pago: comissões estornadas, reserva devolvida).
+ * Ordem do dono (item 4 das automações): "cancelamento em 48 horas, e a
+ * comissão do martelo estornada se não pagar".
+ */
+export const PRAZO_CANCELAMENTO_ARREMATE_H = 48;
+
+/**
+ * Quantas horas valem no ambiente (ARREMATE_CANCELA_EM_HORAS): vazio = 48;
+ * '0' ou 'off' desliga o cancelamento automático (os lembretes continuam);
+ * número ≥ 1 vale como está; lixo cai nas 48.
+ */
+export function horasParaCancelar(valor) {
+  const s = String(valor ?? '').trim().toLowerCase();
+  if (s === '') return PRAZO_CANCELAMENTO_ARREMATE_H;
+  if (s === '0' || s === 'off' || s === 'nao' || s === 'não') return null;
+  const n = Number(s);
+  return Number.isFinite(n) && n >= 1 ? n : PRAZO_CANCELAMENTO_ARREMATE_H;
+}
+
+/** ISO do fim do prazo (end_time + horas), ou null se a data for ruim ou o prazo estiver desligado. */
+export function prazoDoArremate(encerrouEm, horas = PRAZO_CANCELAMENTO_ARREMATE_H) {
+  if (!encerrouEm || !(Number(horas) > 0)) return null;
+  const t = new Date(encerrouEm).getTime();
+  return Number.isFinite(t) ? new Date(t + Number(horas) * 3600000).toISOString() : null;
+}
+
+/**
+ * O que o cron faz com um arremate que o banco acabou de recusar por falta de saldo.
+ *   'esperar'  — prazo desligado, data ruim, ou ainda não deu o prazo
+ *   'adiar'    — o lembrete de 24h saiu NESTE ciclo (cron parado > 24h): não cancelar
+ *                um minuto depois de avisar; o próximo tick decide
+ *   'manual'   — o vencedor lidera outro leilão ativo ou tem outro arremate a pagar:
+ *                a devolução da reserva precisa de olho humano (o admin é avisado)
+ *   'cancelar' — chamar cancelar_arremate_nao_pago
+ */
+export function decisaoDoArremateSemSaldo({ encerrouEm, agora = Date.now(), horas = PRAZO_CANCELAMENTO_ARREMATE_H, lembreteSaiuAgora = false, outroLeilaoEmJogo = false } = {}) {
+  if (!encerrouEm || !(Number(horas) > 0)) return 'esperar';
+  const t = new Date(encerrouEm).getTime();
+  if (!Number.isFinite(t) || (agora - t) / 3600000 < Number(horas)) return 'esperar';
+  if (lembreteSaiuAgora) return 'adiar';
+  if (outroLeilaoEmJogo) return 'manual';
+  return 'cancelar';
+}

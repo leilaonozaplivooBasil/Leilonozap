@@ -51,7 +51,8 @@ test('o cron de liquidação lembra o vencedor quando falta saldo — e não mex
   assert.ok(L.includes("segunda: etapa === '24h'"));
   assert.ok(L.includes(".catch(() => ({ enviado: false, motivo: 'falha' }));"), 'falha no e-mail nunca derruba a liquidação');
   assert.ok(L.includes('lembrete,'), 'o resultado conta o lembrete');
-  // o dinheiro continua inteiro em settleAuctionWithBalance: aqui não há PATCH nem escrita em app_users/auctions
+  // o dinheiro continua inteiro em settleAuctionWithBalance (e, desde a DIR-210, só a função SQL
+  // cancelar_arremate_nao_pago mexe nele): aqui não há PATCH nem escrita em app_users/auctions
   assert.ok(!/method:\s*'PATCH'/.test(L) && !/sb\('app_users|sb\(`app_users|sb\('auctions\?[^']*',\s*\{\s*method/.test(L));
 });
 

@@ -35,6 +35,9 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   // 🏷️ 07/10/2026 (DIR-205) — arremate com vencedor e saldo insuficiente: o cron
   // de liquidação tenta a cada 10 min; o vencedor fica sabendo 1h e 24h depois.
   arremate_sem_saldo: 'leilao',
+  // 🏷️ 08/10/2026 (DIR-210) — passou o prazo sem saldo: o cron cancelou o arremate
+  // e o que estava reservado voltou para a Carteira.
+  arremate_cancelado: 'leilao',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -170,8 +173,18 @@ export function montarAviso(tipo, d = {}) {
         'É só colocar saldo na Carteira: o pedido fecha sozinho em até 10 minutos depois que o depósito cair, sem precisar fazer mais nada.',
         d.segunda
           ? 'Se não for mais do seu interesse, responda este e-mail para a gente liberar o produto para outra pessoa.'
-          : 'Se você já depositou, pode ignorar este e-mail: o pedido fecha assim que o saldo entrar.'];
+          : 'Se você já depositou, pode ignorar este e-mail: o pedido fecha assim que o saldo entrar.',
+        // DIR-210: o prazo só aparece quando o cancelamento automático está ligado (cancelaEm).
+        ...(d.cancelaEm ? [`Prazo: se o saldo não entrar até ${quandoBR(d.cancelaEm)}, o arremate é cancelado automaticamente e o que estiver reservado volta para a sua Carteira.`] : [])];
       botao = { rotulo: 'Colocar saldo na Carteira', url: `${SITE}/Carteira` };
+      break;
+    case 'arremate_cancelado':
+      // DIR-210: passou o prazo sem saldo; o cron cancelou e a reserva voltou.
+      assunto = `Arremate cancelado por falta de saldo: ${d.produto}`;
+      linhas = [`${oi} O seu arremate de ${d.produto} por ${reais(d.valor)} foi cancelado: o prazo de ${Number(d.horas) > 0 ? Number(d.horas) : 48} horas depois do encerramento passou sem saldo suficiente na Carteira.`,
+        `${Number(d.devolvido) > 0 ? `O valor que estava reservado (${reais(d.devolvido)}) já voltou para o seu saldo disponível. ` : ''}O produto fica livre para outra pessoa.`,
+        'Se isso foi um engano ou você já tinha depositado, responda este e-mail.'];
+      botao = { rotulo: 'Ver leilões ativos', url: `${SITE}/leiloes` };
       break;
     default:
       return null;
