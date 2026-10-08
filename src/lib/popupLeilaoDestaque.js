@@ -31,24 +31,32 @@
 export const Z_INDEX = 1500;
 
 /**
- * Marca de onde o pop-up foi fechado pela última vez. sessionStorage: some ao
- * fechar o navegador.
+ * Onde fica a marca do ACESSO (sessionStorage: some ao fechar o navegador).
  *
- * 🔴 20/09/2026 — MUDOU DE SIGNIFICADO, E É A MUDANÇA DESTA DEMANDA.
- * Antes guardava "já vi" (um booleano) e o pop-up aparecia UMA vez por sessão.
- * O dono pediu: "cada vez que o usuário entrar em uma página é necessário que
- * estoure o pop-up". Então agora guarda o NOME DA PÁGINA onde foi fechado.
+ * 🔴 08/10/2026 — MUDOU DE SIGNIFICADO DE NOVO, E ESTA É A DECISÃO DEFINITIVA.
+ * Em 20/09 o dono pediu "cada vez que o usuário entrar em uma página, estoura o
+ * pop-up". Na prática: o cliente trocava de página e levava o pop-up na cara de
+ * novo, e de novo. Ordem do dono (08/10): "isso precisa aparecer só quando o
+ * usuário ENTRA, novo ou antigo. Sempre que acessar, um em destaque; depois que
+ * ele fechar, não aparece mais — senão a experiência do cliente fica ruim."
  *
- * Fechou na Home → guarda 'Home'. Foi para a Loja → 'Loja' ≠ 'Home', aparece de
- * novo. Voltou para a Home → aparece de novo.
+ * A REGRA: UMA VEZ POR ACESSO.
+ *   • Abriu o site/app (aba nova, app aberto de novo) → aparece.
+ *   • Trocou de página, voltou, recarregou → NÃO aparece.
+ *   • Ficou parado mais de JANELA_DE_ACESSO_MS e voltou (app que ficou em
+ *     segundo plano) → conta como um acesso NOVO e aparece.
  *
- * Por que guardar a página e não simplesmente esquecer: se não guardasse nada,
- * fechar o pop-up e a página se redesenhar (uma troca de estado qualquer) faria
- * ele voltar na cara de quem acabou de fechar — pop-up que não fecha é
- * armadilha, não propaganda. Guardando a página, fechar vale enquanto a pessoa
- * estiver ali; entrar em outra página é o que traz de volta, que é o pedido.
+ * O que se guarda é a hora da ÚLTIMA ATIVIDADE (toque, tecla, rolagem, troca de
+ * página). Enquanto a pessoa está usando, a hora anda e o pop-up não volta. Só
+ * quando ela some por mais de 30 minutos o acesso "vence".
+ *
+ * A chave é a mesma de antes de propósito: o valor antigo (nome de página) não é
+ * um número, é lido como "sem registro" e se corrige sozinho na próxima visita.
  */
 export const CHAVE_SESSAO = 'popupLeilaoVisto';
+
+/** Parado por mais que isto, e voltando, é um acesso novo. */
+export const JANELA_DE_ACESSO_MS = 30 * 60 * 1000;
 
 /** Chave que o ConsentBanner grava ao ser aceito (ConsentBanner.jsx:6). */
 export const CHAVE_CONSENTIMENTO = 'lnz_consent_accepted';
@@ -101,18 +109,26 @@ export function leilaoAindaAberto(leilao, agora = Date.now()) {
   return fim > agora;
 }
 
-/**
- * Em que página o pop-up foi fechado por último? '' quando nunca foi fechado.
- * Storage bloqueado (modo privativo) devolve '' — quem cuida de não insistir
- * nesse caso é a memória em RAM do componente, não o storage.
- */
-export function paginaOndeFechou(storage) {
-  try { return String(storage?.getItem(CHAVE_SESSAO) || ''); } catch { return ''; }
+/** Hora (ms) da última atividade neste acesso; 0 se não há registro. Storage bloqueado devolve 0. */
+export function lerAtividade(storage) {
+  try {
+    const n = Number(storage?.getItem(CHAVE_SESSAO));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch { return 0; }
 }
 
-/** Marca a página onde foi fechado. Falha de storage nunca quebra o fechamento. */
-export function marcarVisto(storage, pagina) {
-  try { storage?.setItem(CHAVE_SESSAO, String(pagina || '')); } catch { /* modo privativo: segue */ }
+/** Marca a hora da atividade. Falha de storage nunca quebra a página. */
+export function registrarAtividade(storage, agora = Date.now()) {
+  try { storage?.setItem(CHAVE_SESSAO, String(agora)); } catch { /* modo privativo: segue */ }
+}
+
+/**
+ * Este acesso já teve o seu pop-up? `ultimaAtividade` = 0 → é um acesso novo.
+ * Passou da janela sem atividade → o acesso anterior venceu, este é novo.
+ */
+export function acessoJaAtendido({ ultimaAtividade = 0, agora = Date.now() } = {}) {
+  if (!ultimaAtividade) return false;
+  return agora - ultimaAtividade < JANELA_DE_ACESSO_MS;
 }
 
 /**
@@ -127,12 +143,12 @@ export function podeMostrar({
   paginaAtual,
   consentimentoPendente = false,
   /**
-   * Nome da página onde o pop-up foi fechado por último ('' se nunca).
-   * Vem de fora de propósito: assim esta regra não conhece storage nenhum e o
-   * teste roda no Node sem navegador. Quem lê o sessionStorage (e quem segura a
-   * memória em RAM quando o storage está bloqueado) é o componente.
+   * Este acesso já teve o pop-up? (ver `acessoJaAtendido`). Vem de fora de
+   * propósito: assim esta regra não conhece storage nenhum e o teste roda no
+   * Node sem navegador. Quem lê o sessionStorage (e quem segura a memória em RAM
+   * quando o storage está bloqueado) é o componente.
    */
-  paginaJaVista = '',
+  acessoAtendido = false,
   agora = Date.now(),
 } = {}) {
   if (!configValida(config)) return { mostrar: false, motivo: 'sem_config' };
@@ -151,11 +167,9 @@ export function podeMostrar({
   }
   // Espera o banner de LGPD sair de cena — os dois disputam a primeira visita.
   if (consentimentoPendente) return { mostrar: false, motivo: 'consentimento_pendente' };
-  // Fechado NESTA página continua fechado. Entrar em outra página traz de volta
-  // — é exatamente o pedido de 20/09 ("toda vez que entrar em uma página").
-  if (paginaJaVista && String(paginaJaVista) === String(paginaAtual || '')) {
-    return { mostrar: false, motivo: 'ja_viu_nesta_pagina' };
-  }
+  // UMA VEZ POR ACESSO (ordem do dono, 08/10/2026): já apareceu neste acesso,
+  // trocar de página não traz de volta. Só um acesso novo traz.
+  if (acessoAtendido) return { mostrar: false, motivo: 'ja_viu_neste_acesso' };
   if (!leilaoAindaAberto(leilao, agora)) return { mostrar: false, motivo: 'leilao_encerrado' };
   return { mostrar: true, motivo: 'ok' };
 }

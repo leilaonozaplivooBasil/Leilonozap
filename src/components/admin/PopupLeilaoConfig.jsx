@@ -98,8 +98,10 @@ export default function PopupLeilaoConfig({ banners = [], onSaved }) {
         <h2 className="text-lg font-bold text-white">Pop-up do leilão em destaque</h2>
       </div>
       <p className="mb-4 text-sm text-gray-400">
-        Aparece uma vez por visita, em todas as páginas de cliente. <b>Não</b> aparece dentro
-        da sala do leilão nem no pagamento, e some sozinho quando o leilão escolhido encerra.
+        Aparece <b>uma vez por acesso</b>: quando o cliente, novo ou antigo, entra no site. Depois que ele
+        fecha, não volta ao trocar de página — só em um novo acesso (abrir de novo, ou voltar depois de
+        mais de 30 minutos parado). <b>Não</b> aparece dentro da sala do leilão nem no pagamento, e some
+        sozinho quando o leilão escolhido encerra.
       </p>
 
       <label className="mb-1.5 block text-sm text-gray-300">Leilão em destaque</label>

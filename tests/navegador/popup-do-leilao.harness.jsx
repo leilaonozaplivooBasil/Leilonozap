@@ -32,7 +32,8 @@ const params = new URLSearchParams(window.location.search);
 // O consentimento LGPD já aceito: sem isto o pop-up espera, e com razão — os
 // dois disputam a primeira visita. Aqui queremos medir o pop-up, não a espera.
 try { localStorage.setItem(CHAVE_CONSENTIMENTO, '1'); } catch { /* segue */ }
-try { sessionStorage.clear(); } catch { /* segue */ }
+// `?manter=1`: não zera a sessão a cada carga — para provar o recarregar e o acesso que vence
+try { if (!params.get('manter')) sessionStorage.clear(); } catch { /* segue */ }
 
 const FIM = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
 

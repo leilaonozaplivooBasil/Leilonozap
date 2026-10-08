@@ -1,19 +1,20 @@
 /**
- * 🔔 O POP-UP VOLTA A CADA PÁGINA — num Chromium.
+ * 🔔 O POP-UP APARECE UMA VEZ POR ACESSO — num Chromium.
  *
- * Dono, 20/09/2026: "cada vez que o usuário entrar em uma página é necessário
- * que estoure o pop-up do leilão do PS5 com botão para dar lance."
+ * Dono, 08/10/2026: "isso precisa aparecer só quando o usuário ENTRA, novo ou
+ * antigo. Sempre que acessar, um em destaque; depois que ele fechar, não aparece
+ * mais — senão a experiência do cliente fica ruim." (Em 20/09 o pedido era o
+ * contrário, "a cada página"; o cliente trocava de página e levava o pop-up de
+ * novo e de novo.)
  *
- * A regra (src/lib/popupLeilaoDestaque.js) tem 25 provas no Node e sabe dizer
- * "pode aparecer nesta página". Mas quem impedia o pop-up de VOLTAR não era a
- * regra: era o componente. O Layout monta `PopupLeilaoDestaque` UMA vez, e um
- * `useRef` travava em uma tentativa por montagem — navegar nunca refazia a
- * consulta. Ler o arquivo prova que o ref mudou de nome; só a tela prova que,
- * trocando de página, o pop-up volta mesmo.
+ * A regra (src/lib/popupLeilaoDestaque.js) tem prova no Node. Mas o que o
+ * cliente sente é a TELA: trocar de página, recarregar, voltar de um app parado.
+ * Isso só se mede com o componente real montado, como o Layout monta (uma vez só,
+ * com a página mudando por baixo).
  *
- * 🔴 O CONTROLE QUE IMPORTA: a prova de que ele volta só vale se antes ele
- * tiver realmente SUMIDO. Sem medir o sumiço, "está na tela" passaria com um
- * pop-up que nunca fechou — que é o bug oposto, e pior.
+ * 🔴 O CONTROLE QUE IMPORTA: "não voltou" só vale se antes ele tiver realmente
+ * APARECIDO e SUMIDO. Sem medir isso, "não está na tela" passaria com um pop-up
+ * que nunca abre — que é o bug oposto, e pior.
  *
  * COMO RODAR
  *   npm run test:navegador
@@ -63,10 +64,12 @@ test.after(async () => {
   if (servidor) servidor.close();
 });
 
-async function abrir(busca = '') {
+async function abrir(busca = '', { relogio = false } = {}) {
   const nav = await garantirNavegador();
   const ctx = await nav.newContext({ viewport: { width: 1200, height: 900 } });
   const pagina = await ctx.newPage();
+  // relógio falso: o tempo corre normal, mas dá para PULAR minutos (app parado em segundo plano)
+  if (relogio) await pagina.clock.install({ time: new Date() });
   await pagina.goto(BASE + busca, { waitUntil: 'domcontentloaded' });
   await pagina.waitForSelector('[data-teste="navegar"]', { timeout: 20000 });
   return { ctx, pagina };
@@ -74,30 +77,80 @@ async function abrir(busca = '') {
 
 const popup = (p) => p.locator('[role="dialog"][aria-label="Leilão em destaque"]');
 
-test('🔴 fecha numa página, entra em outra, e o pop-up VOLTA', { skip: semNavegador }, async () => {
+test('🔴 abre uma vez: fecha, troca de página várias vezes e NÃO volta', { skip: semNavegador }, async () => {
   const { ctx, pagina } = await abrir();
 
-  // 1. estourou sozinho na primeira página
+  // 1. estourou sozinho ao entrar
   await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
   const paginaUm = await pagina.locator('[data-teste="pagina-atual"]').innerText();
 
-  // 2. fecha pelo X — e some DE VERDADE (o controle: sem este sumiço, o passo 4
-  //    é decorativo). O X é o botão DENTRO do card; o outro "Fechar" é o véu de
-  //    tela inteira, que fica por baixo e não recebe o clique.
+  // 2. fecha pelo X — e some DE VERDADE (o controle: sem este sumiço, o passo 3
+  //    é decorativo). O X é o botão DENTRO do card; o outro "Fechar" é o véu.
   await pagina.locator('[role="dialog"] > div button[aria-label="Fechar"]').click();
   await popup(pagina).waitFor({ state: 'detached', timeout: 5000 });
 
-  // 3. redesenhar a MESMA página não pode trazer de volta — seria armadilha
-  await pagina.evaluate(() => window.dispatchEvent(new Event('resize')));
-  await pagina.waitForTimeout(300);
-  assert.equal(await popup(pagina).count(), 0, 'voltou sem trocar de página — pop-up que não fecha');
+  // 3. troca de página VÁRIAS vezes (inclusive voltando à primeira): nunca volta
+  for (let i = 0; i < 4; i += 1) {
+    await pagina.locator('[data-teste="navegar"]').click();
+    await pagina.waitForTimeout(500);
+    assert.equal(await popup(pagina).count(), 0, `voltou ao trocar de página (troca ${i + 1}) — estressa o cliente`);
+  }
+  const paginaFinal = await pagina.locator('[data-teste="pagina-atual"]').innerText();
+  assert.ok(paginaFinal, 'a banca não leu a página — a medição acima não valeria');
+  assert.equal(paginaUm, 'Home', 'a banca começou numa página inesperada');
 
-  // 4. entra em outra página: tem que voltar
-  await pagina.locator('[data-teste="navegar"]').click();
-  const paginaDois = await pagina.locator('[data-teste="pagina-atual"]').innerText();
-  assert.notEqual(paginaDois, paginaUm, 'a banca não trocou de página — a medição abaixo não valeria');
+  await ctx.close();
+});
+
+test('🔴 mesmo SEM fechar, trocar de página não traz um segundo pop-up', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+  // troca de página com o pop-up aberto (botão voltar do navegador, link de fora): o véu do
+  // pop-up bloqueia o clique do dedo, então a troca é disparada por código
+  await pagina.locator('[data-teste="navegar"]').dispatchEvent('click');
+  await pagina.waitForTimeout(600);
+  await pagina.locator('[data-teste="navegar"]').dispatchEvent('click');
+  await pagina.waitForTimeout(800);
+  assert.equal(await popup(pagina).count(), 0, 'o pop-up reapareceu depois da troca de página');
+  await ctx.close();
+});
+
+test('🔴 acesso NOVO traz o pop-up de novo; recarregar no mesmo acesso, não', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?manter=1');
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+  await pagina.locator('[role="dialog"] > div button[aria-label="Fechar"]').click();
+  await popup(pagina).waitFor({ state: 'detached', timeout: 5000 });
+
+  // recarregar a página (mesma sessão, minutos depois): é o mesmo acesso
+  await pagina.reload({ waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('[data-teste="navegar"]', { timeout: 20000 });
+  await pagina.waitForTimeout(1200);
+  assert.equal(await popup(pagina).count(), 0, 'recarregar trouxe o pop-up de volta no mesmo acesso');
+
+  // acesso novo (abriu o site/app de novo = sessão nova): aparece
+  await pagina.evaluate(() => sessionStorage.clear());
+  await pagina.reload({ waitUntil: 'domcontentloaded' });
+  await pagina.waitForSelector('[data-teste="navegar"]', { timeout: 20000 });
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+  await ctx.close();
+});
+
+test('🔴 app parado por mais de 30 min e de volta é um acesso novo; menos que isso, não', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?manter=1', { relogio: true });
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+  await pagina.locator('[role="dialog"] > div button[aria-label="Fechar"]').click();
+  await popup(pagina).waitFor({ state: 'detached', timeout: 5000 });
+
+  // o app fica 5 minutos em segundo plano e volta: o mesmo acesso
+  await pagina.clock.fastForward('05:00');
+  await pagina.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await pagina.waitForTimeout(1200);
+  assert.equal(await popup(pagina).count(), 0, 'voltou depois de só 5 minutos parado');
+
+  // mais 30 minutos parado (35 no total desde a última atividade): o acesso venceu, é um novo
+  await pagina.clock.fastForward('30:00');
+  await pagina.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   await popup(pagina).waitFor({ state: 'visible', timeout: 10000 });
-
   await ctx.close();
 });
 
