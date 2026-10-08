@@ -36,19 +36,42 @@ try { sessionStorage.clear(); } catch { /* segue */ }
 
 const FIM = new Date(Date.now() + 6 * 3600 * 1000).toISOString();
 
-window.__entidadesFalsas = {
-  BannerImage: [{
-    id: 'popup-1', context: 'popup_leilao', is_active: true,
-    title: 'Playstation 5',
-    image_url: params.get('semfoto') ? 'https://exemplo.invalido/x.jpg' : fotoPS5,
-    link_url: '/AuctionRoom?id=ps5-de-mentira',
-  }],
-  Auction: [{
-    id: 'ps5-de-mentira', title: 'Playstation 5', status: 'active',
-    end_time: FIM, current_price: 797,
-    image_urls: [fotoPS5],
-  }],
-};
+// 🔴 08/10/2026 — `?velho=1`: o caso Hoverboard × PS5. A configuração guarda o título e a
+// IMAGEM de uma escolha anterior (o PS5) e o link já aponta para OUTRO leilão (o
+// Hoverboard, com a foto dele). O pop-up tem que mostrar o Hoverboard, de ponta a ponta.
+const fotoHoverboard = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="400" height="300" fill="#0f766e"/><text x="200" y="160" font-family="Arial" font-size="34" fill="#fff" text-anchor="middle">HOVERBOARD</text></svg>',
+)}`;
+window.__fotoPS5 = fotoPS5;
+window.__fotoHoverboard = fotoHoverboard;
+
+window.__entidadesFalsas = params.get('velho')
+  ? {
+    BannerImage: [{
+      id: 'popup-1', context: 'popup_leilao', is_active: true,
+      title: 'Playstation 5',
+      image_url: fotoPS5,
+      link_url: '/AuctionRoom?id=hoverboard-de-mentira',
+    }],
+    Auction: [{
+      id: 'hoverboard-de-mentira', title: ' Hoverboard Skate Elétrico 6.5 Polegadas', status: 'active',
+      end_time: FIM, current_price: 97,
+      image_urls: [fotoHoverboard],
+    }],
+  }
+  : {
+    BannerImage: [{
+      id: 'popup-1', context: 'popup_leilao', is_active: true,
+      title: 'Playstation 5',
+      image_url: params.get('semfoto') ? 'https://exemplo.invalido/x.jpg' : fotoPS5,
+      link_url: '/AuctionRoom?id=ps5-de-mentira',
+    }],
+    Auction: [{
+      id: 'ps5-de-mentira', title: 'Playstation 5', status: 'active',
+      end_time: FIM, current_price: 797,
+      image_urls: [fotoPS5],
+    }],
+  };
 
 const PAGINAS = ['Home', 'Loja-Virtual', 'leiloes', 'Home'];
 

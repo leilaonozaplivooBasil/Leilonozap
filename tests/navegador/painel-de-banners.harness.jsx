@@ -38,9 +38,20 @@ const linha = (id, context, texto, cor, order, extra = {}) => ({
   id, context, device_type: 'desktop', is_active: true, order, title: '', link_url: '', image_url: arte(texto, cor), ...extra,
 });
 
+const fotoDe = (texto, cor) => `data:image/svg+xml;utf8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><rect width="300" height="300" fill="${cor}"/><text x="150" y="160" font-family="Arial" font-weight="700" font-size="30" fill="#fff" text-anchor="middle">${texto}</text></svg>`,
+)}`;
+const fimDoLeilao = iso(agora + 3 * 24 * HORA);
+
 window.__criaNaLista = true;
 window.__entidadesFalsas = {
+  // 🔴 08/10/2026 — pop-up do leilão: a configuração guarda a IMAGEM de uma escolha anterior (PS5)
+  Auction: [
+    { id: 'hoverboard', title: ' Hoverboard Skate Elétrico 6.5 Polegadas', status: 'active', end_time: fimDoLeilao, current_price: 97, image_urls: [fotoDe('HOVERBOARD', '#0f766e')] },
+    { id: 'ps5', title: 'Playstation 5', status: 'active', end_time: fimDoLeilao, current_price: 797, image_urls: [fotoDe('PS5', '#1e3a8a')] },
+  ],
   BannerImage: [
+    { id: 'popup-1', context: 'popup_leilao', device_type: 'desktop', is_active: true, order: 0, title: 'Playstation 5', image_url: fotoDe('PS5 VELHO', '#7c2d12'), link_url: '/AuctionRoom?id=hoverboard', ...(semColunas ? {} : { starts_at: null, ends_at: null }) },
     linha('tv3', 'home', 'TV · FALTAM 3 DIAS', '#14532d', 0, janela(meiaNoite - 48 * HORA, meiaNoite - 24 * HORA)),
     linha('tv2', 'home', 'TV · FALTAM 2 DIAS', '#1e3a8a', 1, janela(meiaNoite - 24 * HORA, meiaNoite)),
     linha('tv1', 'home', 'TV · FALTA 1 DIA', '#7c2d12', 2, janela(meiaNoite, meiaNoite + 24 * HORA)),

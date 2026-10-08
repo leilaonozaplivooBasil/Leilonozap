@@ -178,14 +178,34 @@ test('lê o id do leilão do link, e aguenta link torto', () => {
 
 test('o que a tela desenha nunca é inventado', () => {
   const d = dadosDoPopup(CONFIG, ABERTO);
-  assert.equal(d.titulo, 'Air Fryer 5L');
+  // 08/10/2026 — o título é o do LEILÃO escolhido, não a cópia guardada na configuração
+  assert.equal(d.titulo, 'Air Fryer');
   assert.equal(d.destino, '/AuctionRoom?id=leilao-1');
-  // sem título no banner, cai no título do leilão; sem imagem, null (não string vazia)
-  const semTitulo = dadosDoPopup({ ...CONFIG, title: '', image_url: '' }, ABERTO);
-  assert.equal(semTitulo.titulo, 'Air Fryer');
-  assert.equal(semTitulo.imagem, null);
+  // leilão sem foto: null (não string vazia) — e NUNCA a imagem guardada na configuração
+  assert.equal(d.imagem, null);
   // sem nada: um rótulo neutro, nunca "undefined" na tela
   assert.equal(dadosDoPopup(null, null).titulo, 'Leilão em destaque');
+});
+
+test('🔴 o leilão escolhido é a ÚNICA fonte: título e foto de outro leilão não vazam (caso Hoverboard × PS5)', () => {
+  // A configuração guardava a imagem de uma escolha ANTERIOR (o PS5) e a regra antiga
+  // dava preferência a ela: o pop-up abria com o título do Hoverboard e a foto do PS5.
+  const configVelha = {
+    is_active: true, link_url: '/AuctionRoom?id=hoverboard', title: 'Playstation 5 (cópia velha)',
+    image_url: 'https://x/ps5.png',
+  };
+  const hoverboard = {
+    id: 'hoverboard', status: 'active', end_time: '2026-10-11T21:00:00Z', current_price: 97,
+    title: '  Hoverboard Skate Elétrico 6.5 Polegadas  ', image_urls: ['https://x/hoverboard-1.webp', 'https://x/hoverboard-2.webp'],
+  };
+  const d = dadosDoPopup(configVelha, hoverboard);
+  assert.equal(d.imagem, 'https://x/hoverboard-1.webp', 'a foto é a do leilão escolhido');
+  assert.equal(d.titulo, 'Hoverboard Skate Elétrico 6.5 Polegadas', 'o título é o do leilão, sem espaço sobrando');
+  assert.equal(d.preco, 97);
+  // o leilão não tem foto: fica SEM foto, em vez de pegar a de outro leilão
+  assert.equal(dadosDoPopup(configVelha, { ...hoverboard, image_urls: [] }).imagem, null);
+  // título editado depois de salvar: o pop-up acompanha o leilão
+  assert.equal(dadosDoPopup({ ...configVelha, title: 'Antigo' }, { ...hoverboard, title: 'Novo título' }).titulo, 'Novo título');
 });
 
 test('a chave da sessão é de sessão, não permanente', () => {
@@ -210,10 +230,11 @@ test('a foto vem da LISTA image_urls do leilão, não de um campo único', () =>
   assert.equal(fotoDoLeilao({ image_urls: [] }), null);
   assert.equal(fotoDoLeilao({}), null);
   assert.equal(fotoDoLeilao(null), null);
-  // arte própria do banner tem prioridade sobre a foto do leilão
-  assert.equal(dadosDoPopup({ image_url: 'https://banner.jpg', link_url: '/x' }, { image_urls: ['https://leilao.jpg'] }).imagem, 'https://banner.jpg');
-  // sem arte própria, cai na foto do leilão
+  // 08/10/2026 — NENHUMA imagem guardada na configuração ganha da foto do leilão
+  assert.equal(dadosDoPopup({ image_url: 'https://banner.jpg', link_url: '/x' }, { image_urls: ['https://leilao.jpg'] }).imagem, 'https://leilao.jpg');
   assert.equal(dadosDoPopup({ image_url: '', link_url: '/x' }, { image_urls: ['https://leilao.jpg'] }).imagem, 'https://leilao.jpg');
+  // só sem leilão nenhum resolvido a imagem da configuração serve de reserva
+  assert.equal(dadosDoPopup({ image_url: 'https://banner.jpg', link_url: '/x' }, null).imagem, 'https://banner.jpg');
 });
 
 test('o preço aparece, e zero não vira "R$ 0,00"', () => {
@@ -254,4 +275,14 @@ test('sem prazo legível ou já encerrado, não promete contagem nenhuma', () =>
   for (const v of [null, undefined, '', 'ontem', new Date(AGORA - 1000).toISOString()]) {
     assert.equal(contagemRegressiva(v, AGORA), '', `inventou contagem para ${String(v)}`);
   }
+});
+
+test('a ferramenta do painel grava SEM imagem guardada e mostra a prévia do leilão escolhido', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../src/components/admin/PopupLeilaoConfig.jsx', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(src, /image_url: ''/, 'ao salvar, limpa a imagem antiga da configuração');
+  assert.ok(!/create\(\{ \.\.\.dados, image_url/.test(src), 'a criação não reintroduz a imagem');
+  assert.match(src, /data-teste="previa-do-popup"/, 'a prévia existe');
+  assert.match(src, /dadosDoPopup\(/, 'a prévia usa a MESMA regra do pop-up');
 });

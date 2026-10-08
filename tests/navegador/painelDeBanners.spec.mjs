@@ -16,7 +16,9 @@
  *   7. sem as colunas de data no banco, o painel AVISA e não deixa programar
  *      (a gravação do servidor descartaria a data e o banner iria ao ar na hora);
  *   8. a aba "Banners" do Gerenciamento de Conteúdo mostra este painel para o
- *      administrador e segue com a tela antiga para quem não é admin.
+ *      administrador e segue com a tela antiga para quem não é admin;
+ *   9. a ferramenta do pop-up do leilão mostra a prévia do leilão ESCOLHIDO e, ao
+ *      salvar, limpa a imagem antiga guardada (caso Hoverboard × PS5).
  *
  * COMO RODAR
  *   npm run test:navegador
@@ -216,5 +218,30 @@ test('quem não é admin segue com a tela antiga, sem mudança', { skip: semNave
     await pagina.getByText('Gerenciar Banners').waitFor();
     assert.equal(await pagina.locator('[data-teste="fileiras-de-banners"]').count(), 0);
     assert.equal(await pagina.getByText('Novo Banner Desktop').count(), 1);
+  } finally { await ctx.close(); }
+});
+
+test('🔴 pop-up do leilão: a prévia mostra o leilão ESCOLHIDO e salvar limpa a imagem antiga', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const previa = pagina.locator('[data-teste="previa-do-popup"]');
+    await previa.waitFor();
+    // a configuração tem o link do Hoverboard, o título e a IMAGEM antiga do PS5: a prévia ignora o resíduo
+    assert.equal((await previa.locator('[data-teste="previa-titulo"]').innerText()).trim(), 'Hoverboard Skate Elétrico 6.5 Polegadas');
+    assert.match(await previa.locator('img').getAttribute('src'), /HOVERBOARD/);
+    assert.match(await previa.innerText(), /Lance atual R\$\s?97/);
+
+    // troca o leilão: a prévia acompanha
+    await pagina.locator('select').first().selectOption('ps5');
+    assert.equal((await previa.locator('[data-teste="previa-titulo"]').innerText()).trim(), 'Playstation 5');
+    assert.match(await previa.locator('img').getAttribute('src'), /PS5/);
+
+    // salvar grava o leilão certo e LIMPA a imagem guardada
+    await pagina.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'popup-1'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'popup-1');
+    assert.equal(u.dados.link_url, '/AuctionRoom?id=ps5');
+    assert.equal(u.dados.title, 'Playstation 5');
+    assert.equal(u.dados.image_url, '', 'a imagem antiga ficou guardada');
   } finally { await ctx.close(); }
 });
