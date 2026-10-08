@@ -26,7 +26,7 @@ test('a fila de ações: registrada antes, executada pelo servidor, idempotente 
   assert.ok(SQL.includes('create table if not exists public.gateway_acoes ('));
   assert.ok(SQL.includes('revoke all on table public.gateway_acoes from public, anon, authenticated;'));
   const G = ler('../api/_lib/gatewayAcoes.js');
-  assert.ok(G.includes("const ACOES = ['devolver', 'resolver'];"));
+  assert.ok(G.includes("const ACOES = ['devolver', 'resolver', 'liberar'];"), "DIR-211: 'liberar' entrou na fila");
   assert.ok(G.includes("'X-Idempotency-Key': String(acao.id)"), 'repetir nunca devolve em dobro');
   assert.ok(G.includes('/v1/payments/${encodeURIComponent(String(paymentId))}/refunds'));
   assert.ok(G.includes("status: resultado.ok ? 'feita' : (Number(acao.tentativas || 0) + 1 >= 3 ? 'falhou' : 'pendente')"));
@@ -41,7 +41,7 @@ test('o botão: só admin com crachá, motivo obrigatório, valor devolvido é o
   assert.ok(R.includes("exigirSessao(req, userId, 'resolverPendencia')"));
   assert.ok(R.includes("if (!ator || !['admin', 'super_admin'].includes(ator.role)) return res.status(403)"));
   assert.ok(R.includes("if (motivo.length < 5) return res.status(400)"));
-  assert.ok(R.includes("if (!['devolver', 'resolver'].includes(modo)) return res.status(400)"));
+  assert.ok(R.includes("if (!['devolver', 'resolver', 'liberar'].includes(modo)) return res.status(400)"));
   assert.ok(R.includes("Number(sale.gateway?.valor ?? sale.total_amount ?? sale.sale_price ?? 0)"));
   assert.ok(R.includes('const acao = await pedirAcao(') && R.includes('const r = await executarAcao(acao);'));
 });

@@ -34,6 +34,14 @@ import PassaporteCard from '@/components/wallet/PassaporteCard';
 import { jaAceitouPassaporte, registrarAceitePassaporte } from '@/lib/passaporteTermo';
 import { DEPOSITO_MINIMO, PACOTES_DE_DEPOSITO, TEXTO_DO_MINIMO } from '@/lib/depositoMinimo';
 
+// 🛡️ DIR-211 (08/10/2026): hora prevista para o depósito em conferência entrar
+// (fim da espera + 30 min, que é o passo do cron que libera).
+const horaDaEspera = (iso) => {
+  const t = new Date(iso).getTime();
+  if (!iso || Number.isNaN(t)) return 'daqui a 1h30';
+  return new Date(t + 30 * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+};
+
 // 💰 27/09/2026 — os mesmos pacotes da recarga rápida na sala e o piso único
 // de depósito (src/lib/depositoMinimo.js), que o servidor também exige.
 const QUICK_AMOUNTS = PACOTES_DE_DEPOSITO;
@@ -73,6 +81,8 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const [customAmount, setCustomAmount] = useState('');
   const [generating, setGenerating] = useState(false);
   const [pixData, setPixData] = useState(null);
+  // 🛡️ DIR-211: depósito pago que o antifraude segurou ({ espera_ate, automatico })
+  const [emAnalise, setEmAnalise] = useState(null);
   const [visibleCount, setVisibleCount] = useState(15);
   const [filterTab, setFilterTab] = useState('all');
   // 🔒 PONTO 68: o 1º depósito só é liberado depois do aceite dos termos do crédito.
@@ -130,6 +140,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       setRechargeAmount(null);
       setCustomAmount('');
       setPixData(null);
+      setEmAnalise(null);
       setVisibleCount(15);
       setFilterTab('all');
       setAceiteTermos(false);
@@ -148,16 +159,20 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
         const data = result?.data || result;
         if (data?.found && data?.status === 'confirmed') {
           clearInterval(pollRef.current);
+          setEmAnalise(null);
           setView('success');
           toast.success('✅ Pagamento confirmado! Saldo adicionado.');
           await loadWallet();
           if (onBalanceUpdated) onBalanceUpdated();
+        } else if (data?.found && data?.status === 'em_analise') {
+          // 🛡️ DIR-211: pago, mas em conferência (antifraude) — o poll desacelera e a tela avisa.
+          setEmAnalise((atual) => (atual && atual.espera_ate === (data.espera_ate || null) && atual.automatico === !!data.automatico && atual.decisao === (data.decisao || null) ? atual : { espera_ate: data.espera_ate || null, automatico: !!data.automatico, decisao: data.decisao || null }));
         }
       } catch { /* silencioso */ }
     };
-    pollRef.current = setInterval(check, 4000);
+    pollRef.current = setInterval(check, emAnalise ? 60000 : 4000);
     return () => clearInterval(pollRef.current);
-  }, [view, pixData, loadWallet, onBalanceUpdated]);
+  }, [view, pixData, loadWallet, onBalanceUpdated, emAnalise]);
 
   // Depois do sucesso, volta sozinho para a carteira — o usuário continua onde estava
   useEffect(() => {
@@ -214,6 +229,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
       });
       const data = result?.data || result;
       if (data?.success && data?.pix_payload) {
+        setEmAnalise(null); // DIR-211: PIX novo, estado novo (o QR anterior pode ter ficado em conferência)
         setPixData(data);
         setView('pix');
       } else if (data?.error === 'not_implemented' || data?.error === 'network_or_not_implemented') {
@@ -253,7 +269,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
   const totals = React.useMemo(() => {
     let deposited = 0, spent = 0, sold = 0, pendingCount = 0;
     for (const t of transactions) {
-      if (t.status === 'pending') { pendingCount++; continue; }
+      if (t.status === 'pending' || t.status === 'em_analise') { pendingCount++; continue; }
       if (t.status === 'cancelled' || t.status === 'canceled') { continue; }
       if (t.type === 'deposit') deposited += t.amount;
       else if (t.type === 'purchase') spent += Math.abs(t.amount);
@@ -305,7 +321,7 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
               <div className="flex items-center gap-2">
                 {(view === 'recharge' || view === 'pix') && (
                   <button
-                    onClick={() => { setView(view === 'pix' ? 'recharge' : 'wallet'); }}
+                    onClick={() => { setEmAnalise(null); setView(view === 'pix' ? 'recharge' : 'wallet'); }}
                     className="p-1.5 rounded-lg hover:bg-white/10 text-gray-300"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -469,6 +485,14 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                                     title={tx.type === 'deposit' ? 'O PIX desta cobrança ainda não foi gerado/pago.' : 'O PIX desta compra ainda não foi gerado/pago.'}
                                   >
                                     <Clock className="w-3 h-3" /> aguardando pagamento
+                                  </span>
+                                )}
+                                {tx.status === 'em_analise' && (
+                                  <span
+                                    className="inline-flex items-center gap-1 text-[10px] text-amber-300"
+                                    title="Pago. Por segurança, em conferência antes de entrar na Carteira."
+                                  >
+                                    <Clock className="w-3 h-3" /> em conferência
                                   </span>
                                 )}
                                 {tx.status === 'cancelled' && (
@@ -652,11 +676,29 @@ export default function WalletDrawer({ open, onClose, currentUser, onBalanceUpda
                     {pixCopiado ? <Check className="w-4 h-4 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
                     {pixCopiado ? 'Código PIX copiado!' : 'Copiar Código PIX'}
                   </Button>
-                  <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                    <Loader2 className="w-4 h-4 animate-spin text-green-400" />
-                    Aguardando confirmação do pagamento...
-                  </div>
-                  <p className="text-xs text-gray-500">A confirmação é automática. Você continua exatamente onde estava.</p>
+                  {emAnalise ? (
+                    <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-left space-y-1" data-teste="deposito-em-analise">
+                      {emAnalise.decisao === 'recusado' ? (
+                        <>
+                          <p className="text-sm font-bold text-amber-200">Depósito em devolução.</p>
+                          <p className="text-xs text-amber-100/90">A conferência não aprovou este depósito: o valor está sendo devolvido pelo Mercado Pago para a conta de origem. Se tiver dúvida, fale com a gente.</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-bold text-amber-200">Pagamento recebido! Depósito em conferência.</p>
+                          <p className="text-xs text-amber-100/90">Por segurança, este depósito passa por uma conferência rápida antes de entrar na Carteira. {emAnalise.automatico ? `Entra sozinho até ${horaDaEspera(emAnalise.espera_ate)}.` : 'A equipe libera assim que conferir (em horário comercial, até 1 hora).'} Você não precisa fazer nada e pode fechar esta janela.</p>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                        <Loader2 className="w-4 h-4 animate-spin text-green-400" />
+                        Aguardando confirmação do pagamento...
+                      </div>
+                      <p className="text-xs text-gray-500">A confirmação é automática. Você continua exatamente onde estava.</p>
+                    </>
+                  )}
                 </div>
               )}
 

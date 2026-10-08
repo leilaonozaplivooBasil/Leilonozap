@@ -25,6 +25,9 @@ export const TIPOS_NA_TELA = Object.freeze([
   // 🏷️ DIR-210 (08/10/2026): o arremate em risco e o arremate cancelado entram no
   // sino de propósito — quem desligou o e-mail de leilão ainda precisa saber do prazo.
   'arremate_sem_saldo', 'arremate_cancelado',
+  // 🛡️ DIR-211 (08/10/2026): depósito pago que ficou em conferência — a pessoa está olhando
+  // a Carteira sem o saldo entrar; precisa saber que chegou e quando entra.
+  'deposito_em_analise',
 ]);
 
 /** "Superado" do mesmo leilão não empilha: a notificação é renovada. */
@@ -65,6 +68,10 @@ export function notificacaoDaTela(tipo, d = {}) {
       return { titulo: 'Comissão paga', texto: `Sua comissão de ${reais(d.valor)} foi paga.`, link: '/Carteira' };
     case 'arremate_sem_saldo':
       return { titulo: d.segunda ? 'Seu arremate ainda espera saldo' : 'Falta saldo para fechar seu arremate', texto: `${produto}: faltam ${reais(d.falta)} na Carteira.${d.cancelaEm ? ` Prazo: ${quandoBR(d.cancelaEm)}.` : ''}`, link: '/Carteira' };
+    case 'deposito_em_analise': {
+      const prev = d.esperaAte && Number.isFinite(new Date(d.esperaAte).getTime()) ? quandoBR(new Date(new Date(d.esperaAte).getTime() + 30 * 60000).toISOString()) : '';
+      return { titulo: 'Depósito em conferência', texto: `${reais(d.valor)} chegou e entra na Carteira ${d.automatico ? `até ${prev || 'daqui a 1h30'}` : 'assim que a equipe conferir'}. Você não precisa fazer nada.`, link: '/Carteira' };
+    }
     case 'arremate_cancelado':
       return { titulo: 'Arremate cancelado', texto: `${produto} foi cancelado por falta de saldo depois de ${Number(d.horas) > 0 ? Number(d.horas) : 48}h.${Number(d.devolvido) > 0 ? ` ${reais(d.devolvido)} voltou para a sua Carteira.` : ''}`, link: '/Carteira' };
     default:

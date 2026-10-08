@@ -4,6 +4,7 @@
 // Sem este arquivo, a tela "Carteira Digital" (Perfil → Carteira Digital) recebia 404
 // e, dependendo do estado, acabava caindo no ErrorBoundary em loop ("Detectamos um problema").
 import { exigirSessao } from '../_lib/sessao.js';
+import { statusNoExtrato } from '../_lib/antifraudeDeposito.js';
 const SUPABASE_URL = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '')
   .replace(/\/rest\/v1\/?$/, '')
   .replace(/\/+$/, '');
@@ -17,7 +18,8 @@ function sb(path, opts = {}) {
 }
 
 const DEPOSIT_KINDS = ['wallet_deposit', 'passaporte', 'commission_deposit'];
-const SALE_COLS = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name';
+// 🛡️ DIR-211: as colunas antifraude_* dizem se um depósito pago está "em conferência" (statusNoExtrato).
+const SALE_COLS = 'id,kind,product_title,sale_price,total_amount,quantity,status,payment_method,tracking_code,created_date,buyer_id,buyer_name,antifraude_espera_ate,antifraude_decisao';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -99,7 +101,8 @@ export default async function handler(req, res) {
           : (s.kind === 'arremate' ? 'Leilão' : 'Loja'),
         amount: isDeposit ? amount : -amount,
         quantity: s.quantity || 1,
-        status: s.status === 'paid' ? 'paid' : (s.status === 'pending_payment' ? 'pending' : s.status),
+        // DIR-211: 'em_analise' = pago, em conferência do antifraude; 'pending' = QR ainda não pago.
+        status: s.status === 'paid' ? 'paid' : (s.status === 'pending_payment' ? statusNoExtrato(s) : s.status),
         tracking_code: s.tracking_code || null,
         date: s.created_date,
       });

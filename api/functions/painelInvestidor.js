@@ -2,6 +2,8 @@
 // banco por UMA regra só (public.painel_investidor, migração 20260930160000).
 // Só admin/super_admin. Conciliado com o Mercado Pago em 30/09/2026 (DIR-190).
 import { exigirSessao } from '../_lib/sessao.js';
+// 🛡️ DIR-211 (08/10/2026) — depósitos em conferência (antifraude) entram no topo das pendências.
+import { listarDepositosEmAnalise } from '../_lib/antifraudeDeposito.js';
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -40,6 +42,17 @@ export default async function handler(req, res) {
     // 👥 perfil (sexo estimado pelo nome, canais de origem) — best-effort: se falhar, o resto da tela vive
     painel.perfil = rp.ok ? await rp.json().catch(() => null) : null;
     painel.conciliacao = rc.ok ? await rc.json().catch(() => null) : null;
+    // 🛡️ DIR-211 — a lista "em análise" é montada aqui (JS), prefixada às pendências do banco.
+    // Best-effort: se falhar, a conciliação do banco vive sem ela.
+    if (painel.conciliacao) {
+      try {
+        const emAnalise = await listarDepositosEmAnalise(sb);
+        painel.conciliacao.em_analise = { n: emAnalise.length, valor: Math.round(emAnalise.reduce((s, x) => s + (Number(x.valor) || 0), 0) * 100) / 100 };
+        painel.conciliacao.pendencias = [...emAnalise, ...(Array.isArray(painel.conciliacao.pendencias) ? painel.conciliacao.pendencias : [])];
+      } catch (e) {
+        painel.conciliacao.em_analise = { n: 0, valor: 0, erro: String(e?.message || e).slice(0, 120) };
+      }
+    }
     if (rd) painel.depositos = rd.ok ? await rd.json().catch(() => null) : null;
     return res.status(200).json({ success: true, painel });
   } catch (e) {

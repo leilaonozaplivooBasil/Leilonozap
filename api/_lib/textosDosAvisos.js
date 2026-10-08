@@ -38,6 +38,9 @@ export const CATEGORIA_POR_TIPO = Object.freeze({
   // 🏷️ 08/10/2026 (DIR-210) — passou o prazo sem saldo: o cron cancelou o arremate
   // e o que estava reservado voltou para a Carteira.
   arremate_cancelado: 'leilao',
+  // 🛡️ 08/10/2026 (DIR-211) — depósito aprovado no gateway que ficou em conferência
+  // (antifraude) antes de entrar na Carteira. O "depósito confirmado" sai depois, na liberação.
+  deposito_em_analise: 'conta',
 });
 export const TIPOS_DE_AVISO = Object.freeze(Object.keys(CATEGORIA_POR_TIPO));
 
@@ -116,6 +119,19 @@ export function montarAviso(tipo, d = {}) {
       linhas = [`Seu depósito de ${reais(d.valor)} caiu na Carteira.${d.saldo != null ? ` Saldo disponível: ${reais(d.saldo)}.` : ''} Bons lances!`];
       botao = { rotulo: 'Ver leilões ativos', url: `${SITE}/leiloes` };
       break;
+    case 'deposito_em_analise': {
+      // DIR-211: aprovado no gateway, em espera antes do crédito (antifraude). A previsão é
+      // o fim da espera + 30 min (o cron que libera roda a cada meia hora).
+      const prev = d.esperaAte && Number.isFinite(new Date(d.esperaAte).getTime()) ? quandoBR(new Date(new Date(d.esperaAte).getTime() + 30 * 60000).toISOString()) : '';
+      assunto = `Depósito de ${reais(d.valor)} recebido — em conferência`;
+      linhas = [`${oi} Recebemos o seu depósito de ${reais(d.valor)}. Por segurança, ele passa por uma conferência rápida antes de entrar na Carteira.`,
+        d.automatico
+          ? `Previsão: entra sozinho até ${prev || 'daqui a 1h30'}. Você não precisa fazer nada.`
+          : 'A nossa equipe confere e libera — em horário comercial isso costuma levar até 1 hora. Você não precisa fazer nada.',
+        'Se tiver pressa ou alguma dúvida, responda este e-mail.'];
+      botao = { rotulo: 'Ver minha Carteira', url: `${SITE}/Carteira` };
+      break;
+    }
     case 'compra_confirmada':
       assunto = `Pedido #${d.pedido} confirmado`;
       linhas = [`${oi} Recebemos o pagamento do seu pedido #${d.pedido} (${reais(d.valor)}).`, 'Agora é com a gente: assim que sair pra entrega, você recebe o rastreio.'];

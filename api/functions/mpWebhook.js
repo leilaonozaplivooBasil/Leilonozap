@@ -12,6 +12,10 @@ import { settlePdvPixSale } from '../_lib/pdvSettle.js';
 import { aplicarReposicao } from '../_lib/supplySettle.js';
 import { debitarCupomDaVenda, criarCupomPassaporte } from '../_lib/passaporteCoupon.js';
 import { avisarAdmin } from '../_lib/avisarAdmin.js';
+// 🛡️ DIR-211 (08/10/2026) — antifraude de depósito: a espera antes do crédito (régua e
+// leitura em api/_lib/antifraudeDeposito.js; quem segura e libera é este webhook).
+import { avisarAdminUmaVezPorDia } from '../_lib/avisarAdmin.js';
+import { decisaoDoPortao, avaliarDeposito, lerContextoDoComprador, segurarDeposito, marcarDecisao, textoParaAdmin, liberaSozinho, KINDS_DE_DEPOSITO, STATUS_SEGURAVEIS } from '../_lib/antifraudeDeposito.js';
 import { payDirectCommissions } from '../_lib/commissions.js';
 import { registrarReceita } from '../_lib/financialIncome.js';
 import { resumoDoPagamento, resolverPagamentoDoAviso, investigarPagamento, SITUACOES_DINHEIRO_SAIU } from '../_lib/conferenciaMercadoPago.js';
@@ -312,6 +316,12 @@ function investigarManifesto({ segredo, idBody, idUrl, requestId, ts, v1 }) {
 function conferirAssinatura(req, payId, idUrl = '', legado = false) {
   const segredo = process.env.MP_WEBHOOK_SECRET;
   const bloqueia = String(process.env.MP_WEBHOOK_MODO || '').toLowerCase() === 'bloquear';
+  // 🛡️ DIR-211 — chamada de DENTRO do servidor (liberar depósito em espera, cartão aprovado,
+  // poll da tela, cron da conciliação): leva o segredo dos crons em `x-interno`. Sem isso, com
+  // MP_WEBHOOK_MODO=bloquear, a liberação pedida pela Beatriz morreria num 401 — e o gateway
+  // não reenvia o que já respondeu 200 "em_espera". O pagamento continua sendo conferido na API.
+  const interno = lerCabecalho(req, 'x-interno');
+  if (interno && process.env.CRON_SECRET && interno === `Bearer ${process.env.CRON_SECRET}`) return { ok: true, verificado: true, interno: true };
   // Resultado quando a conferência falha: em modo observação vira aviso e passa.
   const reprovar = (motivo) => {
     // ══════════════════════════════════════════════════════════════════════════
@@ -408,7 +418,7 @@ export default async function handler(req, res) {
   res.json = (payload) => {
     try {
       if (!evento.resultado && payload && typeof payload === 'object') {
-        const chave = ['bloqueado', 'estornado', 'credited', 'creditado', 'already_paid', 'em_disputa', 'notfound', 'sale_notfound', 'ignored', 'nao_processado', 'estorno_falhou', 'cancelada_com_estorno', 'sem_referencia', 'error'].find((k) => payload[k]);
+        const chave = ['bloqueado', 'estornado', 'credited', 'creditado', 'already_paid', 'em_disputa', 'em_espera', 'notfound', 'sale_notfound', 'ignored', 'nao_processado', 'estorno_falhou', 'cancelada_com_estorno', 'sem_referencia', 'error'].find((k) => payload[k]);
         evento.resultado = chave || (payload.ok ? `ok:${payload.status || 'processado'}` : 'erro');
         if (payload.status && !evento.status) evento.status = String(payload.status);
       }
@@ -461,6 +471,55 @@ async function conferirEGuardar(pay, sale, evento) {
   }
 }
 
+// 🛡️ DIR-211 — decide se um depósito aprovado espera. NUNCA lança: erro = segue sem espera
+// (falha aberta: um soluço do banco não pode prender dinheiro de cliente; a conciliação e o
+// bloqueio da DIR-198 continuam de rede). Devolve { segurar, motivo?, esperaAte?, decisao? }.
+async function portaoAntifraude(sale, pay) {
+  try {
+    const agora = Date.now();
+    const decisao = decisaoDoPortao(sale, agora);
+    if (decisao === 'passar') return { segurar: false };
+    if (decisao === 'recusado') return { segurar: true, motivo: sale.antifraude_motivo, esperaAte: sale.antifraude_espera_ate, decisao: 'recusado' };
+    if (decisao === 'segurar') return { segurar: true, motivo: sale.antifraude_motivo, esperaAte: sale.antifraude_espera_ate };
+    if (decisao === 'retido') {
+      // o gateway já disse que o dinheiro saiu (approved com liberação revertida, devolvido em parte,
+      // contestado): não credita nem com decisão de liberar — é o buraco que a espera existe para fechar.
+      try { await avisarAdminUmaVezPorDia(`antifraude_retido_${sale.id}`, `🔴 *Depósito em conferência com dinheiro saindo no gateway*\n\n${sale.buyer_name || 'Cliente'} · R$ ${Number(sale.total_amount || 0).toFixed(2)} · gateway diz "${sale.gateway?.situacao}"\n\nNão foi creditado e não será liberado sozinho. Decidir em Painel do Investidor → Conciliação (Devolver pelo Mercado Pago).`, { sb, horas: 24 }); } catch (e) { console.error('[MP][ANTIFRAUDE] aviso (retido) falhou:', e?.message || e); }
+      return { segurar: true, motivo: sale.antifraude_motivo, esperaAte: sale.antifraude_espera_ate, decisao: sale.antifraude_decisao || null, retido: true };
+    }
+    if (decisao === 'auto_liberar') {
+      // o prazo venceu e o motivo libera sozinho: grava 'auto' — só quem grava passa; quem
+      // perdeu a corrida (Beatriz, cron, poll) relê a decisão que ficou.
+      if (await marcarDecisao(sb, sale.id, 'auto', 'prazo de espera vencido (webhook)')) return { segurar: false };
+      const relida = await (await sb(`catalog_sales?select=antifraude_decisao&id=eq.${encodeURIComponent(sale.id)}&limit=1`)).json().catch(() => []);
+      const dec = Array.isArray(relida) ? relida[0]?.antifraude_decisao : null;
+      return ['liberado', 'auto'].includes(dec) ? { segurar: false } : { segurar: true, motivo: sale.antifraude_motivo, esperaAte: sale.antifraude_espera_ate, decisao: dec || null };
+    }
+    // 'avaliar' — a primeira vez que este depósito aprovado passa aqui
+    const contexto = await lerContextoDoComprador(sb, sale, agora);
+    const avaliacao = avaliarDeposito({ sale, ...contexto, agora });
+    if (!avaliacao.motivo) return { segurar: false };
+    const h = await segurarDeposito(sb, sale, avaliacao, { agora, paymentId: pay.id, contas: contexto.contas });
+    if (h.erro) {
+      // o banco recusou gravar a espera: responder "em_espera" sem nada gravado prenderia o dinheiro
+      // para sempre (o gateway não reenvia). Falha aberta: credita como sempre e deixa o rastro.
+      console.error(`[MP][ANTIFRAUDE] não consegui gravar a espera do depósito ${sale.id} (${h.erro}) — segue SEM espera.`);
+      return { segurar: false };
+    }
+    if (h.segurou) {
+      // só quem venceu a corrida avisa (o webhook chega em dobro) — e ESPERA o aviso sair,
+      // porque a função pode ser congelada assim que a resposta vai embora.
+      console.warn(`[MP][ANTIFRAUDE] depósito ${sale.id} (${sale.buyer_name}, R$ ${sale.total_amount}) em espera até ${h.esperaAte}: ${avaliacao.motivo}.`);
+      try { await avisarAdminUmaVezPorDia(`antifraude_${sale.id}`, textoParaAdmin(sale, avaliacao, h.esperaAte), { sb, horas: 24 }); } catch (e) { console.error('[MP][ANTIFRAUDE] aviso ao admin falhou:', e?.message || e); }
+      try { await enviarAviso({ tipo: 'deposito_em_analise', userId: sale.buyer_id, chave: sale.id, dados: { valor: sale.total_amount, esperaAte: h.esperaAte, automatico: liberaSozinho(avaliacao.motivo) } }); } catch (e) { console.error('[MP][ANTIFRAUDE] aviso ao cliente falhou:', e?.message || e); }
+    }
+    return { segurar: true, motivo: avaliacao.motivo, esperaAte: h.esperaAte };
+  } catch (e) {
+    console.error(`[MP][ANTIFRAUDE] avaliação falhou — depósito ${sale?.id} segue SEM espera: ${e?.message || e}`);
+    return { segurar: false };
+  }
+}
+
 async function processar(req, res, evento) {
   // 🔴 PONTO 121: guarda o id da venda que ESTA execução marcou como paga. O
   // catch lá embaixo precisa saber disso pra devolver ao estado anterior — se
@@ -505,7 +564,7 @@ async function processar(req, res, evento) {
     const assinatura = conferirAssinatura(
       req, payId, url.searchParams.get('data.id') || url.searchParams.get('id') || '', formatoAntigo
     );
-    evento.assinatura = assinatura.ok ? (assinatura.verificado ? 'conferida' : 'nao_conferida') : 'invalida';
+    evento.assinatura = assinatura.ok ? (assinatura.interno ? 'interna' : assinatura.verificado ? 'conferida' : 'nao_conferida') : 'invalida';
     if (!assinatura.ok) {
       console.error(`[MP] NOTIFICAÇÃO RECUSADA — ${assinatura.motivo} (pagamento ${payId}).`);
       return res.status(401).json({ ok: false, error: 'assinatura_invalida' });
@@ -633,7 +692,27 @@ async function processar(req, res, evento) {
         return res.status(200).json({ ok: true, cancelada_com_estorno: true, sale_id: sale.id, payment_id: String(pay.id) });
       }
     }
-    const flip = await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}&status=in.(pending_payment,canceled,cancelado,cancelled)`, {
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🛡️ DIR-211 (08/10/2026) — ANTIFRAUDE DE DEPÓSITO: A ESPERA ANTES DO CRÉDITO
+    // ══════════════════════════════════════════════════════════════════════════
+    // Depósito aprovado no gateway, venda ainda 'pending_payment': antes de virar 'paid'
+    // (e com isso creditar, pagar os 10% de quem indicou, criar o cupom e mandar o e-mail
+    // de "depósito confirmado"), a régua de api/_lib/antifraudeDeposito.js decide se há
+    // motivo para esperar (conta nova com valor alto; sequência de depósitos em 24h).
+    // Com motivo, a venda fica como está, com antifraude_* preenchido, e a resposta é
+    // 200 "em_espera": o gateway para de reenviar, e quem libera é ESTE webhook chamado
+    // por dentro (x-interno) — pela Beatriz, pelo cron da conciliação ou pelo poll da
+    // tela. QR cancelado pago tarde (PONTO 121) segue o caminho de sempre, sem espera.
+    if (KINDS_DE_DEPOSITO.includes(sale.kind) && STATUS_SEGURAVEIS.includes(String(sale.status))) {
+      const portao = await portaoAntifraude(sale, pay);
+      if (portao.segurar) {
+        return res.status(200).json({ ok: true, em_espera: true, sale_id: sale.id, payment_id: String(pay.id), antifraude: portao.motivo || null, espera_ate: portao.esperaAte || null, decisao: portao.decisao || null, automatico: liberaSozinho(portao.motivo) });
+      }
+    }
+    // DIR-211: o flip de um depósito só passa se ninguém o segurou no meio-tempo (o webhook em dobro pode
+    // avaliar "sem motivo" enquanto o irmão grava a espera); com espera, só com decisão que libera.
+    const travaAntifraude = KINDS_DE_DEPOSITO.includes(sale.kind) ? '&or=(antifraude_espera_ate.is.null,antifraude_decisao.in.(liberado,auto))' : '';
+    const flip = await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}&status=in.(pending_payment,canceled,cancelado,cancelled)${travaAntifraude}`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
       body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
     });
@@ -644,10 +723,14 @@ async function processar(req, res, evento) {
       // mesmo 'paid', é corrida de webhook e está tudo bem. Qualquer OUTRO estado
       // aqui significa dinheiro que entrou e não foi processado — e isso não pode
       // sair com 200/ok, senão o Mercado Pago para de reenviar e o caso se perde.
-      const conf = await (await sb(`catalog_sales?select=status&id=eq.${sale.id}&limit=1`)).json().catch(() => null);
+      const conf = await (await sb(`catalog_sales?select=status,antifraude_espera_ate,antifraude_decisao&id=eq.${sale.id}&limit=1`)).json().catch(() => null);
       const agora = Array.isArray(conf) ? conf[0]?.status : null;
       if (agora === 'paid') {
         return res.status(200).json({ ok: true, already_paid: true, raced: true }); // outro webhook já pagou
+      }
+      // DIR-211: o irmão segurou o depósito enquanto este avaliava — é espera, não "não processado".
+      if (Array.isArray(conf) && conf[0]?.antifraude_espera_ate && !['liberado', 'auto'].includes(conf[0]?.antifraude_decisao)) {
+        return res.status(200).json({ ok: true, em_espera: true, sale_id: sale.id, payment_id: String(pay.id), raced: true, espera_ate: conf[0].antifraude_espera_ate, decisao: conf[0].antifraude_decisao || null });
       }
       console.error(`[MP] PAGAMENTO RECEBIDO E NÃO PROCESSADO — venda ${sale.id} está em '${agora}', pagamento ${pay.id}, R$ ${pay.transaction_amount}. Resolver na mão.`);
       return res.status(500).json({ ok: false, nao_processado: true, sale_id: sale.id, status_atual: agora });
