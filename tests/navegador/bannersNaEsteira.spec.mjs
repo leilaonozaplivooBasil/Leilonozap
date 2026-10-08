@@ -8,7 +8,9 @@
  *   1. a página do Leilão lê a fileira do Leilão e a da Loja lê a da Loja;
  *   2. com a Unificada ligada, as DUAS páginas mostram o mesmo conjunto;
  *   3. com a fileira da Loja desligada, a Loja fica sem banner e o Leilão segue;
- *   4. um banner agendado ENTRA e um com fim SAI no instante marcado, sozinhos.
+ *   4. um banner agendado ENTRA e um com fim SAI no instante marcado, sozinhos;
+ *   5. 🏁 banner ligado a um leilão SAI no segundo em que o leilão acaba, mesmo com o leilão ainda
+ *      "no ar" no banco (o robô fecha de minuto em minuto) — e FICA se um lance prorrogou o fim.
  *
  * COMO RODAR
  *   npm run test:navegador
@@ -99,4 +101,38 @@ test('a virada acontece SOZINHA, sem recarregar: o agendado entra e o que tem fi
     assert.deepEqual(await noAr(pagina), ['A', 'C'], 'antes da virada: o B ainda não entrou, o C ainda está');
     await esperar(pagina, ['A', 'B']); // depois de ~2,5 s: o C saiu e o B entrou, na mesma tela
   } finally { await ctx.close(); }
+});
+
+const SEM_JANELA = 'entra=600000&sai=600000'; // o B e o C não mexem nestes cenários
+
+test('🏁 o banner do leilão SAI no segundo em que o leilão acaba — sozinho, sem recarregar', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=fim`);
+  try {
+    assert.deepEqual(await noAr(pagina), ['A', 'C', 'T'], 'antes do fim o banner está lá');
+    await esperar(pagina, ['A', 'C']); // ~2,5 s: o leilão acabou e o banner saiu, na mesma tela
+  } finally { await ctx.close(); }
+});
+
+test('🔴 lance de última hora PRORROGA o leilão: o banner NÃO sai no horário antigo', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=prorrogado`);
+  try {
+    assert.deepEqual(await noAr(pagina), ['A', 'C', 'T']);
+    // passa do fim ANTIGO (2 s): o banco já diz que acaba só aos 4,2 s, então ele fica
+    await pagina.waitForTimeout(3200);
+    assert.deepEqual(await noAr(pagina), ['A', 'C', 'T'], 'saiu no horário antigo mesmo com o leilão prorrogado');
+    // e sai quando o fim NOVO chega
+    await esperar(pagina, ['A', 'C']);
+  } finally { await ctx.close(); }
+});
+
+test('leilão já encerrado ou apagado: o banner nem aparece', { skip: semNavegador }, async () => {
+  for (const cenario of ['encerrado', 'sumiu']) {
+    const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=${cenario}`);
+    try { assert.deepEqual(await noAr(pagina), ['A', 'C'], cenario); } finally { await ctx.close(); }
+  }
+});
+
+test('leilão AGENDADO: o banner aparece (é a arte "faltam 3 dias")', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir(`contexto=home&${SEM_JANELA}&leilao=agendado`);
+  try { assert.deepEqual(await noAr(pagina), ['A', 'C', 'T']); } finally { await ctx.close(); }
 });

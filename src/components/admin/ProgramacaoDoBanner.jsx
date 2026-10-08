@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarClock } from 'lucide-react';
 import { deISOBrasilia, paraISOBrasilia, situacaoDoBanner, validarJanela } from '@/lib/janelaDoBanner';
+import { SeletorDeLeilao } from './LeilaoDoBanner';
 
 // 🕛 Programação de datas de UM banner (08/10/2026): "entra em / sai em", no
 // horário de Brasília. Regras em src/lib/janelaDoBanner.js.
@@ -92,8 +93,8 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
 }
 
 /** "O próximo banner que eu subir já entra programado" — por fileira. */
-export function ProgramacaoDoProximo({ valor, onChange, suporta = true }) {
-  const v = valor || { inicio: '', fim: '' };
+export function ProgramacaoDoProximo({ valor, onChange, suporta = true, leiloes, mapa, suportaLeilao = false }) {
+  const v = valor || { inicio: '', fim: '', leilao: '' };
   if (!suporta) return <p className="text-[11px] text-amber-300/90 mb-3">{AVISO_SEM_COLUNAS}</p>;
   return (
     <div data-teste="programacao-do-proximo" className="mb-3 rounded-lg border border-white/10 bg-gray-800/40 p-2.5">
@@ -108,6 +109,14 @@ export function ProgramacaoDoProximo({ valor, onChange, suporta = true }) {
           <input type="datetime-local" value={v.fim} onChange={(e) => onChange({ ...v, fim: e.target.value })} data-campo="proximo-fim" className={`${CAMPO} mt-1 w-full`} />
         </label>
       </div>
+      {suportaLeilao && (
+        <label className="mt-2 block text-[11px] text-gray-400">
+          Ligado ao leilão (o banner sai sozinho quando ele encerrar)
+          <div className="mt-1">
+            <SeletorDeLeilao valor={v.leilao || ''} leiloes={leiloes} mapa={mapa} onChange={(x) => onChange({ ...v, leilao: x })} dataCampo="proximo-leilao" />
+          </div>
+        </label>
+      )}
     </div>
   );
 }

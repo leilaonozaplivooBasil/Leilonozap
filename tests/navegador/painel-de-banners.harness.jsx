@@ -34,8 +34,10 @@ const q = new URLSearchParams(window.location.search);
 const semColunas = q.get('semcolunas') === '1';
 const janela = (ini, fim) => (semColunas ? {} : { starts_at: ini ? iso(ini) : null, ends_at: fim ? iso(fim) : null });
 
+// como o banco depois da migração: toda linha traz `auction_id` (nulo = banner solto)
 const linha = (id, context, texto, cor, order, extra = {}) => ({
-  id, context, device_type: 'desktop', is_active: true, order, title: '', link_url: '', image_url: arte(texto, cor), ...extra,
+  id, context, device_type: 'desktop', is_active: true, order, title: '', link_url: '', image_url: arte(texto, cor),
+  ...(semColunas ? {} : { auction_id: null }), ...extra,
 });
 
 const fotoDe = (texto, cor) => `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -49,6 +51,8 @@ window.__entidadesFalsas = {
   Auction: [
     { id: 'hoverboard', title: ' Hoverboard Skate Elétrico 6.5 Polegadas', status: 'active', end_time: fimDoLeilao, current_price: 97, image_urls: [fotoDe('HOVERBOARD', '#0f766e')] },
     { id: 'ps5', title: 'Playstation 5', status: 'active', end_time: fimDoLeilao, current_price: 797, image_urls: [fotoDe('PS5', '#1e3a8a')] },
+    // 🏁 `?leilao=1`: um banner ligado a um leilão que já ENCERROU (não está mais na lista de ativos)
+    { id: 'tv-vendida', title: 'Smart TV LG vendida', status: 'sold', end_time: iso(agora - 3600 * 1000), current_price: 1200, image_urls: [] },
   ],
   BannerImage: [
     { id: 'popup-1', context: 'popup_leilao', device_type: 'desktop', is_active: true, order: 0, title: 'Playstation 5', image_url: fotoDe('PS5 VELHO', '#7c2d12'), link_url: '/AuctionRoom?id=hoverboard', ...(semColunas ? {} : { starts_at: null, ends_at: null }) },
@@ -57,6 +61,9 @@ window.__entidadesFalsas = {
     linha('tv1', 'home', 'TV · FALTA 1 DIA', '#7c2d12', 2, janela(meiaNoite, meiaNoite + 24 * HORA)),
     linha('geral', 'home', 'LEILÃO NOZAP', '#0f172a', 3, janela(null, null)),
     linha('loja1', 'catalog', 'LOJA VIRTUAL', '#4c1d95', 0, janela(null, null)),
+    ...(q.get('leilao') === '1' ? [
+      linha('tv-banner', 'home', 'TV VENDIDA', '#78350f', 5, { ...janela(null, null), ...(semColunas ? {} : { auction_id: 'tv-vendida' }) }),
+    ] : []),
   ],
 };
 

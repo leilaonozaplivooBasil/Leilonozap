@@ -9,6 +9,12 @@
  *   ?modo=unificado             a Unificada ligada
  *   ?loja=desligada             a fileira da Loja desligada
  *   ?entra=<ms>&sai=<ms>        quando o banner "B" entra e o "C" sai (a partir de agora)
+ *   ?leilao=fim|prorrogado|encerrado|agendado|sumiu   o banner "T" ligado a um leilão (08/10/2026)
+ *       fim         o leilão acaba em ~2,5 s e continua "no ar" no banco (o robô ainda não fechou)
+ *       prorrogado  acaba em ~2 s, mas um lance prorroga o fim para ~5 s (o banner NÃO pode sair aos 2 s)
+ *       encerrado   o leilão já está vendido
+ *       agendado    o leilão ainda não começou (a arte "faltam 3 dias")
+ *       sumiu       o leilão foi apagado
  */
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -24,8 +30,24 @@ const sai = iso(agora + Number(q.get('sai') || 2500));
 const b = (id, context, extra = {}) => ({ id, context, device_type: 'desktop', is_active: true, order: 0, image_url: `${id}.webp`, link_url: '', title: id, ...extra });
 const config = (title, is_active) => ({ id: `cfg-${title}`, context: 'banner_fileira', title, is_active, device_type: 'desktop', image_url: '' });
 
+const leilaoCenario = q.get('leilao');
+const fimDoLeilao = (ms) => iso(Date.now() + ms);
+const leiloes = leilaoCenario ? ({
+  fim: [{ id: 'lt', status: 'active', end_time: fimDoLeilao(2500) }],
+  prorrogado: [{ id: 'lt', status: 'active', end_time: fimDoLeilao(2000) }],
+  encerrado: [{ id: 'lt', status: 'sold', end_time: fimDoLeilao(-60000) }],
+  agendado: [{ id: 'lt', status: 'scheduled', end_time: fimDoLeilao(3 * 24 * 3600 * 1000) }],
+  sumiu: [],
+}[leilaoCenario] || []) : [];
+if (leilaoCenario === 'prorrogado') {
+  // o lance de última hora: o banco passa a dizer que o leilão acaba mais tarde
+  setTimeout(() => { leiloes[0].end_time = fimDoLeilao(3000); }, 1200);
+}
+
 window.__entidadesFalsas = {
+  Auction: leiloes,
   BannerImage: [
+    ...(leilaoCenario ? [b('T', 'home', { order: 3, auction_id: 'lt' })] : []),
     b('A', 'home', { order: 0 }),
     b('B', 'home', { order: 1, starts_at: entra }),
     b('C', 'home', { order: 2, ends_at: sai }),

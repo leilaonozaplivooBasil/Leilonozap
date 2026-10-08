@@ -18,7 +18,9 @@
  *   8. a aba "Banners" do Gerenciamento de Conteúdo mostra este painel para o
  *      administrador e segue com a tela antiga para quem não é admin;
  *   9. a ferramenta do pop-up do leilão mostra a prévia do leilão ESCOLHIDO e, ao
- *      salvar, limpa a imagem antiga guardada (caso Hoverboard × PS5).
+ *      salvar, limpa a imagem antiga guardada (caso Hoverboard × PS5);
+ *  10. cada banner pode ser LIGADO a um leilão (some sozinho quando ele encerrar), e o painel
+ *      mostra o que vai acontecer — inclusive o banner cujo leilão já encerrou.
  *
  * COMO RODAR
  *   npm run test:navegador
@@ -243,5 +245,62 @@ test('🔴 pop-up do leilão: a prévia mostra o leilão ESCOLHIDO e salvar limp
     assert.equal(u.dados.link_url, '/AuctionRoom?id=ps5');
     assert.equal(u.dados.title, 'Playstation 5');
     assert.equal(u.dados.image_url, '', 'a imagem antiga ficou guardada');
+  } finally { await ctx.close(); }
+});
+
+test('🏁 ligar o banner a um leilão: a lista, a gravação e o que o painel diz que vai acontecer', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?leilao=1');
+  try {
+    const cartao = pagina.locator('[data-banner="geral"]');
+    const seletor = cartao.locator('[data-campo="leilao-do-banner"]');
+    await seletor.waitFor();
+    const opcoes = await seletor.locator('option').allInnerTexts();
+    assert.ok(opcoes[0].startsWith('Nenhum'), 'a primeira opção é "nenhum — fica até eu desligar"');
+    assert.ok(opcoes.some((o) => o.includes('Hoverboard')) && opcoes.some((o) => o.includes('Playstation 5')), `a lista não traz os leilões no ar: ${opcoes}`);
+    assert.ok(!opcoes.some((o) => o.includes('Smart TV LG vendida')), 'o leilão já vendido apareceu na lista de escolha');
+    assert.match(await cartao.innerText(), /Escolha o leilão deste produto e o banner sai sozinho/);
+
+    await seletor.selectOption('ps5');
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'geral' && 'auction_id' in c.dados));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral');
+    assert.deepEqual(u.dados, { auction_id: 'ps5' });
+    // o painel relê e diz o que vai acontecer
+    const chip = cartao.locator('[data-estado-leilao]');
+    await chip.waitFor();
+    assert.equal(await chip.getAttribute('data-estado-leilao'), 'leilao_no_ar');
+    assert.match(await chip.innerText(), /Sai sozinho quando o leilão encerrar \(\d{2}\/\d{2} às \d{2}:\d{2}\)/);
+  } finally { await ctx.close(); }
+});
+
+test('🏁 banner cujo leilão JÁ ENCERROU: o painel avisa, mostra o leilão e esmaece o card', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?leilao=1');
+  try {
+    const cartao = pagina.locator('[data-banner="tv-banner"]');
+    const chip = cartao.locator('[data-estado-leilao]');
+    await chip.waitFor();
+    assert.equal(await chip.getAttribute('data-estado-leilao'), 'leilao_encerrou');
+    assert.match(await chip.innerText(), /O leilão encerrou · banner fora do ar/);
+    assert.equal(await cartao.evaluate((el) => el.className.includes('opacity-50')), true, 'o card não esmaeceu');
+    // o seletor segue mostrando QUAL leilão era (mesmo fora da lista de ativos)
+    const rotulo = await cartao.locator('[data-campo="leilao-do-banner"] option:checked').innerText();
+    assert.match(rotulo, /\(encerrado\) Smart TV LG vendida/);
+  } finally { await ctx.close(); }
+});
+
+test('o "próximo banner" também escolhe o leilão a que vai ficar ligado', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const secao = pagina.locator('[data-secao="home"]');
+    const seletor = secao.locator('[data-campo="proximo-leilao"]');
+    await seletor.waitFor();
+    assert.ok((await seletor.locator('option').count()) >= 3, 'a lista de leilões não chegou');
+  } finally { await ctx.close(); }
+});
+
+test('sem a coluna no banco, o painel avisa e não deixa ligar a leilão', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir('?semcolunas=1');
+  try {
+    assert.match(await pagina.locator('[data-banner="geral"] [data-teste="leilao-do-banner"]').innerText(), /falta aplicar a atualização do banco/);
+    assert.equal(await pagina.locator('[data-campo="leilao-do-banner"]').count(), 0, 'o seletor apareceu sem a coluna');
   } finally { await ctx.close(); }
 });
