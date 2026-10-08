@@ -1,6 +1,6 @@
 import { trackAddToCart } from '@/lib/tracking';
 import { linkComAfiliado } from '@/lib/linkDeAfiliado';
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, useRef, memo } from "react";
 import { fmtBR } from '@/lib/money';
 import CompareAquiIcon from '@/assets/compareaqui-icon.webp';
 import { useNavigate } from "react-router-dom";
@@ -11,6 +11,10 @@ import { ShoppingCart, Pause, Edit, Check, MessageCircle, Share2, Plus, Minus } 
 import { toast } from "@/components/ui/use-toast";
 // 🔗 25/09/2026 — o adesivo de link do story do Instagram só aceita URL pura
 import { copiarLinkLimpo, mensagemSemLink } from '@/lib/compartilhar';
+import { compartilharComVideo } from '@/lib/compartilharComVideo';
+import { videoDoProduto } from '@/lib/videoDoProduto';
+import VideoDoCard, { BotaoDoVideo } from '@/components/video/VideoDoCard';
+import { useCartaoDeVideo } from '@/components/video/MaestroDeVideos';
 import CompareAquiModal from '../comparai/CompareAquiModal';
 import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 import { proxyImage } from "@/functions/proxyImage";
@@ -139,8 +143,17 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     ? product.image_urls
     : [];
 
+  // 🎬 08/10/2026 — o vídeo do produto também na Loja. Vem na própria linha do produto
+  // (`video_urls`), então não há consulta extra. Dentro de um <MaestroDeVideos> um vídeo toca
+  // por vez, os outros cards ficam na foto e o som só liga pelo ícone; sem maestro por perto
+  // o card é o que sempre foi.
+  const video = videoDoProduto(product);
+  const cartao = useCartaoDeVideo(product?.id, Boolean(video) && (video.tipo === 'arquivo' || (video.tipo === 'youtube' && Boolean(video.id))));
+  const playerRef = useRef(null);
+
   // 🎞️ PONTO 91 — fotos passando sozinhas, pausa no toque/hover e arraste lateral
-  const { index: currentImageIndex, paused: isPaused, carouselProps } = useAutoCarousel(images.length);
+  // (com vídeo no maestro a foto fica PARADA enquanto o card espera a vez)
+  const { index: currentImageIndex, paused: isPaused, carouselProps } = useAutoCarousel(images.length, { segurar: Boolean(cartao) });
 
   const handleCardClick = (e) => {
     if (e.target.closest('button') || e.target.closest('a')) {
@@ -184,6 +197,12 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
     // 🔗 25/09/2026 — link LIMPO na área de transferência antes da folha (adesivo do story do Instagram)
     const linkCopiado = await copiarLinkLimpo(productUrl);
     if (linkCopiado) toast({ title: 'Link copiado', description: 'Cole onde quiser — story, bio, WhatsApp.' });
+
+    // 🎬 NÍVEL 0 — O VÍDEO, quando o produto tem um (08/10/2026; mesma regra do card do leilão e
+    // da sala, em src/lib/compartilharComVideo.js): vídeo nosso vai anexado; YouTube vai com o
+    // link do vídeo na frente, e o preview é o vídeo. Sem vídeo aproveitável, cai na foto.
+    const comVideo = await compartilharComVideo({ video, titulo: product.description, mensagem: shareMessage, url: productUrl });
+    if (comVideo.feito) return;
 
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
@@ -273,7 +292,7 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
         className="relative overflow-hidden w-full aspect-square bg-white"
         {...carouselProps}
       >
-        <div className="w-full h-full">
+        <div className="w-full h-full" ref={cartao?.ref}>
           {images.map((img, index) => (
             <img 
               key={index}
@@ -303,6 +322,34 @@ function CatalogProductCard({ product, currentUser, licenseePhone, storeRating, 
             </div>
           </div>
         </div>
+
+        {/* 🎬 O vídeo do produto, pelo maestro: aparece POR CIMA da foto só quando já está tocando */}
+        {cartao && (
+          <>
+            <VideoDoCard
+              ref={playerRef}
+              video={video}
+              jaAtivou={cartao.jaAtivou}
+              mostrar={cartao.tocando}
+              deveTocar={cartao.deveTocar}
+              rodada={cartao.rodada}
+              som={cartao.som}
+              onTocando={cartao.aoTocando}
+              onFim={cartao.aoFim}
+              onErro={cartao.aoErro}
+              onSomBloqueado={cartao.aoSomBloqueado}
+            />
+            <BotaoDoVideo
+              tocando={cartao.tocando}
+              som={cartao.som}
+              aoTrocarSom={() => {
+                if (cartao.som) { playerRef.current?.calar(); cartao.calarSom(); }
+                else { playerRef.current?.ligarSom(); cartao.ligarSom(); }
+              }}
+              aoTocar={cartao.assumir}
+            />
+          </>
+        )}
 
         {/* Selo de pausa — só enquanto o dedo/mouse segura a foto */}
         {isPaused && images.length > 1 && (

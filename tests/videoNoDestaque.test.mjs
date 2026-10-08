@@ -120,13 +120,14 @@ test('🔴 videoAtivo trava o SOM, nunca o vídeo nem o compartilhar', () => {
   // mas sem tocar o som"). O que não pode duplicar é o SOM.
   assert.match(card, /const temVideo = Boolean\(video\?\.embed\);/,
     '🔴 o vídeo voltou a ser travado — Patinete e Harley abririam com foto de novo');
-  assert.match(card, /if \(!temVideo \|\| !videoAtivo \|\| !querSom\(\)\) return undefined;/,
+  assert.match(card, /if \(noMaestro \|\| !temVideo \|\| !videoAtivo \|\| !querSom\(\)\) return undefined;/,
     'sem videoAtivo aqui, o clique ligaria o som de TODOS os cards ao mesmo tempo');
-  assert.match(card, /\{temVideo && videoAtivo && video\.tipo === 'arquivo' && mostrandoVideo &&/,
+  assert.match(card, /\{!noMaestro && temVideo && videoAtivo && video\.tipo === 'arquivo' && mostrandoVideo &&/,
     'o botão de som apareceria em card que não tem som');
   const share = card.slice(card.indexOf('const handleShare'));
   const corpo = share.slice(0, share.indexOf('\n  };'));
-  assert.match(corpo, /video\?\.tipo === 'arquivo' && video\.embed/,
+  // 08/10/2026 — o compartilhar olha o vídeo pela regra única (arquivo anexado, YouTube com o link na frente)
+  assert.match(corpo, /compartilharComVideo\(\{\s*video,/,
     'o compartilhar parou de olhar o vídeo');
   assert.ok(!/videoAtivo/.test(corpo),
     '🔴 o compartilhar foi travado junto — 5 dos 6 destaques perderiam o vídeo no WhatsApp');

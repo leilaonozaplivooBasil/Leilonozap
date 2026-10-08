@@ -98,7 +98,9 @@ test('a escolha da pessoa manda sobre o gesto', () => {
   // achando que não faz nada.
   // âncora atualizada em 17/09 (noite): `videoAtivo` entrou na guarda quando o
   // dono mandou o vídeo abrir TODOS os cards, com som só no primeiro.
-  const efeito = card.slice(card.indexOf('if (!temVideo || !videoAtivo || !querSom()) return undefined'));
+  // 08/10/2026 — o card FORA do maestro segue com a regra antiga; `noMaestro` só a desliga
+  // para os cards que o maestro conduz (onde o som é só pelo ícone)
+  const efeito = card.slice(card.indexOf('if (noMaestro || !temVideo || !videoAtivo || !querSom()) return undefined'));
   assert.match(efeito.slice(0, 600), /if \(!v \|\| !querSom\(\)\) return;/,
     'a preferência precisa ser conferida também na hora de ligar o som');
 });
@@ -125,7 +127,9 @@ test('o botão de som existe e é só do vídeo de ARQUIVO', () => {
 
 test('o compartilhar tenta o VÍDEO antes da foto, e cai na foto se falhar', () => {
   const card = ler('src/components/auction/AuctionCard.jsx');
-  const posVideo = card.indexOf("if (video?.tipo === 'arquivo' && video.embed && navigator.share");
+  // 08/10/2026 — a tentativa do vídeo virou UMA regra para todos os pontos de compartilhamento
+  // (src/lib/compartilharComVideo.js); o card chama e, se não for feito, cai na foto
+  const posVideo = card.indexOf('await compartilharComVideo({');
   const posFoto = card.indexOf('// NÍVEL 1: Share com imagem via Web Share API');
   assert.ok(posVideo > 0, 'o compartilhar não tenta o vídeo');
   assert.ok(posFoto > posVideo, 'a foto tem que ser a RESERVA, não a primeira tentativa');
@@ -134,8 +138,10 @@ test('o compartilhar tenta o VÍDEO antes da foto, e cai na foto se falhar', () 
 });
 
 test('vídeo acima do teto do WhatsApp não é nem tentado', () => {
-  const card = ler('src/components/auction/AuctionCard.jsx');
-  assert.match(card, /blob\.size <= 16 \* 1024 \* 1024/,
+  // 08/10/2026 — o teto mora na regra única de compartilhamento
+  const lib = ler('src/lib/compartilharComVideo.js');
+  assert.match(lib, /TETO_ANEXO_BYTES = 16 \* 1024 \* 1024/);
+  assert.match(lib, /blob\.size > TETO_ANEXO_BYTES\) return 'indisponivel'/,
     'sem o teto, o anexo é recusado no aparelho e a pessoa só vê falhar');
 });
 
@@ -143,7 +149,11 @@ test('o botão avisa enquanto baixa — 7,9 MB não são instantâneos', () => {
   const card = ler('src/components/auction/AuctionCard.jsx');
   assert.match(card, /const \[preparandoVideo, setPreparandoVideo\] = useState\(false\)/);
   assert.match(card, /disabled=\{preparandoVideo\}/, 'sem travar, a pessoa aperta de novo achando que não pegou');
-  assert.match(card, /finally \{\s*setPreparandoVideo\(false\);\s*\}/,
+  // 08/10/2026 — o aviso vem da regra única: o card entrega `aoPreparar` e a lib o desliga num
+  // `finally`, então o botão nunca fica travado quando a rede cai
+  assert.match(card, /aoPreparar: setPreparandoVideo/);
+  const lib = ler('src/lib/compartilharComVideo.js');
+  assert.match(lib, /finally \{\s*aoPreparar\?\.\(false\);\s*\}/,
     '🔴 sem `finally` o botão fica travado para sempre quando a rede cai');
 });
 

@@ -41,6 +41,9 @@ import { prazoDoCard, CLASSES_DO_TITULO_FIXO } from '@/lib/padraoDoCard';
 import { querSom, gravarQuerSom, calarARadio } from '@/lib/somDoDestaque';
 // 🔗 25/09/2026 — o adesivo de link do story do Instagram só aceita URL pura
 import { copiarLinkLimpo, mensagemSemLink } from '@/lib/compartilhar';
+import { compartilharComVideo } from '@/lib/compartilharComVideo';
+import VideoDoCard, { BotaoDoVideo } from '@/components/video/VideoDoCard';
+import { useCartaoDeVideo } from '@/components/video/MaestroDeVideos';
 import { toast } from 'sonner';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
@@ -106,7 +109,14 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // 8 MB (PS5 7,92; Patinete 4,90), então seis destaques equipados são ~30 a
   // 48 MB na Home. Medido e informado ao dono.
   const temVideo = Boolean(video?.embed);
-  const totalSlides = images.length + (temVideo ? 1 : 0);
+  // 🎬 08/10/2026 — O MAESTRO. Dentro de um <MaestroDeVideos> (os Destaques) o vídeo deixa de ser
+  // um "slide 0" que cada card gira por conta própria: um vídeo toca por vez, os outros ficam na
+  // FOTO, o som só liga pelo ícone, e o YouTube toca pela API oficial como a rádio. Sem maestro
+  // por perto `cartao` é null e tudo abaixo se comporta como sempre se comportou.
+  const cartao = useCartaoDeVideo(auction?.id, temVideo && (video.tipo === 'arquivo' || (video.tipo === 'youtube' && Boolean(video.id))));
+  const noMaestro = Boolean(cartao);
+  const playerRef = useRef(null);
+  const totalSlides = images.length + (temVideo && !noMaestro ? 1 : 0);
 
   // 🔇 MUDO e sozinho, e o rodízio ESPERA o vídeo acabar: o carrossel troca de
   // slide a cada 2,5s, e vídeo cortado aos 2,5 segundos é pior do que vídeo
@@ -125,7 +135,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
   useEffect(() => {
     // 🔇 `videoAtivo` entra AQUI, e só aqui: é o som que não pode duplicar.
-    if (!temVideo || !videoAtivo || !querSom()) return undefined;
+    if (noMaestro || !temVideo || !videoAtivo || !querSom()) return undefined;
     // `once: true` nos três: basta o primeiro gesto, e o ouvinte se remove
     // sozinho. `capture` para pegar o gesto mesmo que algo pare a propagação.
     const ligarSom = () => {
@@ -148,7 +158,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       window.removeEventListener('touchstart', ligarSom, opcoes);
       window.removeEventListener('keydown', ligarSom, opcoes);
     };
-  }, [temVideo, videoAtivo]);
+  }, [temVideo, videoAtivo, noMaestro]);
 
   const trocarSom = (e) => {
     e.preventDefault();
@@ -169,22 +179,24 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // travando o rodízio. Agora o slide do vídeo ESPERA ele começar (até
   // ESPERA_DO_VIDEO_MS); não começou, segue para as fotos e tenta de novo na
   // próxima volta. Saiu do slide, o vídeo pausa; voltou, toca do começo.
-  const [esperandoVideo, setEsperandoVideo] = useState(temVideo);
+  const [esperandoVideo, setEsperandoVideo] = useState(temVideo && !noMaestro);
   // vídeo que já deu erro não é esperado de novo a cada volta do rodízio
   const videoFalhouRef = useRef(false);
   const { index: slideAtual, paused: isPaused, carouselProps } = useAutoCarousel(
     totalSlides,
-    { segurar: videoTocando || esperandoVideo },
+    // no maestro a foto fica PARADA enquanto o card espera a vez: foto girando em cinco cards
+    // enquanto um vídeo toca no sexto é exatamente a "dessincronia" que o dono não quer
+    { segurar: videoTocando || esperandoVideo || noMaestro },
   );
 
   // O vídeo, quando existe, é o slide 0. `currentImageIndex` continua sendo o
   // índice DA FOTO: vira -1 enquanto o vídeo está na tela, e aí nenhuma foto
   // fica opaca e nenhuma legenda aparece — sem precisar tocar no resto do JSX.
-  const mostrandoVideo = temVideo && slideAtual === 0;
-  const currentImageIndex = temVideo ? slideAtual - 1 : slideAtual;
+  const mostrandoVideo = noMaestro ? cartao.tocando : (temVideo && slideAtual === 0);
+  const currentImageIndex = (temVideo && !noMaestro) ? slideAtual - 1 : slideAtual;
 
   useEffect(() => {
-    if (!temVideo || video?.tipo !== 'arquivo') { setEsperandoVideo(false); return undefined; }
+    if (noMaestro || !temVideo || video?.tipo !== 'arquivo') { setEsperandoVideo(false); return undefined; }
     const v = videoRef.current;
     if (!mostrandoVideo) {
       // saiu do slide (rodízio ou dedo): vídeo escondido não toca nem segura nada
@@ -201,11 +213,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     }
     const desiste = setTimeout(() => setEsperandoVideo(false), ESPERA_DO_VIDEO_MS);
     return () => clearTimeout(desiste);
-  }, [mostrandoVideo, temVideo, video?.tipo]);
+  }, [mostrandoVideo, temVideo, video?.tipo, noMaestro]);
   useEffect(() => { videoFalhouRef.current = false; }, [video?.embed]);
   // ↙️ o selo de fábrica mora no canto inferior esquerdo: estas duas dizem
   // se o botão de som ou a legenda estão ali agora, para ele desviar
-  const somNaFoto = temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
+  const somNaFoto = !noMaestro && temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo;
   const legendaNaFoto = Boolean(capOf(images[currentImageIndex]));
 
   // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
@@ -322,47 +334,17 @@ ${linhaDoLance}
 
     const imageUrl = auction.image_urls?.[0];
 
-    // 🎬 NÍVEL 0 — O VÍDEO, quando o card tem um.
-    //
-    // Dono (17/09): "a opção de compartilhar na página dos leilões compartilhe
-    // com o vídeo no whatsapp".
-    //
-    // 🔴 O QUE NÃO DÁ, E PRECISA ESTAR ESCRITO AQUI: autoplay no WhatsApp não
-    // existe por API. Vídeo enviado como arquivo chega com miniatura e botão de
-    // play; a única coisa que roda sozinha lá é GIF, e esse rótulo só o próprio
-    // WhatsApp aplica quando a pessoa escolhe da galeria. Não há parâmetro,
-    // mime nem meta tag que force isso de fora. O que ganhamos é o vídeo chegar
-    // como VÍDEO (miniatura animada em vários aparelhos) em vez de foto parada.
-    //
-    // Só vídeo de ARQUIVO nosso: YouTube/Vimeo são embed, não há arquivo para
-    // anexar — nesses o link já leva o preview.
-    //
-    // Se qualquer coisa falhar (rede, tamanho, aparelho sem suporte a anexo),
-    // cai na foto logo abaixo. O compartilhamento NUNCA fica sem acontecer.
-    if (video?.tipo === 'arquivo' && video.embed && navigator.share && navigator.canShare) {
-      try {
-        setPreparandoVideo(true);
-        const resposta = await fetch(video.embed, { mode: 'cors' });
-        if (resposta.ok) {
-          const blob = await resposta.blob();
-          // teto do WhatsApp para vídeo é 16 MB; acima disso o anexo é recusado
-          // no aparelho e a pessoa só veria o compartilhamento falhar
-          if (blob.size <= 16 * 1024 * 1024) {
-            const nome = `${(displayTitle || 'leilao').substring(0, 40).replace(/[^a-zA-Z0-9\s]/g, '').trim().replace(/\s+/g, '_')}.mp4`;
-            const arquivo = new File([blob], nome, { type: blob.type || 'video/mp4' });
-            if (navigator.canShare({ files: [arquivo] })) {
-              await navigator.share({ title: `🔨📦 ${displayTitle}`, text: mensagemSemLink(shareMessage, productUrl), url: productUrl, files: [arquivo] });
-              return;
-            }
-          }
-        }
-      } catch (erroVideo) {
-        if (erroVideo.name === 'AbortError') return;   // a pessoa fechou a folha
-        console.debug('Share com vídeo falhou, caindo na foto:', erroVideo.message);
-      } finally {
-        setPreparandoVideo(false);
-      }
-    }
+    // 🎬 NÍVEL 0 — O VÍDEO, quando o card tem um. Uma regra só para todos os pontos de
+    // compartilhamento (src/lib/compartilharComVideo.js), 08/10/2026. Dono: "sempre que eu
+    // compartilhar, se tiver o vídeo postado, precisa compartilhar o vídeo, não a imagem".
+    //   • vídeo nosso → anexado (até 16 MB);
+    //   • YouTube → o link do vídeo vai na frente da mensagem e o preview é o vídeo.
+    // Sem vídeo aproveitável (ou se falhar), cai na foto logo abaixo: compartilhar nunca deixa
+    // de acontecer.
+    const comVideo = await compartilharComVideo({
+      video, titulo: `🔨📦 ${displayTitle}`, mensagem: shareMessage, url: productUrl, aoPreparar: setPreparandoVideo,
+    });
+    if (comVideo.feito) return;
 
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
@@ -564,8 +546,36 @@ ${linhaDoLance}
           {...carouselProps}
           style={{ aspectRatio: '1/1', contain: 'layout', ...carouselProps.style }}
         >
-          <div className="w-full h-full relative">
-            {temVideo && (
+          <div className="w-full h-full relative" ref={cartao?.ref}>
+            {/* 🎬 O vídeo do card, pelo maestro: aparece POR CIMA da foto só quando já está tocando */}
+            {noMaestro && (
+              <VideoDoCard
+                ref={playerRef}
+                video={video}
+                jaAtivou={cartao.jaAtivou}
+                mostrar={cartao.tocando}
+                deveTocar={cartao.deveTocar}
+                rodada={cartao.rodada}
+                som={cartao.som}
+                onTocando={cartao.aoTocando}
+                onFim={cartao.aoFim}
+                onErro={cartao.aoErro}
+                onSomBloqueado={cartao.aoSomBloqueado}
+              />
+            )}
+            {noMaestro && (
+              <BotaoDoVideo
+                tocando={cartao.tocando}
+                som={cartao.som}
+                aoTrocarSom={() => {
+                  if (cartao.som) { playerRef.current?.calar(); cartao.calarSom(); }
+                  else { playerRef.current?.ligarSom(); cartao.ligarSom(); }
+                }}
+                aoTocar={cartao.assumir}
+              />
+            )}
+
+            {temVideo && !noMaestro && (
               video.tipo === 'arquivo' ? (
                 <video
                   ref={videoRef}
@@ -604,7 +614,7 @@ ${linhaDoLance}
             {/* 🔊 o botão só existe no slide do vídeo de ARQUIVO — iframe de
                 terceiro tem controle próprio e não aceita mudo de fora.
                 `z-20` porque o degradê da legenda sobe em z-10. */}
-            {temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo && (
+            {!noMaestro && temVideo && videoAtivo && video.tipo === 'arquivo' && mostrandoVideo && (
               <button
                 type="button"
                 onClick={trocarSom}
@@ -632,7 +642,7 @@ ${linhaDoLance}
               />
             ))}
 
-            {capOf(images[currentImageIndex]) && (
+            {capOf(images[currentImageIndex]) && !(noMaestro && cartao.tocando) && (
               <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-8 pb-2 px-3 pointer-events-none z-10">
                 <p className="text-xs font-bold text-white truncate text-center drop-shadow">{capOf(images[currentImageIndex])}</p>
               </div>

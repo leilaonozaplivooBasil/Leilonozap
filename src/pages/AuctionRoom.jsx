@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { linkComAfiliado } from '@/lib/linkDeAfiliado';
+import { compartilharComVideo, mensagemComVideo } from '@/lib/compartilharComVideo';
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
 import { plataforma } from "@/api/plataformaClient";
 
@@ -1032,12 +1033,21 @@ ${linhaDoLance}
 
 ⚡ ${ehPreLancamento(auction) ? 'Entre e acompanhe' : 'Dê seu lance'}: ${productUrl}`;
 
+    // 🎬 08/10/2026 — SEMPRE COM O VÍDEO quando o produto tem um (src/lib/compartilharComVideo.js):
+    // vídeo nosso vai anexado; YouTube vai com o link do vídeo na FRENTE da mensagem, e o
+    // preview do WhatsApp é o vídeo. Sem vídeo, o fluxo de sempre (preview com a foto).
+    if (videoDoLote?.tipo === 'arquivo') {
+      const anexado = await compartilharComVideo({ video: videoDoLote, titulo: `Leilão: ${auction.title}`, mensagem: shareText, url: productUrl });
+      if (anexado.feito) return;
+    }
+    const textoFinal = mensagemComVideo(shareText, videoDoLote);
+
     if (isAndroid && packageName) {
-      const intentUrl = `intent://send?text=${encodeURIComponent(shareText)}#Intent;scheme=whatsapp;package=${packageName};end`;
+      const intentUrl = `intent://send?text=${encodeURIComponent(textoFinal)}#Intent;scheme=whatsapp;package=${packageName};end`;
       try {
         window.location.href = intentUrl;
       } catch (e) {
-        window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        window.open(`https://wa.me/?text=${encodeURIComponent(textoFinal)}`, '_blank');
       }
       return;
     }
@@ -1046,16 +1056,16 @@ ${linhaDoLance}
       try {
         await navigator.share({
           title: `Leilão: ${auction.title}`,
-          text: shareText,
+          text: textoFinal,
           url: productUrl
         });
       } catch (e) {
         if (e.name !== "AbortError") {
-          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+          window.open(`https://wa.me/?text=${encodeURIComponent(textoFinal)}`, '_blank');
         }
       }
     } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+      window.open(`https://wa.me/?text=${encodeURIComponent(textoFinal)}`, '_blank');
     }
   };
 

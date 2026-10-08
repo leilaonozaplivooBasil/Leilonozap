@@ -20,6 +20,8 @@ import CalculadoraFrete from '@/components/frete/CalculadoraFrete';
 import EstadoDoProduto, { SeloCondicao } from '@/components/catalog/EstadoDoProduto';
 import QuadroDeMidia from '@/components/catalog/QuadroDeMidia';
 import { midiasDoProduto } from '@/lib/midiasDoProduto';
+import { videoDoProduto } from '@/lib/videoDoProduto';
+import { compartilharComVideo } from '@/lib/compartilharComVideo';
 import { descricaoPublica, resumoCondicao } from '@/lib/condicaoProduto';
 import { descontoExibivel, precoDeReferencia } from '@/lib/ofertaRelampago';
 import { WHATSAPP_OFICIAL } from '@/lib/whatsappOficial';
@@ -248,6 +250,14 @@ export default function CatalogProductDetails() {
     const waUrl = targetNumber
       ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    // 🎬 08/10/2026 — compartilhar SEMPRE com o vídeo, quando o produto tem um (só no
+    // compartilhamento aberto; o envio para o número de um licenciado segue como era).
+    // Vídeo nosso vai anexado; YouTube vai com o link do vídeo na frente da mensagem.
+    if (!targetNumber) {
+      const comVideo = await compartilharComVideo({ video: videoDoProduto(product), titulo: product.description, mensagem: message, url: productUrl });
+      if (comVideo.feito) return;
+    }
 
     // NÍVEL 1: Share com imagem via Web Share API
     if (imageUrl && navigator.share && navigator.canShare) {
