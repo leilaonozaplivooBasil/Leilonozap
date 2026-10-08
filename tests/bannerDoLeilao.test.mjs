@@ -97,14 +97,14 @@ test('o painel descreve o vínculo do banner', () => {
   assert.equal(situacaoDoLeilaoDoBanner({ auction_id: 'x' }, { status: 'scheduled', end_time: FIM }, agora).estado, 'leilao_agendado');
 });
 
-test('a migração: coluna nula + gatilho que só liga/desliga banner COM leilão, e só ao sair de "no ar/agendado"', () => {
+test('a migração: coluna nula + rotina de minuto em minuto que só DESLIGA banner de leilão que acabou', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20261008160000_banner_ligado_ao_leilao.sql', import.meta.url), 'utf8')
     .split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
   assert.match(sql, /add column if not exists auction_id text/);
-  assert.match(sql, /new\.status not in \('active', 'scheduled'\)/);
-  assert.match(sql, /where auction_id = new\.id and is_active/);
-  assert.match(sql, /after update of status on public\.auctions/);
-  assert.match(sql, /after delete on public\.auctions/);
+  assert.match(sql, /a\.status in \('active', 'scheduled'\)/, 'a regra é a mesma da tela: no ar ou agendado justifica o banner');
+  assert.match(sql, /where b\.is_active\s+and b\.auction_id is not null\s+and not exists/, 'só mexe em banner LIGADO a leilão e ainda ligado');
+  assert.match(sql, /cron\.schedule\('desligar-banner-leilao-encerrado', '\* \* \* \* \*'/);
+  assert.ok(!/create trigger|drop trigger/i.test(sql), 'a tabela de leilões não recebe gatilho (a aplicação travou: bloqueio forte numa tabela quente)');
   assert.ok(!/\b(drop table|truncate|delete from)\b/i.test(sql), 'a migração não apaga dado nenhum');
-  assert.ok(!/update public\.banner_images\s+set is_active = true/i.test(sql), 'nunca religa banner sozinha');
+  assert.ok(!/set is_active = true/i.test(sql), 'nunca religa banner sozinha');
 });
