@@ -59,6 +59,8 @@ export const KINDS_DE_DEPOSITO = Object.freeze(['wallet_deposit', 'passaporte', 
 export const STATUS_SEGURAVEIS = Object.freeze(['pending_payment', 'canceled', 'cancelado', 'cancelled']);
 const KINDS = KINDS_DE_DEPOSITO.join(',');
 const STATUS = STATUS_SEGURAVEIS.join(',');
+/** Zumbi: QR cancelado cuja devolução no gateway já aconteceu — não há mais o que decidir nem liberar. */
+const SEM_ZUMBI = '&or=(status.eq.pending_payment,gateway->>situacao.is.null,gateway->>situacao.not.in.(devolvido,devolvido_parcial,chargeback))';
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const enc = (v) => encodeURIComponent(String(v));
@@ -82,7 +84,8 @@ export function esperaAte(agora = Date.now(), minutos = ESPERA_MIN) {
 export function rotuloDoMotivo(motivo, det = {}) {
   if (motivo === MOTIVOS.CONTA_NOVA) {
     const h = Number(det?.conta_horas);
-    return `conta criada há ${Number.isFinite(h) ? (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : `${Math.round(h)}h`) : 'menos de 24h'} com depósito de ${reais(det?.valor)}`;
+    const n = Number(det?.depositos_24h) || 1;
+    return `conta criada há ${Number.isFinite(h) ? (h < 1 ? `${Math.max(1, Math.round(h * 60))} min` : `${Math.round(h)}h`) : 'menos de 24h'} com ${n > 1 ? `${reais(det?.soma_24h)} em ${n} depósitos` : `depósito de ${reais(det?.valor)}`}`;
   }
   if (motivo === MOTIVOS.SEQUENCIA) {
     const n = Number(det?.depositos_24h) || SEQUENCIA_N;
@@ -119,7 +122,7 @@ export function avaliarDeposito({ sale, comprador = null, contas = [], depositos
   let motivo = null;
   // o gateway já disse que o dinheiro saiu (approved, mas money_release_status revertido): nunca credita sozinho
   if (dinheiroSaiu(sale)) { motivo = MOTIVOS.GATEWAY; detalhes.situacao = String(sale.gateway.situacao); }
-  else if (contaHoras !== null && contaHoras < CONTA_NOVA_H && valor >= VALOR_ALTO) motivo = MOTIVOS.CONTA_NOVA;
+  else if (contaHoras !== null && contaHoras < CONTA_NOVA_H && (valor >= VALOR_ALTO || (recentes.length + 1 < SEQUENCIA_N && soma >= VALOR_ALTO))) motivo = MOTIVOS.CONTA_NOVA;
   else if (!veterano && recentes.length + 1 >= SEQUENCIA_N && soma >= SEQUENCIA_SOMA_MIN) motivo = MOTIVOS.SEQUENCIA;
   return { motivo, detalhes };
 }
@@ -210,10 +213,17 @@ export async function lerContextoDoComprador(sb, sale, agora = Date.now()) {
   }
   const ids = contas.map(enc).join(',');
   const desde = new Date(agora - SEQUENCIA_JANELA_H * 3600000).toISOString();
-  const recentes = await (await sb(`catalog_sales?select=id,total_amount,status,created_date,antifraude_decisao,antifraude_espera_ate&kind=in.(${KINDS})&buyer_id=in.(${ids})&created_date=gte.${enc(desde)}&or=(status.eq.paid,antifraude_espera_ate.not.is.null)&limit=50`)).json();
+  // pelo momento do PAGAMENTO: pago_em (flip do webhook) ou antifraude_avaliado_em (segurado no aviso aprovado);
+  // linha antiga sem carimbo cai no created_date. Quem gera três QR hoje e paga amanhã conta amanhã.
+  const recentes = await (await sb(`catalog_sales?select=id,total_amount,status,created_date,pago_em,antifraude_decisao,antifraude_espera_ate&kind=in.(${KINDS})&buyer_id=in.(${ids})&or=(pago_em.gte.${enc(desde)},antifraude_avaliado_em.gte.${enc(desde)},and(pago_em.is.null,antifraude_avaliado_em.is.null,status.eq.paid,created_date.gte.${enc(desde)}))&limit=50`)).json();
   const antes = new Date(agora - VETERANO_DIAS * 864e5).toISOString();
-  const antigos = await (await sb(`catalog_sales?select=id,gateway&kind=in.(${KINDS})&buyer_id=in.(${ids})&status=eq.paid&created_date=lt.${enc(antes)}&order=created_date.desc&limit=10`)).json();
+  const antigos = await (await sb(`catalog_sales?select=id,gateway&kind=in.(${KINDS})&buyer_id=in.(${ids})&status=eq.paid&or=(pago_em.lt.${enc(antes)},and(pago_em.is.null,created_date.lt.${enc(antes)}))&order=created_date.desc&limit=10`)).json();
   if (!Array.isArray(recentes) || !Array.isArray(antigos)) throw new Error('contexto_ilegivel');
+  // contestado conta mesmo fora dos 7 dias e mesmo cancelado pelo gateway (refund/chargeback viram
+  // status 'cancelado' e sumiriam do filtro status=eq.paid): quem já teve dinheiro devolvido não é veterano.
+  const contestado = await (await sb(`catalog_sales?select=id,gateway&kind=in.(${KINDS})&buyer_id=in.(${ids})&gateway->>situacao=in.(${SITUACOES_DINHEIRO_SAIU.join(',')})&limit=1`)).json().catch(() => []);
+  const c = Array.isArray(contestado) ? contestado[0] : null;
+  if (c && !antigos.some((a) => a.id === c.id)) antigos.push(c);
   return { comprador, contas, depositosRecentes: recentes, depositosAntigos: antigos };
 }
 
@@ -269,7 +279,7 @@ const COLS = 'id,mp_payment_id,created_date,created_at,kind,status,total_amount,
  * falhou; o cron insiste). No formato das pendências do painel_conciliacao.
  */
 export async function listarDepositosEmAnalise(sb, { agora = Date.now() } = {}) {
-  const rows = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&order=antifraude_espera_ate.asc&limit=50`)).json();
+  const rows = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&order=antifraude_espera_ate.asc&limit=50${SEM_ZUMBI}`)).json();
   const lista = (Array.isArray(rows) ? rows : []).filter((s) => s.antifraude_decisao !== 'recusado' || !['devolvido', 'devolvido_parcial', 'chargeback'].includes(String(s.gateway?.situacao || '')));
   if (!lista.length) return [];
   const ids = [...new Set(lista.map((s) => String(s.buyer_id || '')).filter(Boolean))];
@@ -306,11 +316,11 @@ export async function listarDepositosEmAnalise(sb, { agora = Date.now() } = {}) 
  */
 export async function liberarDepositosVencidos({ sb, limite = 5, orcamentoMs = 15000, agora = Date.now(), disparar = dispararWebhookInterno, lembrar = null } = {}) {
   const inicio = Date.now();
-  const rows = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&antifraude_decisao=is.null&antifraude_espera_ate=lte.${enc(new Date(agora).toISOString())}&order=antifraude_espera_ate.asc&limit=${Math.max(1, Math.min(20, limite))}`)).json();
+  const rows = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&antifraude_decisao=is.null&antifraude_espera_ate=lte.${enc(new Date(agora).toISOString())}&order=antifraude_espera_ate.asc&limit=${Math.max(1, Math.min(20, limite))}${SEM_ZUMBI}`)).json();
   const lista = Array.isArray(rows) ? rows : [];
   // decididos (liberado/auto) há mais de 5 min e ainda pendentes: a liberação não creditou
   // (CAS do crédito, 5xx, função congelada) e o gateway não reenvia — o cron insiste.
-  const decididos = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&antifraude_decisao=in.(liberado,auto)&antifraude_decidido_em=lte.${enc(new Date(agora - 5 * 60000).toISOString())}&order=antifraude_decidido_em.asc&limit=5`)).json().catch(() => []);
+  const decididos = await (await sb(`catalog_sales?select=${COLS}&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&antifraude_decisao=in.(liberado,auto)&antifraude_decidido_em=lte.${enc(new Date(agora - 5 * 60000).toISOString())}&order=antifraude_decidido_em.asc&limit=5${SEM_ZUMBI}`)).json().catch(() => []);
   const r = { vencidos: lista.length, decididos_sem_credito: Array.isArray(decididos) ? decididos.length : 0, liberados: 0, falhas: 0, aguardando_humano: 0, lembretes: 0, restantes: 0, detalhes: [] };
   for (const s of (Array.isArray(decididos) ? decididos : [])) {
     if (Date.now() - inicio > orcamentoMs) { r.restantes += 1; continue; }

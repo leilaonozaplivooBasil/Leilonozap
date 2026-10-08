@@ -714,7 +714,8 @@ async function processar(req, res, evento) {
     const travaAntifraude = KINDS_DE_DEPOSITO.includes(sale.kind) ? '&or=(antifraude_espera_ate.is.null,antifraude_decisao.in.(liberado,auto))' : '';
     const flip = await sb(`catalog_sales?id=eq.${encodeURIComponent(sale.id)}&status=in.(pending_payment,canceled,cancelado,cancelled)${travaAntifraude}`, {
       method: 'PATCH', headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id) }),
+      // DIR-211b: pago_em é o relógio do antifraude (created_date é a hora do QR, não do pagamento)
+      body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id), pago_em: new Date().toISOString() }),
     });
     const flipped = await flip.json().catch(() => []);
     if (!Array.isArray(flipped) || !flipped.length) {

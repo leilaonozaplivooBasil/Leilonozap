@@ -15,7 +15,7 @@
 // credita. "Devolver" num depósito em espera grava 'recusado' ANTES de pedir ao gateway.
 import { exigirSessao } from '../_lib/sessao.js';
 import { pedirAcao, executarAcao } from '../_lib/gatewayAcoes.js';
-import { marcarDecisao } from '../_lib/antifraudeDeposito.js';
+import { marcarDecisao, dinheiroSaiu } from '../_lib/antifraudeDeposito.js';
 
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,6 +61,7 @@ export default async function handler(req, res) {
       const recusadoSemDevolucao = !!sale.antifraude_espera_ate && sale.antifraude_decisao === 'recusado' && !['devolvido', 'devolvido_parcial', 'chargeback'].includes(sale.gateway?.situacao);
       if (!emEspera && !recusadoSemDevolucao) return res.status(200).json({ success: false, error: sale.antifraude_decisao ? `Este depósito já foi decidido (${sale.antifraude_decisao}).` : 'Este depósito não está em conferência.' });
       if (!sale.mp_payment_id) return res.status(200).json({ success: false, error: 'Depósito sem pagamento no gateway; não há o que liberar.' });
+      if (dinheiroSaiu(sale)) return res.status(200).json({ success: false, error: `O gateway já diz que o dinheiro deste pagamento saiu (${sale.gateway?.situacao}); não dá para liberar. Confira no Mercado Pago.` });
       if (recusadoSemDevolucao) {
         const feitas = await (await sb(`gateway_acoes?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&acao=eq.devolver&status=eq.feita&limit=1`)).json().catch(() => []);
         if (Array.isArray(feitas) && feitas.length) return res.status(200).json({ success: false, error: 'A devolução pelo gateway já foi feita; não dá para liberar.' });

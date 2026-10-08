@@ -43,6 +43,10 @@ test('R1 — conta criada há menos de 24h com depósito ≥ R$ 1.000; sem compr
   assert.equal(avaliarDeposito({ sale: venda({ total_amount: 1500 }), comprador: conta(24), agora: AGORA }).motivo, null, '24h: não é mais conta nova');
   assert.equal(avaliarDeposito({ sale: venda({ total_amount: 5000 }), comprador: null, agora: AGORA }).motivo, null, 'sem comprador legível: segue');
   assert.equal(avaliarDeposito({ sale: venda({ total_amount: 1500 }), comprador: { id: 'u1', created_at: new Date(AGORA - 3 * H).toISOString() }, agora: AGORA }).motivo, 'conta_nova_valor_alto', 'created_at vale quando não há created_date');
+  // conta nova somando R$ 1.000 em 2 depósitos também é R1 (2 × 999 em 20 min); o 3º+ segue para a R2
+  assert.equal(avaliarDeposito({ sale: venda({ total_amount: 999 }), comprador: conta(0.3), depositosRecentes: [dep('d1', 999)], agora: AGORA }).motivo, 'conta_nova_valor_alto');
+  assert.equal(avaliarDeposito({ sale: venda({ total_amount: 500 }), comprador: conta(0.3), depositosRecentes: [dep('d1', 300), dep('d2', 500)], agora: AGORA }).motivo, 'sequencia_de_depositos', 'conta nova, 3º depósito: é a R2 (libera sozinho)');
+  assert.equal(rotuloDoMotivo('conta_nova_valor_alto', { conta_horas: 0.3, valor: 999, soma_24h: 1998, depositos_24h: 2 }), 'conta criada há 18 min com R$ 1.998,00 em 2 depósitos');
   const d = avaliarDeposito({ sale: venda({ total_amount: 1500 }), comprador: conta(2.34), agora: AGORA }).detalhes;
   assert.equal(d.conta_horas, 2.3); assert.equal(d.valor, 1500); assert.equal(d.depositos_24h, 1); assert.equal(d.soma_24h, 1500); assert.equal(d.veterano, false);
 });
@@ -119,6 +123,9 @@ test('o cliente fica sabendo: e-mail "em conferência" (categoria conta) e sino,
 });
 
 test('a migração: colunas aditivas, decisão com check, índice parcial, nada de update/insert', () => {
+  const SQL2 = readFileSync(new URL('../supabase/migrations/20261008220000_pago_em_no_deposito.sql', import.meta.url), 'utf8');
+  assert.ok(SQL2.includes('alter table public.catalog_sales add column if not exists pago_em timestamptz;'));
+  assert.ok(!/\b(update|delete from|insert into|truncate|drop table)\b/i.test(SQL2.replace(/--[^\n]*/g, '')), 'só estrutura');
   for (const c of ['antifraude_motivo text', 'antifraude_espera_ate timestamptz', 'antifraude_avaliado_em timestamptz', 'antifraude_detalhes jsonb', 'antifraude_decisao text', 'antifraude_decidido_em timestamptz', 'antifraude_decidido_por text']) assert.ok(SQL.includes(`add column if not exists ${c}`), c);
   assert.ok(SQL.includes("check (antifraude_decisao is null or antifraude_decisao in ('liberado', 'auto', 'recusado'))"));
   assert.ok(SQL.includes('create index if not exists catalog_sales_antifraude_em_espera_idx'));
@@ -164,7 +171,12 @@ test('o webhook: o portão fica entre o already_paid e o flip, só para depósit
 test('a biblioteca: segura só venda pendente e só uma vez, decide só uma vez, reinicia a espera da pessoa, e nunca credita', () => {
   const A = ler('../api/_lib/antifraudeDeposito.js');
   assert.ok(A.includes('catalog_sales?id=eq.${enc(sale.id)}&status=in.(${STATUS})&antifraude_espera_ate=is.null'), 'PATCH filtrado: o webhook duplicado só grava 1x');
-  assert.ok(A.includes('&kind=in.(${KINDS})&buyer_id=in.(${ids})&created_date=gte.'), 'passaporte e carteira de comissões contam na sequência');
+  assert.ok(A.includes('&kind=in.(${KINDS})&buyer_id=in.(${ids})&or=(pago_em.gte.${enc(desde)},antifraude_avaliado_em.gte.${enc(desde)},and(pago_em.is.null,antifraude_avaliado_em.is.null,status.eq.paid,created_date.gte.${enc(desde)}))'), 'a janela de 24h é medida pelo PAGAMENTO (QR gerado hoje e pago amanhã conta amanhã); passaporte e comissões contam');
+  assert.ok(A.includes('&status=eq.paid&or=(pago_em.lt.${enc(antes)},and(pago_em.is.null,created_date.lt.${enc(antes)}))'), 'os 7 dias do veterano também pelo pagamento');
+  assert.ok(A.includes("gateway->>situacao=in.(${SITUACOES_DINHEIRO_SAIU.join(',')})&limit=1"), 'contestado conta mesmo cancelado pelo gateway ou fora dos 7 dias');
+  assert.ok(A.includes("const SEM_ZUMBI = '&or=(status.eq.pending_payment,gateway->>situacao.is.null,gateway->>situacao.not.in.(devolvido,devolvido_parcial,chargeback))';") && A.split('${SEM_ZUMBI}').length === 4, 'QR cancelado já devolvido sai da lista da Beatriz e das duas varreduras do cron');
+  const Wf = ler('../api/functions/mpWebhook.js');
+  assert.ok(Wf.includes("body: JSON.stringify({ status: 'paid', mp_payment_id: String(pay.id), pago_em: new Date().toISOString() }),"), 'o flip carimba o pagamento');
   assert.ok(A.includes('const segurou = r.ok && Array.isArray(rows) && rows.length === 1;'));
   assert.ok(A.includes('&id=neq.${enc(sale.id)}&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&antifraude_decisao=is.null'), 'a espera reinicia para os outros da mesma pessoa');
   assert.ok(A.includes("catalog_sales?id=eq.${enc(saleId)}&antifraude_espera_ate=not.is.null&antifraude_decisao=${de ? `eq.${enc(de)}` : 'is.null'}"), 'decisão só se ainda não havia uma (ou recusado → liberado)');
@@ -172,7 +184,6 @@ test('a biblioteca: segura só venda pendente e só uma vez, decide só uma vez,
   assert.ok(A.includes("h['x-interno'] = `Bearer ${process.env.CRON_SECRET}`;") && A.includes('headers: cabecalhosInternos(),'));
   assert.ok(A.includes("body: JSON.stringify({ type: 'payment', data: { id: String(paymentId) }, origem }),"));
   assert.ok(A.includes("or=(cpf.eq.${enc(cpf)},cpf.eq.${enc(cpfFormatado(cpf))})"), 'mesmo CPF nas duas grafias = mesma pessoa');
-  assert.ok(A.includes('or=(status.eq.paid,antifraude_espera_ate.not.is.null)'), 'pagos ou em espera contam na sequência');
   assert.ok(A.includes('&kind=in.(${KINDS})&status=in.(${STATUS})&antifraude_espera_ate=not.is.null&order=antifraude_espera_ate.asc&limit=50') && A.includes("s.antifraude_decisao === 'recusado' ? 'recusado_sem_devolucao' : "));
   assert.ok(A.includes("if (!r.ok) return { segurou: false, esperaAte: fim, erro: `http_${r.status}` };"), 'erro de banco não é corrida');
   assert.ok(A.includes('antifraude_decisao=is.null&antifraude_espera_ate=lte.') && A.includes('r.aguardando_humano += 1;'));
@@ -196,6 +207,7 @@ test('a Beatriz decide pela conciliação: liberar grava a decisão e chama o we
   assert.ok(R.includes('const emEspera = !!sale.antifraude_espera_ate && !sale.antifraude_decisao;'));
   assert.ok(R.includes("const gravou = await marcarDecisao(sb, sale.id, 'liberado', quem, recusadoSemDevolucao ? { de: 'recusado' } : {});"));
   assert.ok(R.includes("gateway_acoes?select=id&sale_id=eq.${encodeURIComponent(sale.id)}&acao=eq.devolver&status=eq.feita&limit=1"), 'recusado só volta a liberado se a devolução NÃO foi feita');
+  assert.ok(R.includes('if (dinheiroSaiu(sale)) return res.status(200).json({ success: false, error: `O gateway já diz que o dinheiro deste pagamento saiu'), 'nem a Beatriz libera o que o gateway reverteu');
   assert.ok(R.includes("} else if (modo === 'devolver' && emEspera) {") && R.includes("marcarDecisao(sb, sale.id, 'recusado', quem)"));
   assert.ok(R.includes("'Este depósito já foi liberado; trate pela conciliação normal.'"), 'liberado no meio-tempo: não devolve dinheiro já creditado');
   assert.ok(R.indexOf("marcarDecisao(sb, sale.id, 'recusado', quem)") < R.indexOf('const acao = await pedirAcao('), 'a decisão entra antes do pedido ao gateway');
