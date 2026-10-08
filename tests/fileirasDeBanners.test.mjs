@@ -65,7 +65,8 @@ test('o hook escolhe a fileira pela configuração e respeita a janela de datas'
   const hook = readFileSync(new URL('../src/hooks/useBannersDoPainel.js', import.meta.url), 'utf8');
   assert.match(hook, /fileiraDaPagina\(contexto, lerFileiras\(config\)\)/);
   assert.match(hook, /context: 'unificado'/);
-  assert.match(hook, /filtrarPorJanela\(bruto, agoraMs\)/);
+  // 08/10/2026 — o leilão encerrado sai ANTES da janela de datas (src/lib/bannerDoLeilao.js)
+  assert.match(hook, /filtrarPorJanela\(filtrarPorLeilao\(bruto, leiloes, agoraMs\), agoraMs\)/);
   assert.match(hook, /proximaVirada\(bruto/);
 });
 

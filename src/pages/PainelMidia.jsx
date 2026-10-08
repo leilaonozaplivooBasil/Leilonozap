@@ -24,6 +24,8 @@ import PopupLeilaoConfig from '../components/admin/PopupLeilaoConfig';
 import FileirasDeBanners from '../components/admin/FileirasDeBanners';
 import ProgramacaoDoBanner, { ProgramacaoDoProximo } from '../components/admin/ProgramacaoDoBanner';
 import SimuladorDeData from '../components/admin/SimuladorDeData';
+import LeilaoDoBanner from '../components/admin/LeilaoDoBanner';
+import { filtrarPorLeilao } from '@/lib/bannerDoLeilao';
 import { CONTEXTO_CONFIG, chavesAlteradas, lerFileiras, ligarFileira } from '@/lib/fileirasDeBanners';
 import { dentroDaJanela, paraISOBrasilia, validarJanela } from '@/lib/janelaDoBanner';
 import { convertToWebP } from '@/lib/convertToWebP';
@@ -165,6 +167,9 @@ export default function PainelMidia({ embutido = false }) {
   const [programarProximo, setProgramarProximo] = useState({});
   // 👁️ pré-visualizar uma data (só no painel; nada é gravado)
   const [dataSimulada, setDataSimulada] = useState('');
+  // 🏁 08/10/2026 — leilões para ligar a um banner (no ar e agendados) e o que se sabe dos já ligados
+  const [leiloesLista, setLeiloesLista] = useState([]);
+  const [leiloesExtras, setLeiloesExtras] = useState({});
   const [, setRelogio] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setRelogio((n) => n + 1), 30000);
@@ -185,6 +190,23 @@ export default function PainelMidia({ embutido = false }) {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const A = plataforma.entities.Auction;
+        const [ativos, agendados] = await Promise.all([
+          A.filter({ status: 'active' }, '-created_date', 300),
+          A.filter({ status: 'scheduled' }, '-created_date', 100),
+        ]);
+        if (!vivo) return;
+        setLeiloesLista([...(Array.isArray(ativos) ? ativos : []), ...(Array.isArray(agendados) ? agendados : [])]
+          .map((l) => ({ id: l.id, title: l.title, status: l.status, end_time: l.end_time })));
+      } catch { /* sem a lista, o painel segue sem o seletor preenchido */ }
+    })();
+    return () => { vivo = false; };
+  }, []);
+
   const bannersOf = (context, device) =>
     banners
       .filter((b) => b.context === context && (b.device_type || 'desktop') === device)
@@ -200,6 +222,27 @@ export default function PainelMidia({ embutido = false }) {
   // 🕛 a gravação do servidor DESCARTA em silêncio coluna que não existe: sem as colunas
   // de data, um banner "programado" entraria no ar na hora. Sem elas, o painel avisa.
   const suportaProgramacao = banners.length === 0 || banners.some((b) => 'starts_at' in b);
+  const suportaLeilao = banners.length === 0 || banners.some((b) => 'auction_id' in b);
+  // o que se sabe de cada leilão: os da lista + os já ligados a banner que saíram dela (encerrados)
+  const leiloesPorId = { ...leiloesExtras, ...Object.fromEntries(leiloesLista.map((l) => [l.id, l])) };
+  const idsLigados = [...new Set(banners.map((b) => String(b.auction_id || '').trim()).filter(Boolean))];
+  const idsFaltando = idsLigados.filter((id) => !(id in leiloesPorId)).sort().join(',');
+  useEffect(() => {
+    if (!idsFaltando) return undefined;
+    let vivo = true;
+    (async () => {
+      const achados = {};
+      for (const id of idsFaltando.split(',')) {
+        try {
+          const r = await plataforma.entities.Auction.filter({ id });
+          const l = Array.isArray(r) ? r[0] : null;
+          achados[id] = l ? { id: l.id, title: l.title, status: l.status, end_time: l.end_time } : null;
+        } catch { /* sem resposta: fica "ligado a um leilão" */ }
+      }
+      if (vivo) setLeiloesExtras((x) => ({ ...x, ...achados }));
+    })();
+    return () => { vivo = false; };
+  }, [idsFaltando]);
   const simuladaISO = paraISOBrasilia(dataSimulada);
   const agoraMs = simuladaISO ? new Date(simuladaISO).getTime() : Date.now();
 
@@ -236,6 +279,7 @@ export default function PainelMidia({ embutido = false }) {
     const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim));
     if (problema) { toast.error(problema); return; }
     if ((prog.inicio || prog.fim) && !suportaProgramacao) { toast.error('Datas indisponíveis: falta aplicar a atualização do banco.'); return; }
+    if (prog.leilao && !suportaLeilao) { toast.error('Ligar a um leilão está indisponível: falta aplicar a atualização do banco.'); return; }
     openPicker((file) => setCropTask({ file, location, device }));
   };
 
@@ -246,9 +290,10 @@ export default function PainelMidia({ embutido = false }) {
     try {
       const image_url = await uploadFile(croppedFile);
       const prog = programarProximo[location.key] || {};
-      const janela = suportaProgramacao
-        ? { starts_at: paraISOBrasilia(prog.inicio), ends_at: paraISOBrasilia(prog.fim) }
-        : {};
+      const janela = {
+        ...(suportaProgramacao ? { starts_at: paraISOBrasilia(prog.inicio), ends_at: paraISOBrasilia(prog.fim) } : {}),
+        ...(suportaLeilao && prog.leilao ? { auction_id: prog.leilao } : {}),
+      };
       await plataforma.entities.BannerImage.create({
         context: location.key,
         device_type: device,
@@ -259,8 +304,8 @@ export default function PainelMidia({ embutido = false }) {
         order: bannersOf(location.key, device).length,
         ...janela,
       });
-      setProgramarProximo((m) => ({ ...m, [location.key]: { inicio: '', fim: '' } }));
-      toast.success(janela.starts_at || janela.ends_at ? 'Banner programado!' : 'Banner publicado!');
+      setProgramarProximo((m) => ({ ...m, [location.key]: { inicio: '', fim: '', leilao: '' } }));
+      toast.success(janela.starts_at || janela.ends_at || janela.auction_id ? 'Banner programado!' : 'Banner publicado!');
       loadAll();
     } catch (error) {
       console.error('Erro ao salvar banner:', error);
@@ -307,6 +352,17 @@ export default function PainelMidia({ embutido = false }) {
       loadAll();
     } catch {
       toast.error('Erro ao salvar as datas');
+    }
+  };
+
+  // 🏁 liga (ou desliga o vínculo de) UM banner a um leilão
+  const handleSalvarLeilao = async (banner, auction_id) => {
+    try {
+      await plataforma.entities.BannerImage.update(banner.id, { auction_id });
+      toast.success(auction_id ? 'Banner ligado ao leilão' : 'Vínculo com o leilão removido');
+      loadAll();
+    } catch {
+      toast.error('Erro ao ligar o banner ao leilão');
     }
   };
 
@@ -634,6 +690,9 @@ export default function PainelMidia({ embutido = false }) {
                 valor={programarProximo[location.key]}
                 onChange={(v) => setProgramarProximo((m) => ({ ...m, [location.key]: v }))}
                 suporta={suportaProgramacao}
+                leiloes={leiloesLista}
+                mapa={leiloesPorId}
+                suportaLeilao={suportaLeilao}
               />
             )}
 
@@ -667,7 +726,7 @@ export default function PainelMidia({ embutido = false }) {
 
                     <div className="space-y-3">
                       {list.map((banner, index) => (
-                        <div key={banner.id} data-banner={banner.id} className={`rounded-lg border overflow-hidden ${banner.is_active && dentroDaJanela(banner, agoraMs) ? 'border-white/10' : 'border-white/5 opacity-50'}`}>
+                        <div key={banner.id} data-banner={banner.id} className={`rounded-lg border overflow-hidden ${banner.is_active && dentroDaJanela(banner, agoraMs) && filtrarPorLeilao([banner], leiloesPorId, agoraMs).length ? 'border-white/10' : 'border-white/5 opacity-50'}`}>
                           {/* preview na moldura EXATA em que o banner aparece no site */}
                           <div className={`${location.aspectClass} bg-gray-950 relative`}>
                             <img
@@ -714,6 +773,16 @@ export default function PainelMidia({ embutido = false }) {
                               agoraMs={agoraMs}
                               suporta={suportaProgramacao}
                               onSalvar={(janela) => handleSalvarJanela(banner, janela)}
+                            />
+                          )}
+                          {ehFileira && (
+                            <LeilaoDoBanner
+                              banner={banner}
+                              leiloes={leiloesLista}
+                              mapa={leiloesPorId}
+                              agoraMs={agoraMs}
+                              suporta={suportaLeilao}
+                              onSalvar={(id) => handleSalvarLeilao(banner, id)}
                             />
                           )}
                         </div>
