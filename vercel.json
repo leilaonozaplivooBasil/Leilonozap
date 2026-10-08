@@ -5,7 +5,8 @@
   "outputDirectory": "dist",
   "functions": {
     "api/functions/dispararCampanhaPs5.js": { "maxDuration": 60 },
-    "api/functions/conciliarMercadoPago.js": { "maxDuration": 60 }
+    "api/functions/conciliarMercadoPago.js": { "maxDuration": 60 },
+    "api/functions/auditoriaGateway.js": { "maxDuration": 60 }
   },
   "framework": "vite",
   "rewrites": [
