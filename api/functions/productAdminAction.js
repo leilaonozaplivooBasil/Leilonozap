@@ -29,7 +29,15 @@ const ALLOWED = ['description', 'quantity', 'cost_price', 'selling_price_retail'
   // "Produto atualizado!", o banco não recebe nada, e o sintoma é idêntico ao
   // de a coluna não existir. Já aconteceu três vezes documentadas neste mesmo
   // arquivo — category_id, condicao e estado_conservacao.
-  'video_urls'];
+  'video_urls',
+  // 📦 08/10/2026 (DIR-207) — peso e medidas do produto. A Gestão de Estoque
+  // tinha os quatro campos no formulário e mandava os quatro; fora DESTA lista
+  // eles eram descartados aqui em SILÊNCIO — a quarta vez do mesmo defeito. Foi
+  // assim que 2.819 dos 2.858 produtos ficaram sem peso e o frete cotou caixa
+  // padrão de 0,3 kg para geladeira. `medidas_origem`/`medidas_em` dizem de onde
+  // veio a medida (manual | pagina | estimativa_ia) e quando — a tela mostra
+  // "estimativa, conferir" em vez de fingir que é medida real.
+  'peso', 'altura', 'largura', 'comprimento', 'medidas_origem', 'medidas_em'];
 
 /** Vazio de verdade: null, undefined e '' são a mesma coisa pro nosso uso. */
 const vazio = (v) => v === null || v === undefined || v === '';

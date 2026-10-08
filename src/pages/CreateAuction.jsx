@@ -313,9 +313,15 @@ export default function CreateAuction() {
             const gsResponse = await plataforma.functions.invoke('extractGoogleShoppingImages', {
               productName: productDescription
             });
-            const gsData = gsResponse?.data?.data;
-            if (gsData?.products?.length > 0) {
-              const imgs = gsData.products.slice(0, 5).map(p => p.imageUrl).filter(Boolean);
+            // 🔴 DIR-207 (08/10/2026) — lia `data.data.products` (formato do runtime
+            // antigo); a rota da Vercel devolve `{ success, images: [urls] }`. Por
+            // isso a busca automática "nunca encontrava nada". Aceita os dois.
+            const gsCru = gsResponse?.data && typeof gsResponse.data === 'object' && !Array.isArray(gsResponse.data) ? gsResponse.data : gsResponse;
+            const gsUrls = Array.isArray(gsCru?.images) ? gsCru.images
+              : Array.isArray(gsCru?.data?.images) ? gsCru.data.images
+              : Array.isArray(gsCru?.data?.products) ? gsCru.data.products.map((p) => p?.imageUrl) : [];
+            if (gsUrls.length > 0) {
+              const imgs = gsUrls.slice(0, 5).filter(Boolean);
               if (imgs.length > 0) {
                 const finalImgs = [...imgs];
                 while (finalImgs.length < 5) finalImgs.push("");
@@ -1001,7 +1007,7 @@ export default function CreateAuction() {
           });
         } else {
           // Produto novo → cria no estoque com catalog_active
-          await Product.create({
+          const novoProduto = await Product.create({
             description: formData.title,
             notes: formData.description,
             image_urls: finalImageUrls,
@@ -1011,6 +1017,14 @@ export default function CreateAuction() {
             quantity: 1,
             catalog_active: true,
           });
+          // 🔗 DIR-207 (08/10/2026) — o produto nascia aqui e o leilão (já criado
+          // acima) continuava com product_id null: o frete respondia
+          // "produto_nao_vinculado" e a etiqueta nunca saía. Agora o vínculo é
+          // gravado na hora; se falhar, o leilão continua existindo como antes.
+          if (novoProduto?.id && createdAuction?.id) {
+            try { await Auction.update(createdAuction.id, { product_id: novoProduto.id }); }
+            catch (e) { console.warn('Leilão criado, mas o vínculo com o produto novo não foi gravado:', e?.message); }
+          }
         }
       }
 

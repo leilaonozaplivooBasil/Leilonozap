@@ -139,7 +139,14 @@ test('nenhum caminho grava o endereço de fora direto', () => {
 
 test('cópia que falha NÃO guarda o endereço de fora', () => {
   // Guardar o link "porque a cópia falhou" é exatamente o bug de volta.
-  assert.match(tela, /return \{ fotos: nossas, falharam: externas\.length \}/);
+  // 08/10/2026 (DIR-207): a regra saiu da tela e virou helper único em
+  // src/lib/fotosParaNosso.js (a tela, o editor do leilão e o buscador manual
+  // chamam a MESMA função). O pino acompanha: a regra mora no helper, e a tela
+  // só delega para ele — sem cópia local que pudesse divergir.
+  const helper = ler('../src/lib/fotosParaNosso.js');
+  assert.match(helper, /return \{ fotos: nossas, falharam: externas\.length \}/);
+  assert.match(tela, /const trazerParaNosso = trazerFotosParaNosso;/);
+  assert.ok(!tela.includes("invoke('copiarImagensParaNosso'"), 'a tela não pode voltar a copiar por conta própria');
   assert.match(tela, /falharam\s*\?/);   // e a tela avisa quem está cadastrando
 });
 

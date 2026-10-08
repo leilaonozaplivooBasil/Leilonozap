@@ -28,8 +28,21 @@ export default function GoogleShoppingImporter({ onApply }) {
         productName: name,
       });
 
-      if (response?.data?.status === "success") {
-        const data = response.data.data;
+      // 🔴 DIR-207 (08/10/2026) — ESTE IMPORTADOR NUNCA ACHAVA NADA.
+      // Lia `response.data.status === 'success'` e `data.data.products[]`, o
+      // formato do runtime antigo (Deno). A rota da Vercel
+      // (api/functions/extractGoogleShoppingImages.js) devolve
+      // `{ success, images: [urls], query_usada }` e o adapter entrega o JSON
+      // cru. Resultado: "Nenhuma imagem encontrada" sempre, mesmo com fotos.
+      // Agora aceita os dois formatos, como BuscadorFotos.processarResposta.
+      const cru = response?.data && typeof response.data === 'object' && !Array.isArray(response.data) ? response.data : response;
+      const urls = Array.isArray(cru?.images) ? cru.images
+        : Array.isArray(cru?.data?.images) ? cru.data.images
+        : Array.isArray(cru?.data?.products) ? cru.data.products.map((p) => p?.imageUrl)
+        : [];
+      const imagens = [...new Set(urls.filter((u) => typeof u === 'string' && /^https?:\/\//.test(u)))];
+      if (imagens.length > 0) {
+        const data = { products: imagens.map((u) => ({ imageUrl: u, title: name, productUrl: '' })), imageCount: imagens.length, avgPrice: null, minPrice: null, maxPrice: null };
         setResults(data);
         // Pre-seleciona todas as imagens disponíveis (máx 5)
         setSelectedImages(data.products.slice(0, 5).map((p, i) => i));
@@ -60,7 +73,8 @@ export default function GoogleShoppingImporter({ onApply }) {
       return;
     }
 
-    const selected = selectedImages.sort().map((i) => results.products[i]);
+    // ordem numérica (sort() puro ordenava como texto: '10' antes de '2') e sem mutar o estado
+    const selected = [...selectedImages].sort((a, b) => a - b).map((i) => results.products[i]);
     const imageUrls = selected.map((p) => p.imageUrl);
 
     // Ordena: capa = primeiro índice selecionado
