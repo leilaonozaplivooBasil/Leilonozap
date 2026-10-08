@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Megaphone, ExternalLink, AlertTriangle } from 'lucide-react';
-import { leilaoAindaAberto, idDoLeilao } from '@/lib/popupLeilaoDestaque';
+import { leilaoAindaAberto, idDoLeilao, dadosDoPopup, contagemRegressiva } from '@/lib/popupLeilaoDestaque';
+import { fmtBR } from '@/lib/money';
 
 /**
  * "Pop-up do leilão" no Painel de Mídia — onde o dono escolhe o destaque.
@@ -55,6 +56,12 @@ export default function PopupLeilaoConfig({ banners = [], onSaved }) {
 
   // O leilão gravado pode ter encerrado desde a última troca. O pop-up já some
   // sozinho na loja; aqui o dono precisa VER que sumiu, senão fica no escuro.
+  const leilaoEscolhido = useMemo(() => leiloes.find((a) => a.id === escolhido) || null, [leiloes, escolhido]);
+  const previa = useMemo(
+    () => (leilaoEscolhido ? dadosDoPopup({ link_url: `/AuctionRoom?id=${escolhido}` }, leilaoEscolhido) : null),
+    [leilaoEscolhido, escolhido],
+  );
+
   const gravadoEncerrou = !!escolhido && !carregando && !leiloes.some((a) => a.id === escolhido);
 
   const salvar = async () => {
@@ -65,12 +72,15 @@ export default function PopupLeilaoConfig({ banners = [], onSaved }) {
       const dados = {
         context: CONTEXTO,
         link_url: `/AuctionRoom?id=${encodeURIComponent(escolhido)}`,
-        title: leilao?.title || '',
+        title: String(leilao?.title || '').trim(),
+        // 🧹 08/10/2026 — sem imagem guardada: a foto sai do leilão escolhido. Uma imagem
+        // antiga ficava na linha e o pop-up mostrava a foto de OUTRO leilão.
+        image_url: '',
         is_active: ligado,
         device_type: 'desktop',
       };
       if (config?.id) await plataforma.entities.BannerImage.update(config.id, dados);
-      else await plataforma.entities.BannerImage.create({ ...dados, image_url: '', order: 0 });
+      else await plataforma.entities.BannerImage.create({ ...dados, order: 0 });
       toast.success(ligado ? 'Pop-up no ar!' : 'Pop-up salvo (desligado).');
       onSaved?.();
     } catch (e) {
@@ -106,6 +116,27 @@ export default function PopupLeilaoConfig({ banners = [], onSaved }) {
           <option key={a.id} value={a.id}>{a.title}</option>
         ))}
       </select>
+
+      {/* 👁️ 08/10/2026 — a prévia do que o cliente vai ver: foto, título e lance saem
+          direto do leilão escolhido (o mesmo que o pop-up usa), para o dono conferir
+          antes de salvar. */}
+      {previa && (
+        <div data-teste="previa-do-popup" className="mt-3 flex items-center gap-3 rounded-xl border border-white/10 bg-gray-900/50 p-3">
+          {previa.imagem ? (
+            <img src={previa.imagem} alt="" className="h-16 w-16 shrink-0 rounded-lg bg-white object-contain" />
+          ) : (
+            <div className="grid h-16 w-16 shrink-0 place-items-center rounded-lg bg-gray-800 text-[10px] text-gray-500">sem foto</div>
+          )}
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300/90">O cliente vai ver</p>
+            <p data-teste="previa-titulo" className="truncate text-sm font-bold text-white">{previa.titulo}</p>
+            <p className="text-xs text-gray-400">
+              {previa.preco ? `Lance atual R$ ${fmtBR(previa.preco)}` : 'Sem lance ainda'}
+              {contagemRegressiva(previa.encerraEm) ? ` · encerra em ${contagemRegressiva(previa.encerraEm)}` : ''}
+            </p>
+          </div>
+        </div>
+      )}
 
       {gravadoEncerrou && (
         <p className="mt-2 flex items-start gap-2 rounded-lg bg-amber-500/10 p-2.5 text-xs text-amber-300">

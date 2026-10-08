@@ -168,3 +168,17 @@ test('a identidade da marca está no pop-up, não um verde qualquer', { skip: se
 
   await ctx.close();
 });
+
+test('🔴 mostra o leilão ESCOLHIDO, de ponta a ponta — título e foto dele, nunca o resíduo de outro (Hoverboard × PS5)', { skip: semNavegador }, async () => {
+  // A configuração guardava a imagem e o título do PS5; o link já apontava para o Hoverboard.
+  const { ctx, pagina } = await abrir('?velho=1');
+  await popup(pagina).waitFor({ state: 'visible', timeout: 20000 });
+  assert.equal((await popup(pagina).locator('h2').innerText()).trim(), 'Hoverboard Skate Elétrico 6.5 Polegadas');
+  const foto = await popup(pagina).locator('img').first().getAttribute('src');
+  const ps5 = await pagina.evaluate(() => window.__fotoPS5);
+  const hoverboard = await pagina.evaluate(() => window.__fotoHoverboard);
+  assert.notEqual(foto, ps5, 'abriu com a foto do PS5');
+  assert.equal(foto, hoverboard, 'a foto não é a do leilão escolhido');
+  assert.match(await popup(pagina).locator('a[href*="AuctionRoom"]').first().getAttribute('href'), /hoverboard-de-mentira/);
+  await ctx.close();
+});

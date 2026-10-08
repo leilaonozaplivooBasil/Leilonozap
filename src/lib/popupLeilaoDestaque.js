@@ -167,11 +167,22 @@ export function fotoDoLeilao(leilao) {
   return String(lista || '').trim() || null;
 }
 
-/** O que a tela desenha. Nunca inventa: sem título do banner, usa o do leilão. */
+/**
+ * O que a tela desenha. 🔴 O LEILÃO ESCOLHIDO É A ÚNICA FONTE (08/10/2026).
+ *
+ * O caso: o dono escolheu o Hoverboard no Painel de Mídia e o pop-up abriu com o
+ * título do Hoverboard e a FOTO DE UM PS5. A linha de configuração guarda uma
+ * cópia do título e uma `image_url` — e essa `image_url` ficou de uma escolha
+ * anterior (o PS5), e a regra antiga dava preferência a ela sobre a foto do
+ * leilão. Quem escolhe um leilão espera ver ESSE leilão: foto, título e lance
+ * saem direto dele, ao vivo. Nenhum resíduo da configuração pode trocar isso.
+ * (A cópia do título e a `image_url` só servem quando não há leilão resolvido.)
+ */
 export function dadosDoPopup(config, leilao) {
+  const temLeilao = !!leilao && typeof leilao === 'object';
   return {
-    titulo: String(config?.title || leilao?.title || 'Leilão em destaque').trim(),
-    imagem: String(config?.image_url || '').trim() || fotoDoLeilao(leilao),
+    titulo: String((temLeilao && leilao.title) || config?.title || 'Leilão em destaque').trim(),
+    imagem: temLeilao ? fotoDoLeilao(leilao) : (String(config?.image_url || '').trim() || null),
     destino: String(config?.link_url || '').trim(),
     encerraEm: leilao?.end_time || null,
     // O preço é o dado que convence — o pedido era "conduzir o cliente direto
