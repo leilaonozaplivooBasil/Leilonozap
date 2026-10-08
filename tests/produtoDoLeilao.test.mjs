@@ -279,3 +279,12 @@ describe('a migração 20261008130000 — vigia v3 e fechamento com a chave nova
     assert.ok(!mov.includes("interval '24 hours'"), 'sem janela de 24h: é o retrato do passivo');
   });
 });
+
+test('página bloqueada (200 com tela de verificação) não deixa a pessoa sem nada: segunda passada estima pelo nome, marcada como estimativa', () => {
+  const R = semComentarios(readFileSync(new URL('../api/functions/importarProdutoPeloLink.js', import.meta.url), 'utf8'));
+  assert.ok(R.includes("const semMedida = !['peso', 'altura', 'largura', 'comprimento'].some((c) => ficha.medidas?.[c] != null);"));
+  assert.ok(R.includes('if (temTexto && semMedida && (ficha.titulo || titulo)) {'));
+  assert.ok(R.includes("const r2 = await perguntarIA(ia, montarPromptDaEstimativa({ titulo: ficha.titulo || titulo }));"));
+  assert.ok(R.includes("fonte: 'estimativa',"), 'nunca vira lido da página');
+  assert.ok(R.includes('não mostrou a ficha técnica ao nosso servidor (bloqueio ou tela de verificação)'));
+});
