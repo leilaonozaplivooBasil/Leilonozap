@@ -1931,8 +1931,20 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                     </Card>
                 )}
 
+                {/* 🏷️ DIR-210: arremate cancelado sem pagamento — reativar este registro re-arremataria o
+                    mesmo vencedor pelos lances antigos; para reofertar o produto, o caminho é Duplicar. */}
+                {auction && auction.order_status === 'cancelado' && (
+                    <Card className="border-red-500/30 bg-[#161b22]">
+                        <CardContent className="p-4 text-sm text-slate-300 leading-relaxed">
+                            <b className="text-red-300">Arremate cancelado sem pagamento</b>
+                            {auction.raw_base44?.arremate_cancelado?.em ? ` em ${new Date(auction.raw_base44.arremate_cancelado.em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : ''}.
+                            {' '}Reativar este registro re-arremataria o mesmo vencedor pelos lances antigos. Para reofertar o produto, use <b>Duplicar</b>.
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* 🆕 CARD DE REATIVAR LEILÃO */}
-                {auction && (auction.status === 'ended' || auction.status === 'sold') && (
+                {auction && (auction.status === 'ended' || auction.status === 'sold') && auction.order_status !== 'cancelado' && (
                     <Card className="border-orange-500/40 overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(249,115,22,0.08) 0%, rgba(22,27,34,1) 45%)' }}>
                         <CardHeader className="pb-3">
                             <div className="flex items-start gap-3">

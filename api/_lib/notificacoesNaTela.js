@@ -22,6 +22,9 @@ export const TIPOS_NA_TELA = Object.freeze([
   'compra_confirmada', 'compra_enviada',
   'deposito', 'saque_pago', 'kyc_aprovado', 'comissao_paga_manual',
   'retirada_confirmada',
+  // 🏷️ DIR-210 (08/10/2026): o arremate em risco e o arremate cancelado entram no
+  // sino de propósito — quem desligou o e-mail de leilão ainda precisa saber do prazo.
+  'arremate_sem_saldo', 'arremate_cancelado',
 ]);
 
 /** "Superado" do mesmo leilão não empilha: a notificação é renovada. */
@@ -60,6 +63,10 @@ export function notificacaoDaTela(tipo, d = {}) {
       return { titulo: 'Pedido retirado', texto: `A retirada do pedido #${d.pedido} foi registrada (${d.local}).`, link: d.arremate ? '/MyWinnings' : '/MyCatalogOrders' };
     case 'comissao_paga_manual':
       return { titulo: 'Comissão paga', texto: `Sua comissão de ${reais(d.valor)} foi paga.`, link: '/Carteira' };
+    case 'arremate_sem_saldo':
+      return { titulo: d.segunda ? 'Seu arremate ainda espera saldo' : 'Falta saldo para fechar seu arremate', texto: `${produto}: faltam ${reais(d.falta)} na Carteira.${d.cancelaEm ? ` Prazo: ${quandoBR(d.cancelaEm)}.` : ''}`, link: '/Carteira' };
+    case 'arremate_cancelado':
+      return { titulo: 'Arremate cancelado', texto: `${produto} foi cancelado por falta de saldo depois de ${Number(d.horas) > 0 ? Number(d.horas) : 48}h.${Number(d.devolvido) > 0 ? ` ${reais(d.devolvido)} voltou para a sua Carteira.` : ''}`, link: '/Carteira' };
     default:
       return null;
   }

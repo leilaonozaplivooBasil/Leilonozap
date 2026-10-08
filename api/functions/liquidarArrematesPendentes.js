@@ -54,10 +54,18 @@ import { emitirSessao } from '../_lib/sessao.js';
 // 📣 DIR-205 (07/10/2026): sem saldo não é silêncio — o vencedor é lembrado por e-mail.
 import { enviarAviso } from '../_lib/avisosPorEmail.js';
 import { etapaDoLembreteDeArremate } from '../_lib/regrasDosAvisos.js';
+// 🏷️ DIR-210 (08/10/2026): passou o prazo sem saldo, o arremate é cancelado por aqui mesmo —
+// no mesmo ciclo em que o banco acabou de recusar o pagamento (quem depositou aos 47h59 é
+// liquidado, nunca cancelado). Quem cancela é só a função SQL já provada na cadeira.
+import { prazoDoArremate, decisaoDoArremateSemSaldo, horasParaCancelar } from '../_lib/regrasDosAvisos.js';
+import { avisarAdminUmaVezPorDia } from '../_lib/avisarAdmin.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BASE_URL = process.env.PUBLIC_BASE_URL || 'https://leilaonozap.net';
+// Prazo do cancelamento automático: ARREMATE_CANCELA_EM_HORAS ('0'/'off' desliga; vazio = 48).
+const HORAS_PARA_CANCELAR = horasParaCancelar(process.env.ARREMATE_CANCELA_EM_HORAS);
+const reais = (n) => 'R$ ' + (Number(n) || 0).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 // Por execução. Com os planos já fora da consulta, 100 cobre a fila inteira com
 // folga (são 4 produtos reais hoje) — o teto continua existindo só como barreira
@@ -77,6 +85,49 @@ function ehPlanoOuTeste(a) {
   return a?.is_investment_plan === true
     || a?.is_test_auction === true
     || /\bplano\b/i.test(a?.title || '');
+}
+
+// ── DIR-210: as peças do cancelamento (só leitura, salvo a chamada à função SQL) ──
+
+/**
+ * O vencedor lidera outro leilão ativo ou tem outro arremate a pagar? Nesse caso o
+ * cancelamento NÃO é automático: a devolução da reserva (least(valor, saldo_reservado))
+ * poderia soltar a reserva que sustenta o outro compromisso. Mesma régua de releaseBidHold.
+ * Se não der para conferir, responde "sim" — melhor avisar o admin do que cancelar no escuro.
+ */
+async function temOutroLeilaoEmJogo(a) {
+  try {
+    const r = await sb(`auctions?select=id&winner_id=eq.${encodeURIComponent(a.winner_id)}&id=neq.${encodeURIComponent(a.id)}&or=(status.eq.active,order_status.eq.awaiting_payment)&limit=1`);
+    const j = await r.json();
+    return !Array.isArray(j) || j.length > 0;
+  } catch {
+    return true;
+  }
+}
+
+/** Quem deu o maior lance depois do vencedor (nome e valor), para a reoferta ser decisão humana. */
+async function segundoColocado(a) {
+  try {
+    const r = await sb(`auction_messages?select=sender_id,sender_name,bid_amount&auction_id=eq.${encodeURIComponent(a.id)}&message_type=eq.bid&order=bid_amount.desc.nullslast,created_date.asc&limit=50`);
+    const j = await r.json();
+    const outro = (Array.isArray(j) ? j : []).find((m) => m?.sender_id && String(m.sender_id) !== String(a.winner_id) && Number(m.bid_amount) > 0);
+    return outro ? { nome: outro.sender_name || 'cliente', valor: Number(outro.bid_amount) } : null;
+  } catch {
+    return null;
+  }
+}
+
+function textoDoCancelamento(a, c, segundo) {
+  return `🔴 *Arremate cancelado sem pagamento*\n\n${a.title} · ${a.winner_name || 'vencedor'} · ${reais(c.valor)} (lance + frete)\n`
+    + `${HORAS_PARA_CANCELAR}h depois do encerramento sem saldo na Carteira. Comissões do martelo estornadas: ${reais(c.comissoes_estornadas)}. Reserva devolvida ao vencedor: ${reais(c.reserva_devolvida)}.\n\n`
+    + `2º colocado: ${segundo ? `${segundo.nome} · ${reais(segundo.valor)}` : 'não houve'}.\n`
+    + `Reofertar é decisão sua: no editor, use Duplicar (reativar este registro re-arremataria o mesmo vencedor pelos lances antigos).\n${BASE_URL}/EditAuction?id=${a.id}`;
+}
+
+function textoDoCasoManual(a, horas) {
+  return `🟡 *Arremate sem saldo há ${horas}h — cancelar à mão*\n\n${a.title} · ${a.winner_name || 'vencedor'} · ${reais(a.current_price)}\n`
+    + 'O vencedor lidera outro leilão ativo ou tem outro arremate a pagar, então o cancelamento automático não roda: a devolução da reserva precisa de olho humano.\n'
+    + 'Decidir: cobrar o vencedor, ou pedir o cancelamento (função cancelar_arremate_nao_pago, pelo SQL — ainda não há botão).';
 }
 
 export default async function handler(req, res) {
@@ -148,16 +199,63 @@ export default async function handler(req, res) {
         // depois (1x cada; a trava é a de enviarAviso). O admin vê no vigia.
         // Nada aqui mexe em dinheiro nem no leilão.
         let lembrete = null;
+        let cancelamento = null;
         if (d?.insufficient === true) {
+          // DIR-210: o prazo entra no e-mail (só quando o cancelamento automático está ligado).
+          const cancelaEm = prazoDoArremate(a.end_time, HORAS_PARA_CANCELAR);
           const etapa = etapaDoLembreteDeArremate(a.end_time);
           if (etapa) {
             const saldo = (Number(d.balance) || 0) + (Number(d.reserved) || 0);
             const precisa = Number(d.needed) || Number(a.current_price) || 0;
             const env = await enviarAviso({
               tipo: 'arremate_sem_saldo', userId: a.winner_id, chave: `${a.id}:${etapa}`,
-              dados: { produto: a.title, valor: a.current_price, saldo, falta: Math.max(0, Math.round((precisa - saldo) * 100) / 100), segunda: etapa === '24h' },
+              dados: { produto: a.title, valor: a.current_price, saldo, falta: Math.max(0, Math.round((precisa - saldo) * 100) / 100), segunda: etapa === '24h', cancelaEm },
             }).catch(() => ({ enviado: false, motivo: 'falha' }));
             lembrete = { etapa, enviado: !!env?.enviado, motivo: env?.motivo };
+          }
+
+          // 🏷️ DIR-210 — passou o prazo? esperar / adiar / manual / cancelar.
+          const decisao = decisaoDoArremateSemSaldo({
+            encerrouEm: a.end_time, horas: HORAS_PARA_CANCELAR,
+            lembreteSaiuAgora: !!lembrete?.enviado,
+            outroLeilaoEmJogo: HORAS_PARA_CANCELAR ? await temOutroLeilaoEmJogo(a) : false,
+          });
+          cancelamento = { decisao };
+          if (decisao === 'manual') {
+            const av = await avisarAdminUmaVezPorDia(`arremate_cancelar_manual_${a.id}`, textoDoCasoManual(a, HORAS_PARA_CANCELAR), { sb, horas: 24 }).catch(() => ({ enviado: false }));
+            cancelamento.aviso_admin = !!av?.enviado;
+          } else if (decisao === 'cancelar') {
+            // Só a função SQL mexe em dinheiro e no leilão (comissões → reversed, reserva de volta,
+            // order_status 'cancelado'). Ela recusa sozinha plano/teste, já pago/cancelado e
+            // quem acabou de ganhar saldo ('tem_saldo_agora' — o próximo tick liquida).
+            const rc = await sb('rpc/cancelar_arremate_nao_pago', {
+              method: 'POST',
+              body: JSON.stringify({ _auction_id: a.id, _motivo: `Sem saldo ${HORAS_PARA_CANCELAR}h depois do encerramento (DIR-210)`, _por: 'liquidarArrematesPendentes' }),
+            });
+            const c = await rc.json().catch(() => null);
+            if (c?.success === true) {
+              cancelamento.ok = true;
+              cancelamento.reserva_devolvida = c.reserva_devolvida;
+              cancelamento.comissoes_estornadas = c.comissoes_estornadas;
+              const av = await enviarAviso({
+                tipo: 'arremate_cancelado', userId: a.winner_id, chave: a.id,
+                dados: { produto: a.title, valor: a.current_price, devolvido: c.reserva_devolvida, horas: HORAS_PARA_CANCELAR },
+              }).catch(() => ({ enviado: false, motivo: 'falha' }));
+              cancelamento.aviso_vencedor = !!av?.enviado;
+              const segundo = await segundoColocado(a);
+              cancelamento.segundo_colocado = segundo;
+              const adm = await avisarAdminUmaVezPorDia(`arremate_cancelado_${a.id}`, textoDoCancelamento(a, c, segundo), { sb, horas: 24 * 7 }).catch(() => ({ enviado: false }));
+              cancelamento.aviso_admin = !!adm?.enviado;
+              if (!adm?.enviado) {
+                // O cancelamento já está no system_logs (função SQL); aqui fica o rastro de que o admin não foi avisado.
+                await sb('system_logs', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ component_name: 'liquidarArrematesPendentes', step: 'AVISO_ADMIN_FALHOU', status: 'warning', message: `Arremate ${a.id} cancelado sem aviso ao admin (${adm?.motivo || 'falha'}).`, payload: { auction_id: a.id, segundo_colocado: segundo }, created_at: new Date().toISOString() }) }).catch(() => {});
+              }
+              console.log(`[CRON LIQUIDAR] arremate ${a.id} (${a.title}) cancelado após ${HORAS_PARA_CANCELAR}h sem saldo: reserva ${reais(c.reserva_devolvida)} devolvida, comissões ${reais(c.comissoes_estornadas)} estornadas.`);
+            } else {
+              cancelamento.ok = false;
+              cancelamento.erro = c?.error || `http ${rc.status}`;
+              if (c?.error !== 'tem_saldo_agora') console.error(`[CRON LIQUIDAR] cancelamento do arremate ${a.id} recusado: ${cancelamento.erro}`);
+            }
           }
         }
 
@@ -169,6 +267,7 @@ export default async function handler(req, res) {
           ja_pago: d?.already_paid === true,
           sem_saldo: d?.insufficient === true,
           lembrete,
+          cancelamento,
           erro: d?.success === true ? undefined : (d?.error || `http ${r.status}`),
         });
       } catch (e) {
