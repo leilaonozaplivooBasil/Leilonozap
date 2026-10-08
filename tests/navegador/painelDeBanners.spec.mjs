@@ -342,3 +342,25 @@ test('banner que já está LIGADO não ganha o aviso nem o "e ligar"; só as dat
     assert.deepEqual(u.dados, { starts_at: '2099-01-01T03:00:00.000Z', ends_at: null }, 'não mexe em is_active de quem já está ligado');
   } finally { await ctx.close(); }
 });
+
+test('🔴 só DATA DE SAÍDA (sem entrada): banner ligado continua ligado e não ganha is_active; saída que já passou é recusada', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const cartao = pagina.locator('[data-banner="geral"]');
+    await cartao.locator('[data-teste="abrir-programacao"]').click();
+
+    // saída no passado: o banner sumiria na hora — recusa e NÃO grava
+    await cartao.locator('[data-campo="fim"]').fill('2000-01-01T00:00');
+    await cartao.locator('[data-teste="salvar-programacao"]').click();
+    assert.match(await cartao.locator('[role="alert"]').innerText(), /já passou: o banner sairia do ar agora/);
+    assert.equal((await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral').length, 0, 'gravou uma saída que já passou');
+
+    // saída futura, sem entrada: só ends_at; o banner segue ligado e no ar até lá
+    await cartao.locator('[data-campo="fim"]').fill('2099-01-02T00:00');
+    await cartao.locator('[data-teste="salvar-programacao"]').click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'geral'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'geral');
+    assert.deepEqual(u.dados, { starts_at: null, ends_at: '2099-01-02T03:00:00.000Z' });
+    await pagina.waitForFunction(() => document.querySelector('[data-banner="geral"] [data-estado]')?.getAttribute('data-estado') === 'no_ar_com_fim');
+  } finally { await ctx.close(); }
+});

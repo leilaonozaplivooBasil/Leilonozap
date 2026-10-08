@@ -78,6 +78,16 @@ test('validação: o fim tem que ser depois do início', () => {
   assert.equal(validarJanela('2026-10-12T03:00:00Z', null), null);
 });
 
+test('validação: saída que já passou é recusada (o banner sumiria na hora); só saída, sem entrada, vale se for futura', () => {
+  const agora = T('2026-10-08T21:00:00Z');
+  assert.match(validarJanela(null, '2026-10-08T03:00:00Z', agora), /já passou/);
+  assert.match(validarJanela(null, '2026-10-08T21:00:00Z', agora), /já passou/);
+  assert.equal(validarJanela(null, '2026-10-09T03:00:00Z', agora), null, 'só saída futura: o banner fica ligado e sai na hora');
+  assert.equal(validarJanela('2026-10-09T03:00:00Z', '2026-10-10T03:00:00Z', agora), null, 'entrada e saída futuras');
+  assert.equal(validarJanela(null, null, agora), null, 'tirar as datas sempre pode');
+  assert.equal(validarJanela(null, '2026-10-08T03:00:00Z'), null, 'sem relógio não confere o passado (regra antiga)');
+});
+
 test('o painel descreve cada banner: desligado, agendado, encerrado, no ar', () => {
   const agora = T('2026-10-10T15:00:00Z');
   assert.deepEqual(situacaoDoBanner({ is_active: false }, agora), { estado: 'desligado', texto: 'Desligado' });

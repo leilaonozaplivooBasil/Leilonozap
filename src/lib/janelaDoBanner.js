@@ -78,11 +78,18 @@ export function rotuloDeData(valor) {
   return `${p.day}/${p.month} às ${p.hour}:${p.minute}`;
 }
 
-/** null se a janela é válida; senão a mensagem para o painel. */
-export function validarJanela(inicio, fim) {
+/**
+ * null se a janela é válida; senão a mensagem para o painel.
+ * Com `agoraMs`, também recusa uma saída que já passou: salvar "sai em 08/10 00:00" às 18h do dia
+ * 08/10 tiraria o banner do ar NA HORA e parece que o sistema o desativou (dono, 08/10/2026).
+ */
+export function validarJanela(inicio, fim, agoraMs) {
   const i = ms(inicio);
   const f = ms(fim);
   if (i !== null && f !== null && f <= i) return 'O fim precisa ser depois do início.';
+  if (f !== null && Number.isFinite(agoraMs) && f <= agoraMs) {
+    return `Essa data de saída (${rotuloDeData(f)}) já passou: o banner sairia do ar agora. Escolha uma data futura ou deixe o "Sai do ar em" em branco para ele ficar no ar.`;
+  }
   return null;
 }
 

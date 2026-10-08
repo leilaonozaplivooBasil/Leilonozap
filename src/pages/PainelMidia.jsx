@@ -276,7 +276,7 @@ export default function PainelMidia({ embutido = false }) {
   const handleAddBanner = (location, device) => {
     // 🕛 se o dono já programou o próximo, confere ANTES de subir a imagem
     const prog = programarProximo[location.key] || {};
-    const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim));
+    const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim), Date.now());
     if (problema) { toast.error(problema); return; }
     if ((prog.inicio || prog.fim) && !suportaProgramacao) { toast.error('Datas indisponíveis: falta aplicar a atualização do banco.'); return; }
     if (prog.leilao && !suportaLeilao) { toast.error('Ligar a um leilão está indisponível: falta aplicar a atualização do banco.'); return; }

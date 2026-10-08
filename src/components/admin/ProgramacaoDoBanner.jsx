@@ -39,7 +39,7 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
   const salvar = async (ini, fi) => {
     const a = paraISOBrasilia(ini);
     const b = paraISOBrasilia(fi);
-    const problema = validarJanela(a, b);
+    const problema = validarJanela(a, b, Date.now());
     if (problema) { setErro(problema); return; }
     setErro('');
     // 🔴 08/10/2026 — PROGRAMAR UM BANNER DESLIGADO. Dono: "quando o banner está desativado não
@@ -84,6 +84,11 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
             </label>
           </div>
           <p className="mt-1.5 text-[10px] text-gray-500">Horário de Brasília. Deixe em branco o lado que não precisa. À meia-noite em que uma arte sai, a próxima já entra.</p>
+          {banner?.is_active !== false && banner?.ends_at && new Date(banner.ends_at).getTime() <= (agoraMs ?? Date.now()) && (
+            <p data-teste="aviso-saida-passada" className="mt-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+              O interruptor está ligado, mas a data de saída deste banner já passou, por isso ele está fora do ar. Para ele voltar, escolha uma saída futura ou clique em <b>Tirar as datas</b>.
+            </p>
+          )}
           {banner?.is_active === false && (
             <p data-teste="aviso-desligado" className="mt-1.5 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-2 py-1 text-[11px] text-cyan-200">
               Este banner está desligado. Ao salvar as datas ele é <b>ligado</b> e só aparece dentro do período: antes da data de entrada ele fica fora do ar e entra sozinho na hora marcada.
