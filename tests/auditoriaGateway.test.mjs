@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { semComentarios } from './_ajuda.mjs';
-import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, MAX_DIAS, PAGOS, CLASSES, ENTRADAS_DO_APP, TAXA_CARTAO } from '../api/_lib/auditoriaGateway.js';
+import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, identidadeDoPagador, chavesDosPagadores, casarClientes, MAX_DIAS, PAGOS, CLASSES, ENTRADAS_DO_APP, TAXA_CARTAO, CLASSES_COM_PAGADOR } from '../api/_lib/auditoriaGateway.js';
 
 const ler = (p) => semComentarios(readFileSync(new URL(p, import.meta.url), 'utf8'));
 const pago = (id, extra = {}) => ({
@@ -113,6 +113,33 @@ test('o outro lado: venda paga aqui pelo gateway cujo pagamento não apareceu l�
   assert.deepEqual(vendasPagasSemPagamento([], []), []);
 });
 
+test('quem pagou o que não tem venda: identidade do gateway, chaves para buscar o cadastro e o casamento por CPF ou e-mail', () => {
+  assert.deepEqual([...CLASSES_COM_PAGADOR], ['sem_venda', 'dinheiro_saiu', 'pago_la_nao_pago_aqui', 'venda_fora_do_app']);
+  const comDoc = pago(1, { payer: { id: 77, first_name: 'Maria', last_name: 'Silva', email: 'Maria.Silva@Gmail.com', identification: { type: 'cpf', number: '123.456.789-09' } } });
+  const soEmail = pago(2, { payer: { email: 'joao@x.com' } });
+  const anonimo = pago(3, { payer: { id: 5 } });
+  assert.deepEqual(identidadeDoPagador(comDoc), { nome: 'Maria Silva', email: 'maria.silva@gmail.com', doc: '12345678909', tipo_doc: 'CPF' });
+  assert.deepEqual(identidadeDoPagador(anonimo), { nome: null, email: null, doc: null, tipo_doc: null });
+  assert.deepEqual(identidadeDoPagador(null), { nome: null, email: null, doc: null, tipo_doc: null });
+  const linhas = [
+    { id: '1', classe: 'sem_venda' }, { id: '2', classe: 'sem_venda' }, { id: '3', classe: 'sem_venda' },
+    { id: '4', classe: 'bate' }, // tem venda: o comprador já está nela, não se busca o pagador
+  ];
+  const pagamentos = [comDoc, soEmail, anonimo, pago(4, { payer: { email: 'ignorado@x.com' } })];
+  assert.deepEqual(chavesDosPagadores(linhas, pagamentos), { emails: ['maria.silva@gmail.com', 'joao@x.com'], docs: ['12345678909'] });
+  const usuarios = [
+    { id: 'u1', full_name: 'Maria da Silva', email: 'outro@x.com', cpf: '123.456.789-09' }, // casa pelo CPF, mesmo formatado
+    { id: 'u2', full_name: 'João', email: 'JOAO@x.com', cpf: null },                      // casa pelo e-mail, sem distinguir maiúsculas
+  ];
+  const r = casarClientes(linhas, pagamentos, usuarios);
+  assert.deepEqual(r[0].cliente, { id: 'u1', nome: 'Maria da Silva' });
+  assert.deepEqual(r[0].pagador_detalhe, { nome: 'Maria Silva', email: 'mar…@gmail.com', doc: 'CPF …8909' }, 'e-mail e documento saem mascarados');
+  assert.deepEqual(r[1].cliente, { id: 'u2', nome: 'João' });
+  assert.equal(r[2].cliente, null); assert.deepEqual(r[2].pagador_detalhe, { nome: null, email: null, doc: null });
+  assert.equal(r[3].cliente, undefined, 'linha com venda não é tocada');
+  assert.deepEqual(casarClientes([], [], []), []);
+});
+
 test('a rota é só de administrador, só POST e só leitura; reaproveita a listagem paginada da varredura', () => {
   const R = ler('../api/functions/auditoriaGateway.js');
   assert.ok(R.includes("import { exigirSessao } from '../_lib/sessao.js';"));
@@ -121,6 +148,7 @@ test('a rota é só de administrador, só POST e só leitura; reaproveita a list
   assert.ok(R.includes("if (req.method !== 'POST')"));
   assert.ok(R.includes("import { listarPagamentosDoGateway } from '../_lib/varreduraGateway.js';"));
   assert.ok(R.includes("fetch('https://api.mercadopago.com/users/me'") && R.includes('classificarPagamentos(pagamentos, vendas, { nossoId })'), 'sabe quem somos no gateway para separar o que a conta pagou');
+  assert.ok(R.includes('casarClientes(classificado.linhas, pagamentos, usuarios)') && R.includes("'id,full_name,email,cpf'"), 'procura o pagador nos cadastros por e-mail e CPF, lendo só o necessário');
   assert.ok(!/method:\s*'(POST|PATCH|DELETE|PUT)'/.test(R), 'a rota não grava nada');
   const L = ler('../api/_lib/auditoriaGateway.js');
   assert.ok(!/fetch\(/.test(L), 'a régua é pura: não fala com rede');
