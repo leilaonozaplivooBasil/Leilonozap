@@ -12,7 +12,7 @@
 // A régua e as contas ficam em api/_lib/auditoriaGateway.js (puro, testado).
 import { exigirSessao } from '../_lib/sessao.js';
 import { listarPagamentosDoGateway } from '../_lib/varreduraGateway.js';
-import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, PAGOS } from '../_lib/auditoriaGateway.js';
+import { janelaDaAuditoria, classificarPagamentos, vendasPagasSemPagamento, chavesDosPagadores, casarClientes, PAGOS } from '../_lib/auditoriaGateway.js';
 
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -64,11 +64,23 @@ export default async function handler(req, res) {
     // o outro lado: tudo que foi pago aqui pelo gateway no mesmo período
     const vendasPagas = await lerLista(`catalog_sales?select=${CAMPOS}&mp_payment_id=not.is.null&status=in.(${PAGOS.join(',')})&created_date=gte.${encodeURIComponent(janela.de)}&created_date=lte.${encodeURIComponent(janela.ate)}&order=created_date.desc&limit=2000`);
 
-    const { linhas, totais } = classificarPagamentos(pagamentos, vendas, { nossoId });
+    const classificado = classificarPagamentos(pagamentos, vendas, { nossoId });
+    const totais = classificado.totais;
+
+    // quem pagou o que não tem venda: é cliente do aplicativo? (por documento ou e-mail do cadastro)
+    const chaves = chavesDosPagadores(classificado.linhas, pagamentos);
+    const usuarios = [];
+    const CAMPOS_USUARIO = 'id,full_name,email,cpf';
+    for (let i = 0; i < chaves.emails.length; i += 100) usuarios.push(...await lerLista(`app_users?select=${CAMPOS_USUARIO}&email=in.(${encodeURIComponent(chaves.emails.slice(i, i + 100).map((s) => `"${s}"`).join(','))})&limit=500`));
+    // o cadastro pode guardar o CPF com pontos e traço ou só dígitos: busca das duas formas
+    const docsAmbos = chaves.docs.flatMap((d) => (d.length === 11 ? [d, `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`] : [d]));
+    for (let i = 0; i < docsAmbos.length; i += 100) usuarios.push(...await lerLista(`app_users?select=${CAMPOS_USUARIO}&cpf=in.(${encodeURIComponent(docsAmbos.slice(i, i + 100).map((s) => `"${s}"`).join(','))})&limit=500`));
+    const linhas = casarClientes(classificado.linhas, pagamentos, usuarios);
+
     const semPagamento = vendasPagasSemPagamento(vendasPagas, pagamentos);
     return res.status(200).json({
       ok: true, janela, truncado: pagamentos.length >= TETO_PAGAMENTOS, conta: nossoId,
-      totais: { ...totais, vendas_pagas_aqui: vendasPagas.length, pago_aqui_sem_pagamento_la: semPagamento.length },
+      totais: { ...totais, vendas_pagas_aqui: vendasPagas.length, pago_aqui_sem_pagamento_la: semPagamento.length, sem_venda_de_cliente: linhas.filter((l) => l.classe === 'sem_venda' && l.cliente).length },
       pago_aqui_sem_pagamento_la: semPagamento,
       linhas,
     });

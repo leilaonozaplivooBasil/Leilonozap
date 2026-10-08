@@ -173,6 +173,62 @@ export function classificarPagamentos(pagamentos = [], vendas = [], { nossoId = 
   return { linhas, totais };
 }
 
+const soDigitos = (s) => String(s || '').replace(/\D+/g, '');
+const mascararEmail = (e) => { const s = String(e || ''); const i = s.indexOf('@'); return i < 1 ? null : `${s.slice(0, Math.min(3, i))}…${s.slice(i)}`; };
+const mascararDoc = (d) => { const n = soDigitos(d); return n.length >= 4 ? `…${n.slice(-4)}` : null; };
+/** Caixas em que vale a pena saber QUEM pagou (as outras já têm a venda, e nela o comprador). */
+export const CLASSES_COM_PAGADOR = Object.freeze(['sem_venda', 'dinheiro_saiu', 'pago_la_nao_pago_aqui', 'venda_fora_do_app']);
+
+/** Quem pagou, pelo que o gateway devolve no pagamento (nome, e-mail, documento). Puro. */
+export function identidadeDoPagador(p) {
+  const payer = p?.payer && typeof p.payer === 'object' ? p.payer : {};
+  const nome = [payer.first_name, payer.last_name].map((s) => String(s || '').trim()).filter(Boolean).join(' ') || null;
+  const email = String(payer.email || '').trim().toLowerCase() || null;
+  const doc = soDigitos(payer.identification?.number) || null;
+  const tipoDoc = payer.identification?.type ? String(payer.identification.type).toUpperCase() : null;
+  return { nome, email, doc, tipo_doc: tipoDoc };
+}
+
+/** E-mails e documentos (só dígitos) dos pagadores das linhas que pedem identificação — para buscar os cadastros. */
+export function chavesDosPagadores(linhas = [], pagamentos = []) {
+  const porId = new Map((Array.isArray(pagamentos) ? pagamentos : []).filter((p) => p && p.id != null).map((p) => [String(p.id), p]));
+  const emails = new Set(); const docs = new Set();
+  for (const l of Array.isArray(linhas) ? linhas : []) {
+    if (!CLASSES_COM_PAGADOR.includes(l?.classe)) continue;
+    const ident = identidadeDoPagador(porId.get(String(l.id)));
+    if (ident.email) emails.add(ident.email);
+    if (ident.doc) docs.add(ident.doc);
+  }
+  return { emails: [...emails], docs: [...docs] };
+}
+
+/**
+ * Casa o pagador de cada linha (das caixas que pedem identificação) com os cadastros
+ * do aplicativo, por documento ou por e-mail. Devolve as linhas com `pagador_detalhe`
+ * (nome como veio do gateway; e-mail e documento mascarados) e `cliente` (id e nome
+ * do cadastro que casou, ou null). Pagamento sem venda cujo pagador É cliente do
+ * aplicativo é a pista de um depósito feito por fora. Puro. Nunca lança.
+ */
+export function casarClientes(linhas = [], pagamentos = [], usuarios = []) {
+  const porId = new Map((Array.isArray(pagamentos) ? pagamentos : []).filter((p) => p && p.id != null).map((p) => [String(p.id), p]));
+  const porEmail = new Map(); const porDoc = new Map();
+  for (const u of Array.isArray(usuarios) ? usuarios : []) {
+    if (!u || !u.id) continue;
+    const e = String(u.email || '').trim().toLowerCase(); if (e) porEmail.set(e, u);
+    const d = soDigitos(u.cpf); if (d) porDoc.set(d, u);
+  }
+  return (Array.isArray(linhas) ? linhas : []).map((l) => {
+    if (!l || !CLASSES_COM_PAGADOR.includes(l.classe)) return l;
+    const ident = identidadeDoPagador(porId.get(String(l.id)));
+    const u = (ident.doc && porDoc.get(ident.doc)) || (ident.email && porEmail.get(ident.email)) || null;
+    return {
+      ...l,
+      pagador_detalhe: { nome: ident.nome, email: mascararEmail(ident.email), doc: ident.doc ? `${ident.tipo_doc || 'DOC'} ${mascararDoc(ident.doc)}` : null },
+      cliente: u ? { id: u.id, nome: u.full_name || null } : null,
+    };
+  });
+}
+
 /**
  * O outro lado: vendas PAGAS aqui, com pagamento do gateway, cujo pagamento não
  * apareceu na lista do gateway com dinheiro (nem pelo id, nem pela referência).
