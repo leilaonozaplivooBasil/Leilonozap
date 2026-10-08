@@ -364,3 +364,16 @@ test('🔴 só DATA DE SAÍDA (sem entrada): banner ligado continua ligado e nã
     await pagina.waitForFunction(() => document.querySelector('[data-banner="geral"] [data-estado]')?.getAttribute('data-estado') === 'no_ar_com_fim');
   } finally { await ctx.close(); }
 });
+
+test('🔴 ligado com a saída VENCIDA: o painel explica e "Voltar ao ar" tira só a saída (a entrada fica)', { skip: semNavegador }, async () => {
+  const { ctx, pagina } = await abrir();
+  try {
+    const cartao = pagina.locator('[data-banner="tv3"]');
+    assert.equal(await cartao.locator('[data-estado]').first().getAttribute('data-estado'), 'encerrado');
+    assert.equal(await pagina.locator('[data-banner="geral"] [data-teste="voltar-ao-ar"]').count(), 0, 'o botão apareceu num banner que está no ar');
+    await cartao.locator('[data-teste="voltar-ao-ar"]').click();
+    await pagina.waitForFunction(() => window.__plataformaFalsa.chamadas.some((c) => c.tipo === 'update' && c.id === 'tv3'));
+    const [u] = (await gravacoes(pagina, 'update')).filter((c) => c.id === 'tv3');
+    assert.deepEqual(u.dados, { ends_at: null }, 'só a saída vencida sai; a entrada e o interruptor não são tocados');
+  } finally { await ctx.close(); }
+});
