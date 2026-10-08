@@ -76,6 +76,13 @@ export default function AuctionCheckoutModern() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  // 🛡️ DIR-211 (08/10/2026): depósito pago que o antifraude segurou ({ espera_ate, automatico })
+  const [emAnalise, setEmAnalise] = useState(null);
+  const horaDaEspera = (iso) => {
+    const t = new Date(iso).getTime();
+    if (!iso || Number.isNaN(t)) return 'daqui a 1h30';
+    return new Date(t + 30 * 60000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+  };
   const initialTimeoutRef = useRef(null);
   const intervalRef = useRef(null);
   const autoSubmitTriggered = useRef(false);
@@ -357,6 +364,8 @@ export default function AuctionCheckoutModern() {
 
       if (responseData?.success === true) {
         setPixData(responseData);
+        // 🛡️ DIR-211: cartão aprovado que o antifraude segurou — a tela diz "em conferência".
+        if (responseData?.em_analise) setEmAnalise({ espera_ate: responseData.espera_ate || null, automatico: !!responseData.automatico });
         setStep('payment');
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
 
@@ -555,8 +564,12 @@ export default function AuctionCheckoutModern() {
         });
         const data = result?.data || result;
         if (data?.found && data?.status === 'confirmed') {
+          setEmAnalise(null);
           setPaymentConfirmed(true);
           toast.success('✅ Pagamento confirmado! Saldo adicionado.');
+        } else if (data?.found && data?.status === 'em_analise') {
+          // 🛡️ DIR-211: pago, em conferência (antifraude) — o poll desacelera e a tela avisa
+          setEmAnalise((atual) => (atual && atual.espera_ate === (data.espera_ate || null) && atual.automatico === !!data.automatico && atual.decisao === (data.decisao || null) ? atual : { espera_ate: data.espera_ate || null, automatico: !!data.automatico, decisao: data.decisao || null }));
         } else if (data?.found && data?.status === 'failed') {
           setPaymentError({
             show: true,
@@ -572,7 +585,7 @@ export default function AuctionCheckoutModern() {
 
     // Primeira checagem imediata após 3s
     initialTimeoutRef.current = setTimeout(checkPaymentStatus, 3000);
-    intervalRef.current = setInterval(checkPaymentStatus, 5000);
+    intervalRef.current = setInterval(checkPaymentStatus, emAnalise ? 60000 : 5000);
 
     // 📱 PONTO 69: no celular o setInterval congela enquanto o app do banco está
     // aberto. Ao voltar pro navegador, checa NA HORA — sem esperar o próximo ciclo.
@@ -586,7 +599,7 @@ export default function AuctionCheckoutModern() {
       document.removeEventListener('visibilitychange', onWake);
       window.removeEventListener('focus', onWake);
     };
-  }, [step, pixData, paymentConfirmed]);
+  }, [step, pixData, paymentConfirmed, emAnalise]);
 
   // Após recarga confirmada, volta automaticamente para o leilão/loja de origem
   useEffect(() => {
@@ -1095,10 +1108,26 @@ export default function AuctionCheckoutModern() {
                           <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
                         </div>
 
-                        <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Aguardando confirmação do pagamento...
-                        </div>
+                        {emAnalise ? (
+                          <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-left space-y-1" data-teste="deposito-em-analise">
+                            {emAnalise.decisao === 'recusado' ? (
+                              <>
+                                <p className="text-sm font-bold text-amber-200">Depósito em devolução.</p>
+                                <p className="text-xs text-amber-100/90">A conferência não aprovou este depósito: o valor está sendo devolvido pelo Mercado Pago para a conta de origem.</p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-bold text-amber-200">Pagamento recebido! Depósito em conferência.</p>
+                                <p className="text-xs text-amber-100/90">Por segurança, este depósito passa por uma conferência rápida antes de entrar na Carteira. {emAnalise.automatico ? `Entra sozinho até ${horaDaEspera(emAnalise.espera_ate)}.` : 'A equipe libera assim que conferir (em horário comercial, até 1 hora).'} Você não precisa fazer nada.</p>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Aguardando confirmação do pagamento...
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center space-y-4">
@@ -1108,6 +1137,12 @@ export default function AuctionCheckoutModern() {
                         <h3 className="text-2xl font-bold text-white">Pagamento em Processamento</h3>
                         <p className="text-gray-400">Seu cartão está sendo processado</p>
                         <p className="text-sm text-gray-500">Você receberá uma confirmação em breve</p>
+                        {emAnalise && (
+                          <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-left space-y-1" data-teste="deposito-em-analise">
+                            <p className="text-sm font-bold text-amber-200">Pagamento aprovado! Depósito em conferência.</p>
+                            <p className="text-xs text-amber-100/90">Por segurança, este depósito passa por uma conferência rápida antes de entrar na Carteira. {emAnalise.automatico ? `Entra sozinho até ${horaDaEspera(emAnalise.espera_ate)}.` : 'A equipe libera assim que conferir (em horário comercial, até 1 hora).'} Você não precisa fazer nada.</p>
+                          </div>
+                        )}
                         {/* 🧭 PONTO 69: nunca deixar a tela sem saída — o cartão pode
                             levar minutos e o usuário não pode ficar preso aqui. */}
                         <Button

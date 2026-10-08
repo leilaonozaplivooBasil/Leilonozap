@@ -74,6 +74,10 @@ const DIVERGENCIA = {
   dinheiro_saiu: { rotulo: 'Dinheiro saiu no gateway, mas consta pago aqui', cor: 'text-red-300' },
   pago_nao_creditado: { rotulo: 'Pago no gateway, cancelado aqui', cor: 'text-amber-300' },
   pago_sem_pagamento: { rotulo: 'Pago aqui, sem pagamento no gateway', cor: 'text-red-300' },
+  // 🛡️ DIR-211 (08/10/2026) — depósito pago que o antifraude segurou antes do crédito
+  em_analise: { rotulo: 'Depósito em conferência (antifraude) — decidir: liberar ou devolver', cor: 'text-amber-300' },
+  recusado_sem_devolucao: { rotulo: 'Recusado na conferência, mas a devolução no gateway ainda não aconteceu', cor: 'text-red-300' },
+  liberado_sem_credito: { rotulo: 'Liberado na conferência, mas o crédito ainda não entrou — o sistema insiste a cada 30 min', cor: 'text-sky-300' },
 };
 const soDigitos = (v) => String(v || '').replace(/\D/g, '');
 const FAIXAS = { ate_17: 'até 17', '18_24': '18 a 24', '25_34': '25 a 34', '35_44': '35 a 44', '45_54': '45 a 54', '55_64': '55 a 64', '65_mais': '65 ou mais' };
@@ -227,7 +231,9 @@ export default function PainelInvestidor() {
     const valor = Number(x.gateway?.valor ?? x.valor) || 0;
     const pergunta = modo === 'devolver'
       ? `Devolver ${moeda(valor)} ao pagador pelo Mercado Pago (${x.nome})? Escreva o motivo; ele fica no histórico.`
-      : `Marcar a pendência de ${x.nome} (${moeda(valor)}) como tratada. Escreva o motivo; ele fica no histórico.`;
+      : modo === 'liberar'
+        ? `Liberar agora o depósito de ${moeda(valor)} de ${x.nome} (${x.antifraude?.rotulo || 'em conferência'})? O saldo entra na Carteira na hora. Escreva o motivo; ele fica no histórico.`
+        : `Marcar a pendência de ${x.nome} (${moeda(valor)}) como tratada. Escreva o motivo; ele fica no histórico.`;
     const motivo = window.prompt(pergunta, '');
     if (motivo === null) return;
     if (String(motivo).trim().length < 5) { toast.error('Escreva o motivo com pelo menos 5 letras.'); return; }
@@ -235,7 +241,7 @@ export default function PainelInvestidor() {
     try {
       const r = await plataforma.functions.invoke('resolverPendencia', { user_id: user.id, sale_id: x.sale_id, modo, motivo: String(motivo).trim() });
       const d = r?.data || r;
-      if (d?.success) toast.success(modo === 'devolver' ? `Devolvido ${moeda(d.valor)} pelo Mercado Pago.` : 'Pendência marcada como tratada.', { duration: 4000 });
+      if (d?.success) toast.success(modo === 'devolver' ? `Devolvido ${moeda(d.valor)} pelo Mercado Pago.` : modo === 'liberar' ? 'Depósito liberado: o saldo entrou na Carteira.' : 'Pendência marcada como tratada.', { duration: 4000 });
       else toast.error(d?.error || 'Não foi possível concluir.');
     } catch {
       toast.error('Sem resposta do servidor.');
@@ -434,6 +440,7 @@ export default function PainelInvestidor() {
                             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-0.5 text-gray-200"><span className="inline-block w-2 h-2 rounded-full" style={{ background: sit.cor }} /> {sit.rotulo}</span>
                               <span className="rounded-full border border-white/10 px-2 py-0.5 text-gray-400">aqui: {x.status}</span>
+                              {x.antifraude && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-amber-200" data-teste="pendencia-antifraude">{x.antifraude.rotulo} · {x.antifraude.decisao === 'recusado' ? 'recusado: devolver' : x.antifraude.decisao ? `liberado por ${x.antifraude.decidido_por || 'prazo'}, creditando` : x.antifraude.retido ? 'o gateway já diz que o dinheiro saiu: não libera sozinho' : x.antifraude.automatico ? `libera sozinho a partir das ${hora(x.antifraude.espera_ate)}` : 'só libera com a sua decisão'}</span>}
                               {x.bloqueado > 0 && <span className="rounded-full border border-red-400/30 bg-red-400/10 px-2 py-0.5 text-red-200">saldo bloqueado {moeda(x.bloqueado)}</span>}
                               {x.kind === 'wallet_deposit' && x.divergencia === 'dinheiro_saiu' && !(x.bloqueado > 0) && <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-amber-200">saldo disponível {moeda(x.saldo_disponivel)}</span>}
                               {tel && <a href={`tel:+55${tel}`} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-gray-200 hover:bg-white/10"><Phone className="w-3 h-3" /> {x.telefone}</a>}
@@ -445,10 +452,15 @@ export default function PainelInvestidor() {
                                 <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 text-sky-200">ação "{x.acao_pendente.acao}" aguardando o próximo ciclo</span>
                               ) : (
                                 <>
-                                  {x.divergencia !== 'dinheiro_saiu' && x.situacao !== 'devolvido' && (
+                                  {(x.divergencia === 'em_analise' || x.divergencia === 'recusado_sem_devolucao') && (
+                                    <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'liberar')} className="rounded-full border border-emerald-400/40 bg-emerald-400/10 px-2.5 py-1 font-bold text-emerald-200 hover:bg-emerald-400/20 disabled:opacity-60" data-teste="botao-liberar-deposito">Liberar agora</button>
+                                  )}
+                                  {x.divergencia !== 'dinheiro_saiu' && x.situacao !== 'devolvido' && x.divergencia !== 'liberado_sem_credito' && (
                                     <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'devolver')} className="rounded-full border border-red-400/40 bg-red-400/10 px-2.5 py-1 font-bold text-red-200 hover:bg-red-400/20 disabled:opacity-60" data-teste="botao-devolver-gateway">Devolver pelo Mercado Pago</button>
                                   )}
-                                  <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'resolver')} className="rounded-full border border-white/15 px-2.5 py-1 font-bold text-gray-200 hover:bg-white/10 disabled:opacity-60" data-teste="botao-marcar-resolvida">Marcar como tratada</button>
+                                  {x.divergencia !== 'em_analise' && x.divergencia !== 'recusado_sem_devolucao' && x.divergencia !== 'liberado_sem_credito' && (
+                                    <button type="button" disabled={resolvendo === x.sale_id} onClick={() => resolverPendencia(x, 'resolver')} className="rounded-full border border-white/15 px-2.5 py-1 font-bold text-gray-200 hover:bg-white/10 disabled:opacity-60" data-teste="botao-marcar-resolvida">Marcar como tratada</button>
+                                  )}
                                 </>
                               )}
                               {resolvendo === x.sale_id && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-300" />}

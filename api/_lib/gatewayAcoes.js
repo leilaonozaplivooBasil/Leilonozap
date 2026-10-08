@@ -13,13 +13,18 @@
 //               com chave de idempotência = id da ação: repetir nunca devolve em dobro).
 //               Depois reconfere o pagamento, grava gateway, marca a pendência resolvida.
 //   resolver  — só marca a pendência como tratada, com motivo (ex.: compra interna de teste).
+//   liberar   — 🛡️ DIR-211 (08/10/2026): depósito em espera do antifraude, liberado pela
+//               Beatriz. A decisão 'liberado' já está gravada (resolverPendencia); aqui o
+//               PRÓPRIO webhook é chamado por dentro (x-interno) e vira a venda 'paid'.
+//               Não marca a pendência como resolvida: o depósito vira uma venda paga comum.
 import { buscarPagamento, resumoDoPagamento } from './conferenciaMercadoPago.js';
+import { dispararWebhookInterno } from './antifraudeDeposito.js';
 
 const MP = 'https://api.mercadopago.com';
 const SUPABASE_URL = String(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const MP_TOKEN = process.env.MP_ACCESS_TOKEN;
-const ACOES = ['devolver', 'resolver'];
+const ACOES = ['devolver', 'resolver', 'liberar'];
 
 function sb(path, opts = {}) {
   return fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -72,14 +77,33 @@ async function devolverNoGateway(acao) {
   return { ok: true, http: r.status, refund_id: j?.id ?? null, valor: Number(j?.amount) || valor, status: j?.status ?? null, bruto: texto.slice(0, 800) };
 }
 
+/**
+ * 🛡️ DIR-211 — libera um depósito em espera do antifraude re-disparando o PRÓPRIO webhook por
+ * dentro (x-interno). A decisão 'liberado' já foi gravada por resolverPendencia; o webhook vê a
+ * decisão, vira 'paid' e credita. Só confirma se a resposta diz que creditou.
+ */
+async function liberarNoAplicativo(acao) {
+  if (!acao.payment_id) return { ok: false, erro: 'sem_payment_id' };
+  const j = await dispararWebhookInterno(acao.payment_id, 'liberar');
+  if (j?.paid || j?.already_paid) return { ok: true, http: j.http, creditado: j.credited ?? null, sale_id: j.sale_id || acao.sale_id };
+  if ([401, 403].includes(Number(j?.http))) {
+    console.error('[GATEWAY-AÇÕES] o webhook recusou a chamada interna (401/403): confira CRON_SECRET (x-interno) na Vercel — a liberação do antifraude não sai sem isso.');
+    return { ok: false, http: j.http, erro: 'config: o webhook recusou a chamada interna (falta CRON_SECRET / x-interno)' };
+  }
+  return { ok: false, http: j?.http, erro: j?.em_espera ? `ainda_em_espera${j.decisao ? `:${j.decisao}` : ''}${j.retido ? ':retido_no_gateway' : ''}` : String(j?.error || j?.motivo || 'webhook_nao_creditou').slice(0, 200) };
+}
+
 /** Executa UMA ação. Grava o resultado na linha. Devolve { ok, resultado }. Nunca lança. */
 export async function executarAcao(acao) {
   let resultado;
   try {
     if (acao.acao === 'devolver') resultado = await devolverNoGateway(acao);
     else if (acao.acao === 'resolver') resultado = { ok: true };
+    else if (acao.acao === 'liberar') resultado = await liberarNoAplicativo(acao);
     else resultado = { ok: false, erro: 'acao_desconhecida' };
-    if (resultado.ok) await marcarResolvida(acao.sale_id, acao.pedida_por, `${acao.acao}: ${acao.motivo || ''}`.slice(0, 500));
+    // DIR-211: 'liberar' NÃO marca a pendência como resolvida — o depósito liberado vira uma venda
+    // paga comum, e conciliacao_resolvida_em esconderia dela um 'dinheiro_saiu' futuro no painel.
+    if (resultado.ok && acao.acao !== 'liberar') await marcarResolvida(acao.sale_id, acao.pedida_por, `${acao.acao}: ${acao.motivo || ''}`.slice(0, 500));
   } catch (e) {
     resultado = { ok: false, erro: String(e?.message || e).slice(0, 300) };
   }

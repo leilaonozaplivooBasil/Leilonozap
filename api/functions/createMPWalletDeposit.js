@@ -6,6 +6,8 @@ import { oid } from '../_lib/oid.js';
 import { montarRawArremate } from '../_lib/rawArremate.js';
 import { exigirSessao } from '../_lib/sessao.js';
 import { DEPOSITO_MINIMO, abaixoDoMinimo } from '../../src/lib/depositoMinimo.js';
+// 🛡️ DIR-211 (08/10/2026): a chamada interna ao webhook (cartão aprovado) leva x-interno.
+import { cabecalhosInternos } from '../_lib/antifraudeDeposito.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -234,13 +236,18 @@ export default async function handler(req, res) {
       // usaria (fulfillStoreOrder, activatePartnerPlan, creditWalletDeposit, etc.) chamando
       // o próprio endpoint do webhook — reaproveita 100% da regra de negócio sem duplicar
       // nem tocar em mpWebhook.js. O webhook real do MP também chega depois como rede de segurança.
+      // 🛡️ DIR-211 (08/10/2026): a chamada leva x-interno (sobrevive a MP_WEBHOOK_MODO=bloquear) e
+      // a resposta diz se o antifraude segurou o depósito — a tela mostra "em conferência".
+      let emAnalise = null;
       if (cardPay.status === 'approved') {
         try {
-          await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
+          const r = await fetch(`${BASE_URL}/api/functions/mpWebhook`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: { id: cardPay.id } }),
+            headers: cabecalhosInternos(),
+            body: JSON.stringify({ type: 'payment', data: { id: cardPay.id }, origem: 'cartao' }),
           });
+          const j = await r.json().catch(() => null);
+          if (j?.em_espera) emAnalise = { espera_ate: j.espera_ate || null, automatico: !!j.automatico };
         } catch (_) { /* rede de segurança: o webhook do MP também vai chegar */ }
       }
 
@@ -255,6 +262,8 @@ export default async function handler(req, res) {
         status: cardPay.status,
         status_detail: cardPay.status_detail,
         installments,
+        em_analise: !!emAnalise,
+        ...(emAnalise ? { espera_ate: emAnalise.espera_ate, automatico: emAnalise.automatico } : {}),
       });
     }
 

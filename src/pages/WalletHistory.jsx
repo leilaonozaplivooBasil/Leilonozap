@@ -72,6 +72,8 @@ export default function WalletHistory() {
     const config = {
       confirmed: { label: "Confirmado", className: "bg-green-600" },
       pending: { label: "Pendente", className: "bg-yellow-600" },
+      // 🛡️ DIR-211: pago, em conferência do antifraude antes de entrar na Carteira
+      em_analise: { label: "Em conferência", className: "bg-amber-600" },
       failed: { label: "Falhou", className: "bg-red-600" }
     };
     const { label, className } = config[status] || config.pending;

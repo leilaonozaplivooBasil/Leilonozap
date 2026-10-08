@@ -21,7 +21,9 @@ export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
   try {
     const { de, ate } = janelaPixPendente();
-    const vendas = await (await sb(`catalog_sales?select=id,kind,buyer_id,total_amount,tracking_code,created_date,pix_ticket_url&status=eq.pending_payment&payment_method=eq.pix_mp&kind=in.(wallet_deposit,loja)&created_date=gte.${de}&created_date=lt.${ate}&limit=200`)).json();
+    // 🛡️ DIR-211: depósito PAGO que o antifraude segurou continua 'pending_payment' — não é PIX
+    // pendente, e não pode receber "você ainda não pagou" (antifraude_espera_ate=is.null).
+    const vendas = await (await sb(`catalog_sales?select=id,kind,buyer_id,total_amount,tracking_code,created_date,pix_ticket_url&status=eq.pending_payment&payment_method=eq.pix_mp&kind=in.(wallet_deposit,loja)&antifraude_espera_ate=is.null&created_date=gte.${de}&created_date=lt.${ate}&limit=200`)).json();
     let enviados = 0; let pulados = 0;
     for (const v of (Array.isArray(vendas) ? vendas : [])) {
       if (!v.buyer_id) { pulados += 1; continue; }

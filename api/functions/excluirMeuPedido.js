@@ -39,7 +39,7 @@ export default async function handler(req, res) {
     if (!userId || !saleId) return res.status(400).json({ success: false, error: 'Pedido e usuário obrigatórios' });
     if (!SUPABASE_URL || !SR) return res.status(500).json({ success: false, error: 'Config do servidor ausente' });
 
-    const sale = (await (await sb(`catalog_sales?select=id,buyer_id,status,mp_payment_id&id=eq.${encodeURIComponent(saleId)}&limit=1`)).json())[0];
+    const sale = (await (await sb(`catalog_sales?select=id,buyer_id,status,mp_payment_id,antifraude_espera_ate&id=eq.${encodeURIComponent(saleId)}&limit=1`)).json())[0];
     if (!sale) return res.status(200).json({ success: false, error: 'Pedido não encontrado' });
 
     // 1) dono do pedido (ou admin)
@@ -53,6 +53,11 @@ export default async function handler(req, res) {
     // 2) nunca apagar pedido pago / em andamento
     if (!EXCLUIVEIS.includes(sale.status)) {
       return res.status(200).json({ success: false, error: 'Só é possível excluir pedidos aguardando pagamento ou cancelados' });
+    }
+    // 🛡️ DIR-211: depósito PAGO que o antifraude segurou continua pending_payment — cancelar aqui
+    // o tiraria da lista da Beatriz e do cron, com o gateway já dispensado (respondeu 200). Não.
+    if (sale.antifraude_espera_ate) {
+      return res.status(200).json({ success: false, error: 'Este depósito já foi pago e está em conferência; ele entra na Carteira assim que for liberado.' });
     }
 
     // 3) 🔴 TRAVA FINANCEIRA (03/08/2026): se JÁ existe cobrança gerada (PIX/cartão),
