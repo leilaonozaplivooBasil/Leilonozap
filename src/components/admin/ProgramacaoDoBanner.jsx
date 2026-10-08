@@ -54,11 +54,24 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
   };
 
   const temJanela = !!(banner?.starts_at || banner?.ends_at);
+  // 08/10/2026 — interruptor ligado + saída vencida = banner fora do ar e "apagado" no painel, o que
+  // parece desativado. Um clique devolve o banner ao ar (tira só a saída vencida; a entrada fica).
+  const saidaVencida = banner?.is_active !== false && !!banner?.ends_at && new Date(banner.ends_at).getTime() <= (agoraMs ?? Date.now());
 
   return (
     <div data-teste="programacao-do-banner" className="px-2.5 pb-2.5 pt-1 bg-gray-900/60">
       <div className="flex flex-wrap items-center gap-2">
         <EtiquetaDoBanner banner={banner} agoraMs={agoraMs} />
+        {suporta && saidaVencida && (
+          <button
+            type="button"
+            onClick={() => onSalvar({ ends_at: null })}
+            data-teste="voltar-ao-ar"
+            className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-md border border-emerald-500/50 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25"
+          >
+            Voltar ao ar (tirar a data de saída)
+          </button>
+        )}
         {suporta && (
           <button
             type="button"
@@ -84,7 +97,7 @@ export default function ProgramacaoDoBanner({ banner, agoraMs, suporta = true, o
             </label>
           </div>
           <p className="mt-1.5 text-[10px] text-gray-500">Horário de Brasília. Deixe em branco o lado que não precisa. À meia-noite em que uma arte sai, a próxima já entra.</p>
-          {banner?.is_active !== false && banner?.ends_at && new Date(banner.ends_at).getTime() <= (agoraMs ?? Date.now()) && (
+          {saidaVencida && (
             <p data-teste="aviso-saida-passada" className="mt-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
               O interruptor está ligado, mas a data de saída deste banner já passou, por isso ele está fora do ar. Para ele voltar, escolha uma saída futura ou clique em <b>Tirar as datas</b>.
             </p>
