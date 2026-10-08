@@ -8,12 +8,17 @@ import {
   guardarBanners,
   lerBannersGuardados,
 } from '@/lib/bannersAoVivo';
+import { CONTEXTO_CONFIG, fileiraDaPagina, lerFileiras } from '@/lib/fileirasDeBanners';
+import { filtrarPorJanela, proximaVirada } from '@/lib/janelaDoBanner';
 
-// 🖼️ Banners do Painel de Mídia, sempre atualizados — ver src/lib/bannersAoVivo.js.
-//
-// Substitui (08/10/2026) os três blocos iguais que viviam em Home, TigrinhoNoLeilao
-// e Catalog: cache de 10 min (2 min na Loja) no sessionStorage que SEGURAVA a
-// busca e deixava o banner antigo no ar em quem já estava com o app aberto.
+// 🖼️ Banners do Painel de Mídia, sempre atualizados — ver src/lib/bannersAoVivo.js —
+// e agora com as três fileiras e a janela de datas (08/10/2026):
+//   • `contexto` é a PÁGINA ('home' = Leilão, 'catalog' = Loja). A fileira que ela
+//     de fato lê vem da configuração do painel: a própria, a Unificada, ou nenhuma
+//     (src/lib/fileirasDeBanners.js);
+//   • cada banner só aparece dentro da sua janela de datas (src/lib/janelaDoBanner.js).
+//     A troca da meia-noite acontece na própria tela, no instante exato, sem rotina
+//     no servidor.
 //
 // Uso: const banners = useBannersDoPainel({ contexto: 'home', chaveCache: 'home_banners_cache' });
 
@@ -35,33 +40,65 @@ function lerUrlGuardada(chave) {
   try { return localStorage.getItem(chave) || ''; } catch { return ''; }
 }
 
+/** Do que veio do banco ao que a tela mostra: janela de datas, ordem e dispositivo. */
+const derivar = (bruto, agoraMs) => prepararBannersDoPainel(filtrarPorJanela(bruto, agoraMs));
+
 export default function useBannersDoPainel({ contexto, chaveCache, chavePreload = '' }) {
-  const [banners, setBanners] = useState(() => {
+  const [bruto, setBruto] = useState(() => {
     // ⚡ preload da arte da visita anterior: começa a baixar em paralelo com a consulta
     anunciarPrimeiroBanner(lerUrlGuardada(chavePreload));
-    const guardados = typeof sessionStorage === 'undefined' ? null : lerBannersGuardados(sessionStorage, chaveCache);
-    return guardados ? prepararBannersDoPainel(guardados) : [];
+    return (typeof sessionStorage === 'undefined' ? null : lerBannersGuardados(sessionStorage, chaveCache)) || [];
   });
-  const atuais = useRef(banners);
+  const [agora, setAgora] = useState(() => Date.now());
+  const [banners, setBanners] = useState(() => derivar(bruto, agora));
+  const brutoAtual = useRef(bruto);
   const ultimaBusca = useRef(0);
   const vivo = useRef(true);
 
   const buscar = useCallback(async () => {
     ultimaBusca.current = Date.now();
     try {
-      const dados = await plataforma.entities.BannerImage.filter({ is_active: true, context: contexto });
-      const preparados = prepararBannersDoPainel(dados);
+      const entidade = plataforma.entities.BannerImage;
+      const [config, daPagina, unificados] = await Promise.all([
+        // sem configuração legível, vale o padrão (Leilão e Loja no ar)
+        Promise.resolve(entidade.filter({ context: CONTEXTO_CONFIG })).catch(() => []),
+        entidade.filter({ is_active: true, context: contexto }),
+        entidade.filter({ is_active: true, context: 'unificado' }),
+      ]);
       if (!vivo.current) return;
-      if (chavePreload && preparados[0]?.image_url) {
-        try { localStorage.setItem(chavePreload, preparados[0].image_url); } catch { /* ignora */ }
-        anunciarPrimeiroBanner(preparados[0].image_url);
-      }
-      if (bannersIguais(atuais.current, preparados)) return;
-      atuais.current = preparados;
-      setBanners(preparados);
-      guardarBanners(sessionStorage, chaveCache, preparados);
+      const escolhida = fileiraDaPagina(contexto, lerFileiras(config));
+      const dados = escolhida === 'unificado' ? unificados : escolhida === contexto ? daPagina : [];
+      if (bannersIguais(brutoAtual.current, dados)) return;
+      brutoAtual.current = dados;
+      setBruto(dados);
+      guardarBanners(sessionStorage, chaveCache, dados);
     } catch { /* sem rede: a tela fica com o que já tinha */ }
-  }, [contexto, chaveCache, chavePreload]);
+  }, [contexto, chaveCache]);
+
+  // o que a tela mostra = o que veio do banco, filtrado pela janela de datas de AGORA
+  useEffect(() => {
+    setBanners((anterior) => {
+      const novo = derivar(bruto, agora);
+      return bannersIguais(anterior, novo) ? anterior : novo;
+    });
+  }, [bruto, agora]);
+
+  // preload da primeira arte para a próxima visita abrir instantânea
+  const primeira = banners[0]?.image_url || '';
+  useEffect(() => {
+    if (!chavePreload || !primeira) return;
+    try { localStorage.setItem(chavePreload, primeira); } catch { /* ignora */ }
+    anunciarPrimeiroBanner(primeira);
+  }, [chavePreload, primeira]);
+
+  // a virada da meia-noite: dorme até o próximo instante em que algum banner entra ou sai
+  useEffect(() => {
+    const proxima = proximaVirada(bruto, Date.now());
+    if (proxima === null) return undefined;
+    const espera = Math.min(Math.max(proxima - Date.now() + 500, 500), 2_000_000_000);
+    const t = setTimeout(() => setAgora(Date.now()), espera);
+    return () => clearTimeout(t);
+  }, [bruto, agora]);
 
   useEffect(() => {
     vivo.current = true;
@@ -69,6 +106,7 @@ export default function useBannersDoPainel({ contexto, chaveCache, chavePreload 
 
     const aoVoltar = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      setAgora(Date.now()); // o aparelho dormiu? a janela de datas é reavaliada na hora
       if (deveRevalidar({ ultimaBuscaMs: ultimaBusca.current })) buscar();
     };
     document.addEventListener('visibilitychange', aoVoltar);

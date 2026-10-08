@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Search, Loader2, Package } from 'lucide-react';
 import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
-import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
+import useBannersDoPainel from '@/hooks/useBannersDoPainel';
 
 const Product = plataforma.entities.Product;
 
@@ -16,7 +16,9 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
   // 🖼️ 15/09/2026 — esta aba mostrava a lista de banners escrita no código da
   // Loja Virtual. Essa lista não existe mais: como é a MESMA vitrine, lê o mesmo
   // contexto do Painel de Mídia ("catalog") que a loja pública lê.
-  const [banners, setBanners] = useState([]);
+  // 🗂️ 08/10/2026 — passa pelo mesmo hook da loja pública: a fileira certa (Loja ou
+  // Unificada) e a janela de datas valem aqui também.
+  const banners = useBannersDoPainel({ contexto: 'catalog', chaveCache: 'catalog_banners_cache' });
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -30,11 +32,6 @@ export default function CatalogTabComponent({ isSaiDeBaixo, user }) {
       }
     };
     loadProducts();
-
-    plataforma.entities.BannerImage
-      .filter({ is_active: true, context: 'catalog' })
-      .then((bannerData) => setBanners(prepararBannersDoPainel(bannerData)))
-      .catch(() => {});
   }, []);
 
   const filteredProducts = useMemo(() => {
