@@ -1,3 +1,13 @@
+## 🧾 DIR-209 — Auditoria dos depósitos dos últimos 30 dias: tudo que entrou, as comissões de 10% e de 5%, tudo que foi pago, conferido com o gateway (08/10/2026)
+
+**Dono:** "quero uma auditoria em todos os depósitos dos últimos 30 dias para o leilão: os valores depositados, quem recebeu comissão, quando começamos a pagar os 10%, quanto pagamos de comissão nos 5% de arremate; preciso saber tudo que entrou e todas as comissões pagas; listagem e conferência com a plataforma. Isso é sério e precisa estar tudo batendo."
+
+**Ferramenta nova (só leitura):** `api/functions/auditoriaGateway.js` + régua pura em `api/_lib/auditoriaGateway.js`. Até hoje o sistema só olhava um lado de cada vez: a conciliação (DIR-195) confere cada venda nossa no gateway; a varredura (DIR-206) olha o que o gateway recebeu desde ontem. Faltava a visão inteira de um período: **tudo que o gateway recebeu × tudo que foi pago aqui**, pagamento por pagamento, cada um numa de seis caixas — `bate`, `dinheiro_saiu`, `sem_venda`, `pago_la_nao_pago_aqui`, `valor_diferente`, `sem_dinheiro` — mais o outro lado (`pago_aqui_sem_pagamento_la`). Admin/super_admin com crachá, POST `{ actor_id, de?, ate?, dias? }` (dias de Brasília, teto 62), bruto/líquido/taxas do liberado, por meio e por situação. Nada é criado, creditado ou devolvido. `vercel.json`: 60 s para a função.
+
+**Resultado da auditoria:** registrado logo abaixo assim que a conferência (banco + gateway) fechar; a listagem completa vai num relatório à parte para o dono e a Beatriz.
+
+**Prova:** `tests/auditoriaGateway.test.mjs` (4), suíte completa, lint 0 erros, build.
+
 ## 🧾 DIR-208 — Cadeira de R$ 246 cancelada, lote de medidas nos leilões ativos, Avila fora dos alertas (08/10/2026)
 
 **Dono:** "pode fazer e tire o número do Avila da lista, ele não faz mais parte do nosso time" (depois de ler o plano escrito antes de executar) e, na sequência, mandou o próprio número para entrar na lista.
