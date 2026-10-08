@@ -128,11 +128,34 @@ export default async function handler(req, res) {
     const r = await perguntarIA(ia, prompt);
     if (!r.ok) return res.status(200).json({ ok: false, error: r.error, details: { ...(r.details || {}), pagina }, fotos, titulo });
 
-    const ficha = sanearFicha(r.obj, { fonte: temTexto ? 'pagina' : 'estimativa' });
+    let ficha = sanearFicha(r.obj, { fonte: temTexto ? 'pagina' : 'estimativa' });
     if (!ficha.titulo) ficha.titulo = titulo;
     if (!temTexto) ficha.avisos.unshift(pag.erro === 'origem_403' || pag.erro === 'demorou_demais'
       ? 'A página não abriu para o nosso servidor (bloqueio ou demora): peso e medidas são estimativa pelo nome.'
       : 'A página não trouxe texto útil: peso e medidas são estimativa pelo nome.');
+
+    // 🧱 MEDIDO EM PRODUÇÃO (08/10/2026, primeira rodada real): o Mercado Livre
+    // responde 200 ao nosso servidor, mas com a TELA DE VERIFICAÇÃO de conta
+    // no lugar da página do produto. Tinha "texto útil" (mais de 200
+    // caracteres), a IA leu com honestidade e devolveu peso/medidas nulos — e
+    // a pessoa ficava sem nada. Segunda passada: a página não serviu, então a
+    // IA estima pelo nome, marcada como estimativa, e o que a página deu de
+    // verdade (marca, modelo, descrição) fica. Nunca vira "lido da página".
+    const semMedida = !['peso', 'altura', 'largura', 'comprimento'].some((c) => ficha.medidas?.[c] != null);
+    if (temTexto && semMedida && (ficha.titulo || titulo)) {
+      const r2 = await perguntarIA(ia, montarPromptDaEstimativa({ titulo: ficha.titulo || titulo }));
+      if (r2.ok) {
+        const est = sanearFicha(r2.obj, { fonte: 'estimativa' });
+        ficha = {
+          ...ficha,
+          medidas: est.medidas,
+          fonte: 'estimativa',
+          confianca: est.confianca,
+          observacao: [ficha.observacao, est.observacao].filter(Boolean).join(' '),
+          avisos: [`A página de ${host || 'origem'} não mostrou a ficha técnica ao nosso servidor (bloqueio ou tela de verificação): peso e medidas são estimativa pelo nome.`, ...est.avisos.filter((a) => !ficha.avisos.includes(a)), ...ficha.avisos.filter((a) => !/Nenhuma medida aproveitável/.test(a))],
+        };
+      }
+    }
     console.log('[importarProdutoPeloLink]', { fonte: ficha.fonte, host, status: pag.status, lida: temTexto, confianca: ficha.confianca, fotos: fotos.length, model: r.model });
     return res.status(200).json({ ok: true, ...ficha, pagina, fotos });
   } catch (e) {
