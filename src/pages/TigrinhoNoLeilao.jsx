@@ -34,7 +34,7 @@ const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import { HeroTigre, ComoFuncionaTigre } from '../components/home/TigreNoLeilao';
-import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
+import useBannersDoPainel from '@/hooks/useBannersDoPainel';
 import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
@@ -210,7 +210,7 @@ export default function TigrinhoNoLeilao() {
   const [loadError, setLoadError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [favoriteAuctions, setFavoriteAuctions] = useState([]);
-  const [banners, setBanners] = useState([]);
+  const banners = useBannersDoPainel({ contexto: 'home', chaveCache: 'home_banners_cache', chavePreload: 'home_banner_first_url' });
   const [userRegion, setUserRegion] = useState(null);
   const [productStockMap, setProductStockMap] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
@@ -752,62 +752,10 @@ export default function TigrinhoNoLeilao() {
       setTimeout(() => loadCurrentUser(), 2000);
       setTimeout(() => loadProductStock(), 6000);
 
-      // ⚡ PRELOAD IMEDIATO DO BANNER: se já sabemos a URL da visita anterior
-      // (localStorage), injeta <link rel="preload"> no <head> AGORA — antes do
-      // fetch do banco. O browser começa a baixar a imagem em paralelo com a
-      // query, então o banner aparece instantâneo em TODOS os SOs (Mac/Win).
-      const lastBannerUrl = localStorage.getItem('home_banner_first_url');
-      if (lastBannerUrl && !document.querySelector('link[data-banner-preload]')) {
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.href = lastBannerUrl;
-        link.setAttribute('fetchPriority', 'high');
-        link.setAttribute('data-banner-preload', '1');
-        document.head.appendChild(link);
-      }
-
-      // Banners: cache de 10 minutos (raramente mudam)
-      const cachedBanners = sessionStorage.getItem('home_banners_cache');
-      const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
-
-      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
-        setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
-      } else {
-        // Banner carrega IMEDIATAMENTE (igual ao Catálogo) — sem atraso artificial.
-        // PONTO 90 — os banners bonitos da Home estão cadastrados como device_type
-        // "desktop", então o carrossel os escondia no celular e sobrava só o vídeo.
-        // Marcamos como "any": a MESMA arte serve os dois tamanhos (padrão da Loja
-        // Virtual). Os banners velhos (sem context) continuam de fora.
-        plataforma.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
-        // 🖼️ 15/09/2026 — SAIU o `.slice(0, 1)`. Ele existia porque a segunda arte
-        // antiga não enquadrava em proporção nenhuma; com a moldura 16:9 e
-        // `fit=contain` isso deixou de ser verdade, e cortar a lista fazia o dono
-        // subir 3 banners pelo painel e ver só 1 no ar.
-        // A ordem é a do painel (campo `order`) — quem é o principal é ele quem diz.
-        const sortedBanners = prepararBannersDoPainel(bannerData);
-          // Salva a URL da primeira imagem pra preload na próxima visita
-          if (sortedBanners[0]?.image_url) {
-            localStorage.setItem('home_banner_first_url', sortedBanners[0].image_url);
-            // Injeta preload agora também (primeira visita) — não espera re-render
-            if (!document.querySelector('link[data-banner-preload]')) {
-              const link = document.createElement('link');
-              link.rel = 'preload';
-              link.as = 'image';
-              link.href = sortedBanners[0].image_url;
-              link.setAttribute('fetchPriority', 'high');
-              link.setAttribute('data-banner-preload', '1');
-              document.head.appendChild(link);
-            }
-          }
-          setBanners(sortedBanners);
-          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
-          sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
-        }).catch(() => {
-          const oldBanners = sessionStorage.getItem('home_banners_cache');
-          if (oldBanners) setBanners(prepararBannersDoPainel(JSON.parse(oldBanners)));
-        });
-      }
+      // 🖼️ 08/10/2026 — os banners agora vêm do hook useBannersDoPainel (sempre
+      // atualizados: cache instantâneo + busca em toda montagem, ao voltar para o
+      // app e de tempos em tempos). O bloco de cache de 10 min que vivia aqui
+      // segurava o banner antigo em quem já estava com o app aberto.
     };
 
     loadInitialData();

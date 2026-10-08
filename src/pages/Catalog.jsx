@@ -26,7 +26,7 @@ import { getReferral, saveReferral } from '@/lib/referral';
 import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
 import { useSectionTracking } from '@/lib/tracking';
-import { prepararBannersDoPainel } from '@/lib/bannersDoPainel';
+import useBannersDoPainel from '@/hooks/useBannersDoPainel';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -68,7 +68,7 @@ export default function Catalog() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [banners, setBanners] = useState([]);
+  const banners = useBannersDoPainel({ contexto: 'catalog', chaveCache: 'catalog_banners_cache' });
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("recent");
@@ -535,37 +535,10 @@ export default function Catalog() {
         }
       }
 
-      try {
-        const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
-        const cacheTime = sessionStorage.getItem('catalog_banners_cache_time');
-
-        if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
-          setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
-          console.log('⚡ Banners do catálogo do cache');
-        } else {
-          // 🖼️ 15/09/2026 — SEM os 1500ms de atraso que havia aqui. O banner deixou
-          // de ser enfeite: agora é o hero da loja, e a lista fixa que preenchia a
-          // moldura enquanto isso não existe mais. Atrasar de propósito seria
-          // entregar uma faixa vazia no primeiro segundo de toda visita.
-          (async () => {
-            try {
-              const bannerData = await plataforma.entities.BannerImage.filter({ is_active: true, context: 'catalog' });
-              const preparados = prepararBannersDoPainel(bannerData);
-              setBanners(preparados);
-              sessionStorage.setItem('catalog_banners_cache', JSON.stringify(preparados));
-              sessionStorage.setItem('catalog_banners_cache_time', Date.now().toString());
-            } catch (error) {
-              console.debug('Erro ao carregar banners:', error.message);
-            }
-          })();
-        }
-      } catch (error) {
-        console.error('Erro ao carregar banners:', error);
-        const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
-        if (cachedBanners) {
-          setBanners(prepararBannersDoPainel(JSON.parse(cachedBanners)));
-        }
-      }
+      // 🖼️ 08/10/2026 — os banners agora vêm do hook useBannersDoPainel (sempre
+      // atualizados: cache instantâneo + busca em toda montagem, ao voltar para o
+      // app e de tempos em tempos). O bloco de cache de 10 min que vivia aqui
+      // segurava o banner antigo em quem já estava com o app aberto.
     };
 
     loadInitialData();
