@@ -12,6 +12,7 @@ import { getReferral } from '@/lib/referral';
 import { lerOrigemDoTrafego } from '@/lib/origemDoTrafego';
 import { telefoneValido } from '@/lib/telefoneBR';
 import { mascaraData, nascimentoISO } from '@/lib/dataDeNascimento';
+import { entrarPeloConvite } from '@/lib/entrarPeloConvite';
 // 📜 PONTO 70 — este convite NÃO exibe mais o Termo de Adesão: o termo só aparece
 // na intenção de compra (1º lance no leilão / adicionar ao carrinho na loja).
 
@@ -348,7 +349,19 @@ export default function GuestRegistrationModal({ onClose, onSuccess, referrerNam
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-end">
+      <CardFooter className="flex flex-wrap items-center justify-between gap-3">
+        {/* 🔑 08/10/2026 — quem JÁ TEM conta (ex.: abriu pelo navegador do
+            WhatsApp, sem a sessão) entra por aqui, em vez de ficar preso no
+            formulário. Ao entrar, a tela recarrega com a conta certa. */}
+        <button
+          type="button"
+          onClick={() => entrarPeloConvite({ fechar: onClose })}
+          disabled={isRegistering}
+          data-teste="convite-entrar"
+          className="text-sm text-gray-300 hover:text-white disabled:opacity-50"
+        >
+          Já tem conta? <span className="font-semibold text-green-400 underline underline-offset-2">Entrar</span>
+        </button>
         <Button 
           onClick={handleRegister} 
           disabled={isRegistering || !nickname || !email || !phone || !password || !confirmPassword || !fullName}
