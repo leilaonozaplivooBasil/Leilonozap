@@ -48,6 +48,8 @@
 
 **Prova:** `tests/varreduraGateway.test.mjs` (6), suíte completa, lint 0 erros, build.
 
+**206c (08/10/2026, primeiro dia real):** a varredura acusou três pagamentos no gateway sem venda no aplicativo e sem nenhum aviso do webhook — R$ 2.199,00 (visto às 09h23), R$ 1.138,00 e R$ 132,04 (às 13h23) — ou seja, dinheiro que entrou na conta por fora do app (PIX direto, link ou maquininha). O WhatsApp de Luiz e Beatriz recebeu os três com nome do pagador e meio. Mas o `system_logs` da rodada só guardava o **id** de cada pagamento, e o detalhe morria na mensagem. Ajuste: a rodada passa a gravar valor, hora, situação, meio, pagador, descrição e referência de cada um (`vigiaFinanceiro.js`, uma linha; pino no teste atualizado). Nenhum crédito automático: continua decisão de gente.
+
 ## 🏷️ DIR-205 — Arremate sem saldo não é silêncio: o vencedor é lembrado (1h e 24h) e o admin vê no vigia (07/10/2026)
 
 **Dono:** item 4 das automações aprovadas ("arremate não pago"), com a regra "cirúrgicas, não quebre nada".

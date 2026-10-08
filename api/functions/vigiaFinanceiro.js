@@ -63,7 +63,9 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         component_name: 'vigiaFinanceiro', step: 'RODADA', status: alertas.length ? 'warning' : 'info',
         message: alertas.length ? `${alertas.length} alerta(s): ${alertas.map((a) => a.codigo).join(', ')}` : 'Tudo bate.',
-        payload: { numeros: vigia.numeros, alertas: alertas.map((a) => ({ codigo: a.codigo, gravidade: a.gravidade, titulo: a.titulo })), avisos, varredura: { ...varredura, sem_venda: (varredura.sem_venda || []).map((p) => p.id) } },
+        // 🔭 08/10/2026: a varredura fica inteira no log (valor, quando, meio, pagador, descrição,
+        // referência). Antes só o id ficava, e o detalhe morria na mensagem do WhatsApp.
+        payload: { numeros: vigia.numeros, alertas: alertas.map((a) => ({ codigo: a.codigo, gravidade: a.gravidade, titulo: a.titulo })), avisos, varredura: { ...varredura, sem_venda: (varredura.sem_venda || []).map((p) => ({ id: p.id, valor: p.valor, situacao: p.situacao, quando: p.quando, meio: p.meio, pagador: p.pagador, descricao: p.descricao, referencia: p.referencia })) } },
         created_at: new Date().toISOString(),
       }),
     }).catch(() => {});

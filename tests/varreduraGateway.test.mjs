@@ -85,7 +85,7 @@ test('o alerta é vermelho, um por pagamento, e o vigia manda sem repetir por 7 
   assert.ok(V.includes("import { varrerGateway, alertaDoPagamentoSemVenda } from '../_lib/varreduraGateway.js';"));
   assert.ok(V.includes('const varredura = await varrerGateway({ sb, token: process.env.MP_ACCESS_TOKEN })'));
   assert.ok(V.includes('avisarAdminUmaVezPorDia(`vigia_${a.codigo}`, textoDoAlerta(a), { sb, horas: 24 * 7 })'));
-  assert.ok(V.includes("varredura: { ...varredura, sem_venda: (varredura.sem_venda || []).map((p) => p.id) }"), 'a rodada guarda o que a varredura viu');
+  assert.ok(V.includes("varredura: { ...varredura, sem_venda: (varredura.sem_venda || []).map((p) => ({ id: p.id, valor: p.valor, situacao: p.situacao, quando: p.quando, meio: p.meio, pagador: p.pagador, descricao: p.descricao, referencia: p.referencia })) }"), 'a rodada guarda o que a varredura viu, com o detalhe de cada pagamento (não só o id)');
   const M = ler('../api/_lib/varreduraGateway.js');
   assert.ok(!/method:\s*'(POST|PATCH|DELETE|PUT)'/.test(M), 'a varredura só lê');
 });
