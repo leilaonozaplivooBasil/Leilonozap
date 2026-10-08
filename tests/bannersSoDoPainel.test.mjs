@@ -50,10 +50,15 @@ test('nenhum vídeo institucional entra mais no carrossel de banners', () => {
   }
 });
 
+// 🖼️ 08/10/2026 — a busca saiu das páginas e foi para o hook useBannersDoPainel
+// (sempre atualizado — ver src/lib/bannersAoVivo.js). O preparo e a regra "sem
+// corte" agora vivem lá, e as páginas só pedem o contexto.
+const HOOK = ler('src/hooks/useBannersDoPainel.js');
+
 test('a Home mostra TODAS as artes do painel, não só a primeira', () => {
-  const trecho = HOME.slice(HOME.indexOf("context: 'home'"), HOME.indexOf("context: 'home'") + 900);
-  assert.ok(!/\.slice\(0,\s*1\)/.test(trecho), 'voltou o corte que escondia as outras artes');
-  assert.match(trecho, /prepararBannersDoPainel\(bannerData\)/);
+  assert.match(HOME, /useBannersDoPainel\(\{ contexto: 'home'/, 'a Home pede os banners ao hook');
+  assert.ok(!/\.slice\(0,\s*1\)/.test(HOOK), 'voltou o corte que escondia as outras artes');
+  assert.match(HOOK, /prepararBannersDoPainel\(dados\)/);
 });
 
 test('aba Catálogo do Licenciado lê o mesmo contexto da loja pública', () => {
@@ -62,7 +67,11 @@ test('aba Catálogo do Licenciado lê o mesmo contexto da loja pública', () => 
 });
 
 test('as quatro telas passam pelo mesmo preparo antes de renderizar', () => {
-  for (const [nome, fonte] of [['home', HOME], ['catalog', CATALOGO], ['luxo', LUXO], ['aba', ABA_CATALOGO]]) {
+  // Home e Loja pública preparam dentro do hook; Luxo e a aba do Licenciado chamam direto.
+  for (const [nome, fonte] of [['home', HOME], ['catalog', CATALOGO]]) {
+    assert.match(fonte, /useBannersDoPainel\(\{ contexto: '(home|catalog)'/, `${nome} não usa o hook dos banners`);
+  }
+  for (const [nome, fonte] of [['hook', HOOK], ['luxo', LUXO], ['aba', ABA_CATALOGO]]) {
     assert.match(fonte, /prepararBannersDoPainel/, `${nome} não normaliza os banners do painel`);
   }
 });
@@ -70,7 +79,7 @@ test('as quatro telas passam pelo mesmo preparo antes de renderizar', () => {
 test('o catálogo não atrasa mais o banner de propósito', () => {
   // era `setTimeout(..., 1500)` em volta do fetch — com o hero vindo do banco,
   // atrasar significa faixa vazia no primeiro segundo de toda visita.
-  const trecho = CATALOGO.slice(CATALOGO.indexOf('catalog_banners_cache'), CATALOGO.indexOf('catalog_banners_cache') + 1400);
+  const trecho = HOOK.slice(HOOK.indexOf('const buscar'), HOOK.indexOf('const buscar') + 1400);
   assert.ok(!/setTimeout\(/.test(trecho), 'voltou o atraso artificial no carregamento do banner');
 });
 
