@@ -21,6 +21,11 @@ import {
 import { toast } from 'sonner';
 import ImageCropEditor from '../components/admin/ImageCropEditor';
 import PopupLeilaoConfig from '../components/admin/PopupLeilaoConfig';
+import FileirasDeBanners from '../components/admin/FileirasDeBanners';
+import ProgramacaoDoBanner, { ProgramacaoDoProximo } from '../components/admin/ProgramacaoDoBanner';
+import SimuladorDeData from '../components/admin/SimuladorDeData';
+import { CONTEXTO_CONFIG, chavesAlteradas, lerFileiras, ligarFileira } from '@/lib/fileirasDeBanners';
+import { dentroDaJanela, paraISOBrasilia, validarJanela } from '@/lib/janelaDoBanner';
 import { convertToWebP } from '@/lib/convertToWebP';
 import { invalidateSiteMediaCache, LOGO_FALLBACK, FAVICON_FALLBACK } from '@/hooks/useSiteMedia';
 
@@ -59,6 +64,18 @@ const BANNER_LOCATIONS = [
     label: 'Loja Virtual',
     route: '/Loja-Virtual',
     desc: 'Carrossel da loja/catálogo. A imagem aparece INTEIRA (sem corte) com as bordas preenchidas pela própria arte desfocada.',
+    fit: 'contain',
+    aspectClass: 'aspect-[16/9]',
+    sizes: {
+      desktop: { w: 1920, h: 1080, hint: '1920×1080 px (16:9)' },
+      mobile: { w: 1280, h: 720, hint: '1280×720 px (16:9)' },
+    },
+  },
+  {
+    key: 'unificado',
+    label: 'Unificada (Leilão + Loja)',
+    route: '/leiloes',
+    desc: 'O mesmo conjunto de banners no topo do Leilão e da Loja Virtual. Só vale quando a fileira Unificada está ligada (as fileiras Leilão e Loja ficam desligadas). A imagem aparece INTEIRA, como nas outras.',
     fit: 'contain',
     aspectClass: 'aspect-[16/9]',
     sizes: {
@@ -142,6 +159,15 @@ export default function PainelMidia() {
   const [cropTask, setCropTask] = useState(null);
   const fileInputRef = useRef(null);
   const pendingPickRef = useRef(null); // o que fazer com o arquivo escolhido
+  // 🕛 08/10/2026 — "o próximo banner que eu subir já entra programado", por fileira
+  const [programarProximo, setProgramarProximo] = useState({});
+  // 👁️ pré-visualizar uma data (só no painel; nada é gravado)
+  const [dataSimulada, setDataSimulada] = useState('');
+  const [, setRelogio] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setRelogio((n) => n + 1), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const loadAll = useCallback(async () => {
     try {
@@ -161,6 +187,19 @@ export default function PainelMidia() {
     banners
       .filter((b) => b.context === context && (b.device_type || 'desktop') === device)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  // 🗂️ as três fileiras: linhas de configuração em banner_images (src/lib/fileirasDeBanners.js)
+  const fileiras = lerFileiras(banners);
+  const contagens = {
+    home: banners.filter((b) => b.context === 'home').length,
+    catalog: banners.filter((b) => b.context === 'catalog').length,
+    unificado: banners.filter((b) => b.context === 'unificado').length,
+  };
+  // 🕛 a gravação do servidor DESCARTA em silêncio coluna que não existe: sem as colunas
+  // de data, um banner "programado" entraria no ar na hora. Sem elas, o painel avisa.
+  const suportaProgramacao = banners.length === 0 || banners.some((b) => 'starts_at' in b);
+  const simuladaISO = paraISOBrasilia(dataSimulada);
+  const agoraMs = simuladaISO ? new Date(simuladaISO).getTime() : Date.now();
 
   const brandOf = (context) => banners.find((b) => b.context === context && b.is_active) || banners.find((b) => b.context === context);
 
@@ -190,6 +229,11 @@ export default function PainelMidia() {
 
   // Novo banner: escolhe arquivo → recorte na proporção do local → WebP → salva
   const handleAddBanner = (location, device) => {
+    // 🕛 se o dono já programou o próximo, confere ANTES de subir a imagem
+    const prog = programarProximo[location.key] || {};
+    const problema = validarJanela(paraISOBrasilia(prog.inicio), paraISOBrasilia(prog.fim));
+    if (problema) { toast.error(problema); return; }
+    if ((prog.inicio || prog.fim) && !suportaProgramacao) { toast.error('Datas indisponíveis: falta aplicar a atualização do banco.'); return; }
     openPicker((file) => setCropTask({ file, location, device }));
   };
 
@@ -199,6 +243,10 @@ export default function PainelMidia() {
     setIsSaving(true);
     try {
       const image_url = await uploadFile(croppedFile);
+      const prog = programarProximo[location.key] || {};
+      const janela = suportaProgramacao
+        ? { starts_at: paraISOBrasilia(prog.inicio), ends_at: paraISOBrasilia(prog.fim) }
+        : {};
       await plataforma.entities.BannerImage.create({
         context: location.key,
         device_type: device,
@@ -207,8 +255,10 @@ export default function PainelMidia() {
         link_url: '',
         is_active: true,
         order: bannersOf(location.key, device).length,
+        ...janela,
       });
-      toast.success('Banner publicado!');
+      setProgramarProximo((m) => ({ ...m, [location.key]: { inicio: '', fim: '' } }));
+      toast.success(janela.starts_at || janela.ends_at ? 'Banner programado!' : 'Banner publicado!');
       loadAll();
     } catch (error) {
       console.error('Erro ao salvar banner:', error);
@@ -242,6 +292,75 @@ export default function PainelMidia() {
     } catch (error) {
       console.error('Erro ao trocar imagem:', error);
       toast.error('Erro ao trocar a imagem');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 🕛 salva (ou tira) as datas de UM banner
+  const handleSalvarJanela = async (banner, janela) => {
+    try {
+      await plataforma.entities.BannerImage.update(banner.id, janela);
+      toast.success(janela.starts_at || janela.ends_at ? 'Datas salvas' : 'Datas removidas');
+      loadAll();
+    } catch {
+      toast.error('Erro ao salvar as datas');
+    }
+  };
+
+  // 🗂️ liga/desliga uma fileira (regra de exclusão em src/lib/fileirasDeBanners.js)
+  const handleLigarFileira = async (chave, ligado) => {
+    const depois = ligarFileira(fileiras, chave, ligado);
+    const mudar = chavesAlteradas(fileiras, depois);
+    if (mudar.length === 0) return;
+    if (chave === 'unificado' && ligado && !confirm('Ligar a fileira Unificada desliga as fileiras do Leilão e da Loja: as duas páginas passam a mostrar os banners da Unificada. Continuar?')) return;
+    if (chave === 'unificado' && !ligado && !confirm('Desligar a Unificada devolve as fileiras do Leilão e da Loja ao ar, cada uma com os seus banners. Continuar?')) return;
+    setIsSaving(true);
+    try {
+      await Promise.all(mudar.map((k) => {
+        const linha = banners.find((b) => b.context === CONTEXTO_CONFIG && b.title === k);
+        return linha
+          ? plataforma.entities.BannerImage.update(linha.id, { is_active: depois[k] })
+          : plataforma.entities.BannerImage.create({ context: CONTEXTO_CONFIG, title: k, device_type: 'desktop', image_url: '', link_url: '', is_active: depois[k], order: 0 });
+      }));
+      toast.success('Fileiras atualizadas');
+      loadAll();
+    } catch (error) {
+      console.error('Erro ao atualizar as fileiras:', error);
+      toast.error('Erro ao atualizar as fileiras');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 📋 começa a Unificada com os banners do Leilão (sem subir tudo de novo)
+  const handleCopiarDoLeilao = async () => {
+    const origem = banners.filter((b) => b.context === 'home');
+    if (origem.length === 0) { toast.error('A fileira do Leilão não tem banners para copiar.'); return; }
+    if (!confirm(`Copiar os ${origem.length} banners do Leilão para a Unificada? Os do Leilão continuam onde estão.`)) return;
+    setIsSaving(true);
+    try {
+      // continua a numeração de quem já está na Unificada, por dispositivo
+      const cont = { desktop: bannersOf('unificado', 'desktop').length, mobile: bannersOf('unificado', 'mobile').length };
+      for (const b of origem.sort((a, c) => (a.order ?? 0) - (c.order ?? 0))) {
+        const device = b.device_type || 'desktop';
+        await plataforma.entities.BannerImage.create({
+          context: 'unificado',
+          device_type: device,
+          image_url: b.image_url,
+          title: b.title || '',
+          link_url: b.link_url || '',
+          is_active: b.is_active !== false,
+          order: cont[device] ?? 0,
+          ...(suportaProgramacao ? { starts_at: b.starts_at || null, ends_at: b.ends_at || null } : {}),
+        });
+        cont[device] = (cont[device] ?? 0) + 1;
+      }
+      toast.success('Banners copiados para a Unificada');
+      loadAll();
+    } catch (error) {
+      console.error('Erro ao copiar banners:', error);
+      toast.error('Erro ao copiar os banners');
     } finally {
       setIsSaving(false);
     }
@@ -471,12 +590,24 @@ export default function PainelMidia() {
           </div>
         </section>
 
+        {/* ===== As três fileiras e a pré-visualização de datas ===== */}
+        <FileirasDeBanners fileiras={fileiras} contagens={contagens} onLigar={handleLigarFileira} desabilitado={isSaving} />
+        <SimuladorDeData valor={dataSimulada} onChange={setDataSimulada} />
+
         {/* ===== Banners por página ===== */}
-        {BANNER_LOCATIONS.map((location) => (
-          <section key={location.key} className="mt-8">
+        {BANNER_LOCATIONS.map((location) => {
+          const ehFileira = ['home', 'catalog', 'unificado'].includes(location.key);
+          const fileiraLigada = !ehFileira || fileiras[location.key];
+          return (
+          <section key={location.key} data-secao={location.key} className={`mt-8 ${fileiraLigada ? '' : 'opacity-60'}`}>
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">{location.label}</h2>
+                {ehFileira && (
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${fileiraLigada ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10' : 'text-gray-400 border-white/15 bg-white/5'}`}>
+                    {fileiraLigada ? 'No ar' : 'Fileira desligada'}
+                  </span>
+                )}
                 <a
                   href={location.route}
                   target="_blank"
@@ -487,8 +618,20 @@ export default function PainelMidia() {
                   <ExternalLink className="w-4 h-4" />
                 </a>
               </div>
+              {location.key === 'unificado' && (
+                <Button size="sm" variant="outline" onClick={handleCopiarDoLeilao} disabled={isSaving} data-teste="copiar-do-leilao" className="h-8 border-white/15 text-gray-300 hover:text-white text-xs">
+                  Copiar banners do Leilão
+                </Button>
+              )}
             </div>
             <p className="text-xs text-gray-400 mb-3">{location.desc}</p>
+            {ehFileira && (
+              <ProgramacaoDoProximo
+                valor={programarProximo[location.key]}
+                onChange={(v) => setProgramarProximo((m) => ({ ...m, [location.key]: v }))}
+                suporta={suportaProgramacao}
+              />
+            )}
 
             <div className="grid lg:grid-cols-2 gap-4">
               {['desktop', 'mobile'].map((device) => {
@@ -520,7 +663,7 @@ export default function PainelMidia() {
 
                     <div className="space-y-3">
                       {list.map((banner, index) => (
-                        <div key={banner.id} className={`rounded-lg border overflow-hidden ${banner.is_active ? 'border-white/10' : 'border-white/5 opacity-50'}`}>
+                        <div key={banner.id} data-banner={banner.id} className={`rounded-lg border overflow-hidden ${banner.is_active && dentroDaJanela(banner, agoraMs) ? 'border-white/10' : 'border-white/5 opacity-50'}`}>
                           {/* preview na moldura EXATA em que o banner aparece no site */}
                           <div className={`${location.aspectClass} bg-gray-950 relative`}>
                             <img
@@ -560,6 +703,15 @@ export default function PainelMidia() {
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
+                          {ehFileira && (
+                            <ProgramacaoDoBanner
+                              key={`${banner.id}-${banner.starts_at || ''}-${banner.ends_at || ''}`}
+                              banner={banner}
+                              agoraMs={agoraMs}
+                              suporta={suportaProgramacao}
+                              onSalvar={(janela) => handleSalvarJanela(banner, janela)}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>
@@ -568,7 +720,8 @@ export default function PainelMidia() {
               })}
             </div>
           </section>
-        ))}
+          );
+        })}
 
         <p className="text-[11px] text-gray-600 mt-8 mb-4 text-center">
           As imagens são recortadas na proporção exata de cada moldura e convertidas para WebP automaticamente.

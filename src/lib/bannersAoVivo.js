@@ -44,7 +44,7 @@ export function guardarBanners(storage, chave, lista) {
   } catch { /* storage cheio ou modo privado: a tela segue com o que veio da rede */ }
 }
 
-const assinaturaDe = (b) => [b?.id, b?.image_url, b?.video_url, b?.link_url, b?.title, b?.device_type, Number(b?.order) || 0].join('|');
+const assinaturaDe = (b) => [b?.id, b?.image_url, b?.video_url, b?.link_url, b?.title, b?.device_type, b?.is_active, b?.starts_at, b?.ends_at, Number(b?.order) || 0].join('|');
 
 /** Mesmas artes, na mesma ordem, com os mesmos campos que a tela usa. */
 export function bannersIguais(a, b) {

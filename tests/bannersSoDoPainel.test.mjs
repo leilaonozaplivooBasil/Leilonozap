@@ -58,20 +58,20 @@ const HOOK = ler('src/hooks/useBannersDoPainel.js');
 test('a Home mostra TODAS as artes do painel, não só a primeira', () => {
   assert.match(HOME, /useBannersDoPainel\(\{ contexto: 'home'/, 'a Home pede os banners ao hook');
   assert.ok(!/\.slice\(0,\s*1\)/.test(HOOK), 'voltou o corte que escondia as outras artes');
-  assert.match(HOOK, /prepararBannersDoPainel\(dados\)/);
+  assert.match(HOOK, /prepararBannersDoPainel\(filtrarPorJanela\(/);
 });
 
 test('aba Catálogo do Licenciado lê o mesmo contexto da loja pública', () => {
-  assert.match(ABA_CATALOGO, /context: 'catalog'/);
+  assert.match(ABA_CATALOGO, /useBannersDoPainel\(\{ contexto: 'catalog'/);
   assert.match(ABA_CATALOGO, /<RotatingBanner banners=\{banners\}/);
 });
 
 test('as quatro telas passam pelo mesmo preparo antes de renderizar', () => {
   // Home e Loja pública preparam dentro do hook; Luxo e a aba do Licenciado chamam direto.
-  for (const [nome, fonte] of [['home', HOME], ['catalog', CATALOGO]]) {
+  for (const [nome, fonte] of [['home', HOME], ['catalog', CATALOGO], ['aba', ABA_CATALOGO]]) {
     assert.match(fonte, /useBannersDoPainel\(\{ contexto: '(home|catalog)'/, `${nome} não usa o hook dos banners`);
   }
-  for (const [nome, fonte] of [['hook', HOOK], ['luxo', LUXO], ['aba', ABA_CATALOGO]]) {
+  for (const [nome, fonte] of [['hook', HOOK], ['luxo', LUXO]]) {
     assert.match(fonte, /prepararBannersDoPainel/, `${nome} não normaliza os banners do painel`);
   }
 });

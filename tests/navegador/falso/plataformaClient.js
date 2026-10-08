@@ -46,6 +46,15 @@ export const plataforma = {
     list: async () => semeadas(entidade),
     filter: async (onde) => semeadas(entidade).filter((l) => casa(l, onde)),
     create: async (d) => {
+      // 🖼️ 08/10/2026 — a criação fica visível pra prova (tipo 'create') e, quando a
+      // banca pede (window.__criaNaLista), entra na lista semeada: a tela que relê
+      // depois de gravar enxerga a linha nova, como no banco de verdade.
+      estado.chamadas.push({ tipo: 'create', entidade, dados: d });
+      if (typeof window !== 'undefined' && window.__criaNaLista && Array.isArray(window.__entidadesFalsas?.[entidade])) {
+        const nova = { id: `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, ...d };
+        window.__entidadesFalsas[entidade].push(nova);
+        return nova;
+      }
       const tabela = TABELA_DA_ENTIDADE[entidade];
       const b = typeof window !== 'undefined' ? (window.__bancoFalso ||= { tabelas: {}, escritas: [] }) : null;
       if (!tabela || !b) return d;
