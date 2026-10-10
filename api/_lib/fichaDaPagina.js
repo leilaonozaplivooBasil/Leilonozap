@@ -385,3 +385,108 @@ export function sanearFicha(obj, { fonte = 'estimativa' } = {}) {
     observacao: texto(o.observacao, 600),
   };
 }
+
+// ── 🔗 DIR-212 (10/10/2026) — IMPORTAR DE QUALQUER MARKETPLACE ────────────────
+// Dono: "não precisa ser só o link do Mercado Livre: pode ser qualquer link de
+// qualquer marketplace — Shopee, Magazine Luiza, Mercado Livre e etc." O leitor
+// acima já lia qualquer página; faltavam três coisas: o PREÇO (a loja precisa),
+// reconhecer de qual marketplace é o link, e um título tirado do próprio
+// endereço quando a página não abre para o servidor — o Mercado Livre e a
+// Shopee devolvem tela de verificação ou vazia para robô, mas o endereço
+// carrega o nome do produto.
+
+export const MARKETPLACES = Object.freeze([
+  { id: 'mercado_livre', nome: 'Mercado Livre', hosts: ['mercadolivre.com', 'mercadolivre.com.br', 'mercadolibre.com'] },
+  { id: 'shopee', nome: 'Shopee', hosts: ['shopee.com.br', 'shopee.com', 'shp.ee'] },
+  { id: 'magazine_luiza', nome: 'Magazine Luiza', hosts: ['magazineluiza.com.br', 'magalu.com', 'magazinevoce.com.br'] },
+  { id: 'amazon', nome: 'Amazon', hosts: ['amazon.com.br', 'amazon.com', 'amzn.to'] },
+  { id: 'americanas', nome: 'Americanas', hosts: ['americanas.com.br'] },
+  { id: 'casas_bahia', nome: 'Casas Bahia', hosts: ['casasbahia.com.br'] },
+  { id: 'aliexpress', nome: 'AliExpress', hosts: ['aliexpress.com', 'aliexpress.us'] },
+  { id: 'temu', nome: 'Temu', hosts: ['temu.com'] },
+  { id: 'shein', nome: 'Shein', hosts: ['shein.com'] },
+  { id: 'kabum', nome: 'KaBuM!', hosts: ['kabum.com.br'] },
+  { id: 'olx', nome: 'OLX', hosts: ['olx.com.br'] },
+]);
+
+/** De qual marketplace é o host. Desconhecido vira { id: 'outro', nome: host }; vazio vira null. */
+export function marketplaceDoHost(host) {
+  const h = String(host || '').toLowerCase().replace(/^www\./, '');
+  if (!h) return null;
+  for (const m of MARKETPLACES) if (m.hosts.some((d) => h === d || h.endsWith(`.${d}`))) return { id: m.id, nome: m.nome };
+  return { id: 'outro', nome: h };
+}
+
+const TITULOS_GENERICOS = [
+  /^mercado ?livre\b/i, /^shopee\b/i, /^amazon(\.com)?(\.br)?$/i, /^magazine ?luiza\b/i, /^americanas\b/i, /^casas bahia\b/i,
+  /^aliexpress\b/i, /^temu\b/i, /^shein\b/i, /access denied/i, /robot check/i, /just a moment/i, /attention required/i,
+  /captcha/i, /verifica/i, /^erro?\b/i, /^403\b/, /^404\b/, /não encontrad/i, /page not found/i, /^unavailable/i,
+];
+
+/** O título da página é só o nome do marketplace ou uma tela de bloqueio (não é o produto)? */
+export function tituloEhGenerico(titulo) {
+  const t = String(titulo || '').trim();
+  if (t.length < 6) return true;
+  return TITULOS_GENERICOS.some((re) => re.test(t));
+}
+
+const PEDACOS_SEM_NOME = /^(p|dp|item|itens|produto|produtos|product|products|itm|i|s|sp|search|ref|b|pd|c|category|categoria|offer|oferta)$/i;
+
+/**
+ * O nome do produto escondido no endereço (o "slug"): o maior pedaço com hífens,
+ * sem os códigos (MLB…, _JM, i.123.456, ASIN). Vazio quando o endereço não tem nome.
+ *   produto.mercadolivre.com.br/MLB-123-notebook-lenovo-_JM → "Notebook lenovo"
+ *   shopee.com.br/Fone-Bluetooth-i.123.456                   → "Fone Bluetooth"
+ */
+export function tituloDoEndereco(url) {
+  let u;
+  try { u = new URL(String(url || '').trim()); } catch { return ''; }
+  let caminho = u.pathname;
+  try { caminho = decodeURIComponent(caminho); } catch { /* fica como veio */ }
+  const candidatos = caminho.split('/').filter(Boolean)
+    .map((p) => p.replace(/_JM$/i, '').replace(/^MLB-?\d+-?/i, '').replace(/-i\.\d+\.\d+$/i, '').replace(/-p$/i, '').replace(/[_+]/g, '-'))
+    .filter((p) => p.includes('-') && /[a-zà-ú]/i.test(p) && !PEDACOS_SEM_NOME.test(p));
+  if (!candidatos.length) return '';
+  const melhor = candidatos.sort((a, b) => b.length - a.length)[0]
+    .replace(/-+/g, ' ').replace(/\b[a-f0-9]{10,}\b/gi, '').replace(/\b(mlb|mlu|mla)\d+\b/gi, '').replace(/\s+/g, ' ').trim();
+  if (melhor.length < 8) return '';
+  return (melhor[0].toUpperCase() + melhor.slice(1)).slice(0, 150);
+}
+
+const numeroDePreco = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const s = String(v).trim();
+  const n = Number(/^\d+(\.\d+)?$/.test(s) ? s : s.replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'));
+  return Number.isFinite(n) && n > 0 && n < 10000000 ? Math.round(n * 100) / 100 : null;
+};
+
+/**
+ * O preço que a página DECLARA (nunca estimado): Product.offers do JSON-LD
+ * (Offer, AggregateOffer.lowPrice, priceSpecification) ou as <meta> de preço
+ * (product:price:amount, og:price:amount, itemprop price). Sem nada, null.
+ * @returns {{preco:number|null, moeda:string|null, origem:'json_ld'|'meta'|null}}
+ */
+export function precoDaPagina(html) {
+  const h = String(html || '');
+  let product = null;
+  const reLd = /<script\b[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while (!product && (m = reLd.exec(h))) {
+    try { product = achaProduct(JSON.parse(m[1].trim())); } catch { /* JSON-LD quebrado: segue */ }
+  }
+  const ofertas = product?.offers ? (Array.isArray(product.offers) ? product.offers : [product.offers]) : [];
+  for (const o of ofertas) {
+    if (!o || typeof o !== 'object') continue;
+    const spec = Array.isArray(o.priceSpecification) ? o.priceSpecification[0] : o.priceSpecification;
+    const preco = numeroDePreco(o.price ?? o.lowPrice ?? spec?.price);
+    if (preco) return { preco, moeda: String(o.priceCurrency || spec?.priceCurrency || 'BRL').toUpperCase(), origem: 'json_ld' };
+  }
+  for (const chave of ['product:price:amount', 'og:price:amount', 'product:sale_price:amount', 'price']) {
+    const preco = numeroDePreco(metas(h, chave)[0]);
+    if (preco) {
+      const moeda = metas(h, 'product:price:currency')[0] || metas(h, 'og:price:currency')[0] || metas(h, 'pricecurrency')[0] || 'BRL';
+      return { preco, moeda: String(moeda).toUpperCase(), origem: 'meta' };
+    }
+  }
+  return { preco: null, moeda: null, origem: null };
+}

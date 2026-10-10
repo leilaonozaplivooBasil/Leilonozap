@@ -120,11 +120,12 @@ test('o nome do arquivo sai limpo, sem acento nem caractere estranho', () => {
 const tela = ler('../src/pages/AddCatalogProduct.jsx');
 const rota = ler('../api/functions/copiarImagensParaNosso.js');
 
-test('os TRÊS caminhos de importação copiam antes de salvar', () => {
+test('os QUATRO caminhos de importação copiam antes de salvar', () => {
   // Eram três pontos gravando endereço de fora: fotos já vindas do Google
-  // Shopping, importação do Mercado Livre, e busca por nome.
+  // Shopping, importação pelo link de origem, e busca por nome. 10/10/2026
+  // (DIR-212): o quarto é "Importar de um link" (qualquer marketplace) — copia também.
   const chamadas = tela.match(/await trazerParaNosso\(/g) || [];
-  assert.equal(chamadas.length, 3, `só ${chamadas.length} dos 3 caminhos copiam`);
+  assert.equal(chamadas.length, 4, `só ${chamadas.length} dos 4 caminhos copiam`);
 });
 
 test('nenhum caminho grava o endereço de fora direto', () => {

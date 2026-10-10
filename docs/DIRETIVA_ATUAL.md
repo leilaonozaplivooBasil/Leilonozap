@@ -1,3 +1,17 @@
+## 🔗 DIR-212 — Importar produto por link, de qualquer marketplace, na tela de adicionar produto da loja (10/10/2026)
+
+**Dono:** "o leilão tem essa parte de importar automático do Mercado Livre um produto; eu quero criar essa opção também pra quando formos adicionar produtos na loja — e, se ficar mais fácil, não precisa ser só o link do Mercado Livre: pode ser qualquer link de qualquer marketplace (Shopee, Magazine Luiza, Mercado Livre e etc.)". E, na sequência: **"não quero que você mexa em nada além de adicionar essa opção na loja"** — o leilão e os outros caminhos de importação ficam exatamente como estão (a auditoria deles é outra conversa, a decidir).
+
+**O que muda (só a loja):**
+- **`AddCatalogProduct`**: bloco "Importar de um link" no topo da aba Informações Gerais, com os marketplaces por nome. Preenche nome, descrição, marca, modelo, medidas (com a origem página/estimativa e o selo "conferir"), preço e preço de referência, e grava `source_url` no produto — **só em campo vazio**, nunca por cima do que a pessoa digitou. As fotos passam pelo nosso servidor (quarto caminho que copia). O caminho antigo de fotos automáticas da própria tela continua como estava.
+- `src/lib/importarPorLink.js` (novo): o lado da tela — valida o link, chama a rota, normaliza a resposta e busca fotos pelo nome quando a página não entregou. O cliente da plataforma entra por import dinâmico, então as funções puras rodam nos testes.
+- Usa a rota `importarProdutoPeloLink` (DIR-207), a mesma do card do produto do leilão, que ganhou: `marketplace` (`marketplaceDoHost`, 11 conhecidos), `preco`/`moeda` (`precoDaPagina`: só o que a página DECLARA em JSON-LD/meta; a IA continua sem campo de preço, nunca estima), `titulo_de`, e o tratamento da tela de verificação do Mercado Livre (título "Mercado Livre", sem dados estruturados) como página NÃO lida: nome vindo do endereço (`tituloDoEndereco`: `MLB-123-nome-_JM`, `Nome-i.1.2` da Shopee, `/nome/p/…` da Magalu, `/Nome/dp/ASIN` da Amazon), nenhuma foto (seria o logotipo), estimativa pelo nome. O leitor `textoDaPagina` e o `SCHEMA_DA_FICHA` ficam como estavam.
+- **Limite honesto:** Mercado Livre e Shopee não mostram a página ao nosso servidor (verificação/JavaScript). Nesses casos o nome vem do endereço, descrição e medidas são estimativa da IA (marcada), as fotos vêm da busca por nome e o preço fica para a pessoa. Magazine Luiza, Americanas, Casas Bahia, KaBuM e lojas com dados estruturados entregam preço e fotos de verdade.
+
+**Prova:** `tests/importarPorLink.test.mjs` (7: lista igual na tela e no servidor, nome do endereço nos seis formatos, preço declarado, lado da tela sem rede, pins da rota e da loja, e o leilão intacto), `tests/imagemExterna.test.mjs` (os quatro caminhos copiam); suíte completa, lint 0 erros, build.
+
+**Publicação:** zona amarela (sem pagamento, carteira ou lance). Sobe na janela 01h00–02h15, salvo ordem do dono.
+
 ## ⏳ DIR-210 — Arremate não pago: cancelamento automático 48h depois do encerramento, comissão do martelo estornada, reserva devolvida (08/10/2026)
 
 **Dono:** item 4 das oito automações aprovadas ("arremate não pago: lembretes em 1h e 24h, cancelamento em 48 horas com reoferta, e a comissão do martelo estornada se não pagar") e "vamos seguir o que precisa seguir, vamos lá". A DIR-205 fez os lembretes e tinha registrado "decidido NÃO automatizar o cancelamento"; essa decisão fica revertida aqui, por ordem do dono — o cancelamento passa a ser automático, com interruptor.
