@@ -86,7 +86,7 @@ export const plataforma = {
       return () => { rt.ouvintes = rt.ouvintes.filter((o) => o !== ouvinte); };
     },
   }) }),
-  auth: { me: async () => null },
+  auth: { me: async () => (typeof window !== 'undefined' ? window.__usuarioFalso || null : null) },
   // o rastreador de desempenho das páginas chama isto ao montar; na banca, não faz nada
   analytics: { track: () => {} },
 };

@@ -25,6 +25,7 @@ const AuctionRoom = React.lazy(() => import('./pages/AuctionRoom'));
 const AuditSnapshot = React.lazy(() => import('./pages/AuditSnapshot'));
 const BannerManagement = React.lazy(() => import('./pages/BannerManagement'));
 const PainelMidia = React.lazy(() => import('./pages/PainelMidia'));
+const RevisaoDeDescricoes = React.lazy(() => import('./pages/RevisaoDeDescricoes'));
 const CadastroInvestidor = React.lazy(() => import('./pages/CadastroInvestidor'));
 const CadastroLeiloeiro = React.lazy(() => import('./pages/CadastroLeiloeiro'));
 const CarteiraInvestidor = React.lazy(() => import('./pages/CarteiraInvestidor'));
@@ -130,6 +131,12 @@ export const PAGES = {
     "PainelMidia": () => (
         <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
             <PainelMidia />
+        </RequireRole>
+    ),
+    // 📝 Revisar descrições — a IA escreve rascunho, o admin aprova. Só admin.
+    "RevisaoDeDescricoes": () => (
+        <RequireRole allowedRoles={['admin', 'super_admin']} fallbackRoute="Home">
+            <RevisaoDeDescricoes />
         </RequireRole>
     ),
     "CadastroInvestidor": CadastroInvestidor,
