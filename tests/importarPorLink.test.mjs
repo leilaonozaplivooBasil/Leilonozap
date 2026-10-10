@@ -1,7 +1,8 @@
 // 🔗 DIR-212 — IMPORTAR PRODUTO POR LINK, DE QUALQUER MARKETPLACE (10/10/2026)
 // Dono: "o leilão tem a parte de importar automático do Mercado Livre; quero essa opção
 // também quando formos adicionar produtos na loja — e pode ser qualquer link de qualquer
-// marketplace: Shopee, Magazine Luiza, Mercado Livre etc."
+// marketplace: Shopee, Magazine Luiza, Mercado Livre etc." E depois: "não quero que você
+// mexa em nada além de adicionar essa opção na loja" — o leilão fica como está.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -111,7 +112,7 @@ test('a rota: marketplace, título do endereço quando a página é tela de veri
   assert.ok(!/method:\s*'(PATCH|POST|DELETE)'/.test(R), 'NUNCA grava');
 });
 
-test('a loja (AddCatalogProduct): o bloco de importar por link, só em campo vazio, fotos pelo nosso servidor, source_url gravado', () => {
+test('a loja (AddCatalogProduct): o bloco de importar por link, só em campo vazio, fotos pelo nosso servidor, source_url gravado; o resto da tela como estava', () => {
   const A = ler('../src/pages/AddCatalogProduct.jsx');
   assert.ok(A.includes("import { importarProdutoPorLink, fotosPeloNome, marketplaceDoLink, linkValido, resumoDaImportacao, MARKETPLACES_CONHECIDOS } from '@/lib/importarPorLink';"));
   assert.ok(A.includes('data-teste="importar-por-link"') && A.includes('data-teste="botao-importar-por-link"') && A.includes('data-teste="status-importar-por-link"'));
@@ -121,19 +122,12 @@ test('a loja (AddCatalogProduct): o bloco de importar por link, só em campo vaz
   assert.ok(A.includes("setMedidasOrigem(d.fonte === 'pagina' ? 'pagina' : 'estimativa_ia');"), 'medida da página vale como página; o resto é estimativa, com o selo');
   assert.ok(A.includes('candidatas = await fotosPeloNome(nome);') && A.includes('const r = await trazerParaNosso(candidatas, nome);'), 'fotos passam pelo nosso servidor');
   assert.ok(A.includes("source_url: product.source_url || ''") && A.includes('source_url: formData.source_url || null,'), 'o link de origem vai e volta do banco');
-  assert.ok(!A.includes("invoke('extractMLImages'"), 'o stub do Mercado Livre saiu da loja');
   assert.ok(A.includes("if (e.key === 'Enter') { e.preventDefault(); importarPeloLink(); }"), 'Enter importa, não envia o formulário');
+  assert.ok(A.includes("const mlResponse = await plataforma.functions.invoke('extractMLImages', { productUrl: sourceUrl });"), 'o caminho antigo de fotos automáticas da loja ficou como estava');
 });
 
-test('o leilão (CreateAuction): o botão aceita qualquer link, usa o mesmo motor, e o stub extractMLImages sumiu', () => {
-  const C = ler('../src/pages/CreateAuction.jsx');
-  assert.ok(C.includes('import { importarProdutoPorLink, fotosPeloNome, marketplaceDoLink, linkValido } from "@/lib/importarPorLink";'));
-  assert.ok(C.includes('const importarLinkNoFormulario = async (url) => {') && C.includes('const d = await importarProdutoPorLink({ url });'));
-  assert.ok(C.includes('id="btn-importar-link"') && C.includes('await importarLinkNoFormulario(url);'));
-  assert.ok(C.includes("setTimeout(() => { importarLinkNoFormulario(decodedUrl); }, 1500);"), '?ml_url= também passa pelo motor novo');
-  assert.ok(C.includes("fotos = await fotosPeloNome(d.titulo);"), 'sem fotos na página, busca pelo nome');
-  assert.ok(C.includes("starting_price: d.preco ? String(d.preco) : prev.starting_price,"));
-  assert.ok(!C.includes("Cole um link válido do Mercado Livre"), 'não exige mais Mercado Livre');
-  assert.ok(!C.includes("invoke('extractMLImages'"), 'o stub saiu do leilão');
-  assert.ok(C.includes("if (!linkValido(url)) {"));
+test('o leilão NÃO foi mexido (ordem do dono: só a opção da loja)', () => {
+  const C = readFileSync(new URL('../src/pages/CreateAuction.jsx', import.meta.url), 'utf8');
+  assert.ok(!C.includes('importarPorLink'), 'CreateAuction continua com o importador dele');
+  assert.ok(C.includes("plataforma.functions.invoke('extractMLImages'"), 'o caminho antigo do leilão segue intacto');
 });

@@ -17,7 +17,7 @@ import { ORIGENS } from '@/lib/origemProduto';
 // (src/lib/fotosParaNosso.js): esta tela, o editor do leilão e o buscador
 // manual usam a MESMA função. A cópia local que vivia aqui foi retirada.
 import { trazerFotosParaNosso } from '@/lib/fotosParaNosso';
-// 🔗 10/10/2026 (DIR-212) — importar de QUALQUER marketplace pelo link, com o mesmo motor do leilão.
+// 🔗 10/10/2026 (DIR-212) — importar de QUALQUER marketplace pelo link (só esta tela, por ordem do dono).
 import { importarProdutoPorLink, fotosPeloNome, marketplaceDoLink, linkValido, resumoDaImportacao, MARKETPLACES_CONHECIDOS } from '@/lib/importarPorLink';
 // 📦 08/10/2026 (DIR-207) — a régua única de medidas: vazio vira null (nunca 0),
 // fora da faixa é recusado, e a tela mostra a caixa que o frete VAI usar.
@@ -426,10 +426,11 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
 
   // 🔗 DIR-212 (10/10/2026) — IMPORTAR DE QUALQUER MARKETPLACE PELO LINK
   // Dono: "quero essa opção também quando formos adicionar produtos na loja; pode ser
-  // qualquer link — Shopee, Magazine Luiza, Mercado Livre etc." Mesmo motor do leilão
-  // e do card do produto (importarProdutoPeloLink): título, descrição, marca, modelo,
-  // medidas, preço declarado e fotos. NUNCA passa por cima do que a pessoa já
-  // preencheu: só entra em campo vazio. Toda foto de fora passa pelo nosso servidor.
+  // qualquer link — Shopee, Magazine Luiza, Mercado Livre etc." — e "não mexa em nada
+  // além disso". Usa a rota que o card do produto do leilão já usava
+  // (importarProdutoPeloLink): título, descrição, marca, modelo, medidas, preço
+  // declarado e fotos. NUNCA passa por cima do que a pessoa já preencheu: só entra em
+  // campo vazio. Toda foto de fora passa pelo nosso servidor.
   const importarPeloLink = async () => {
     const url = linkImport.trim();
     if (!linkValido(url)) {
@@ -523,21 +524,21 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     }
 
     try {
-      // 🔗 DIR-212 — se o produto tem o link de origem (qualquer marketplace), lê o anúncio.
-      // (antes: extractMLImages, um stub que sempre devolvia "ml_bloqueado")
+      // Tenta ML primeiro se tiver source_url
       const sourceUrl = product.source_url || '';
+      const isMlUrl = sourceUrl.includes('mercadolivre.com') || sourceUrl.includes('mercadolibre.com');
 
-      if (sourceUrl && linkValido(sourceUrl)) {
-        setAutoImportStatus(`🔗 Lendo o anúncio em ${marketplaceDoLink(sourceUrl)?.nome || 'origem'}...`);
-        const lido = await importarProdutoPorLink({ url: sourceUrl, titulo: product.description });
-        const mlImgs = lido.ok ? lido.fotos : [];
+      if (isMlUrl) {
+        setAutoImportStatus('🛒 Importando do Mercado Livre...');
+        const mlResponse = await plataforma.functions.invoke('extractMLImages', { productUrl: sourceUrl });
+        const mlImgs = mlResponse?.images || mlResponse?.data?.images || [];
         if (mlImgs.length > 0) {
           setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
           const { fotos, falharam } = await trazerParaNosso(mlImgs.slice(0, 5), product.description);
           setFormData(prev => ({ ...prev, image_urls: fotos }));
           setAutoImportStatus(falharam
-            ? `✅ ${fotos.length} imagens do anúncio no nosso servidor · ⚠️ ${falharam} não vieram`
-            : `✅ ${fotos.length} imagens importadas do anúncio!`);
+            ? `✅ ${fotos.length} imagens do ML no nosso servidor · ⚠️ ${falharam} não vieram`
+            : `✅ ${fotos.length} imagens importadas do ML!`);
           setTimeout(() => setAutoImportStatus(''), 3000);
           return;
         }

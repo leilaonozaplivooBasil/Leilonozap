@@ -1,4 +1,4 @@
-// 🔗 IMPORTAR PRODUTO POR LINK — o MESMO motor para a loja e o leilão (10/10/2026, DIR-212)
+// 🔗 IMPORTAR PRODUTO POR LINK — a opção "automático" da loja, para qualquer marketplace (10/10/2026, DIR-212)
 //
 // Dono: "o leilão tem a parte de importar automático do Mercado Livre; quero essa
 // opção também quando formos adicionar produtos na loja — e não precisa ser só o
@@ -12,8 +12,8 @@
 // não entregou nenhuma. NÃO importa o cliente da plataforma no topo de
 // propósito (import dinâmico): as funções puras daqui rodam nos testes em Node.
 //
-// O antigo extractMLImages era um stub ("ml_bloqueado"): o botão "Importar do
-// Mercado Livre" do leilão nunca funcionou. Agora os dois lugares usam isto.
+// Só a tela da loja usa isto, por ordem do dono ("não mexa em nada além de
+// adicionar essa opção na loja"). O leilão continua com o importador dele.
 
 /** Os marketplaces que a tela mostra por nome (o servidor tem a mesma lista: api/_lib/fichaDaPagina.js). */
 export const MARKETPLACES_CONHECIDOS = Object.freeze([
