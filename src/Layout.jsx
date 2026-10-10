@@ -86,7 +86,7 @@ import { Menu, ShoppingCart as CartIcon, Wallet as WalletIcon } from "lucide-rea
 // pública, sala de leilão, Live Shop, páginas do Parceiro e a Visão da Operação.
 const PAGINAS_TEMA_CLARO = new Set([
   'MyCatalogOrders', 'MyWinnings', 'TirarPedido', 'PedidosDistribuidor', 'MeuEstoque',
-  'GestaoMetas', 'PainelArrematante', 'ProductManagement', 'CatalogManagement',
+  'GestaoMetas', 'PainelArrematante', 'ProductManagement', 'CatalogManagement', 'RevisaoDeDescricoes',
   // 🖤 NetworkOverview (Painel de Controle / Sistema de Alavancagem) SAIU do tema
   // claro em 08/08/2026: a árvore genealógica precisa do fundo preto pra ficar
   // legível e com a identidade certa. Ele continua escuro por desenho próprio.

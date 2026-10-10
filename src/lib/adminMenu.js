@@ -93,6 +93,7 @@ export function buildAdminMenu(isSuperAdmin = false) {
         { title: "Banners", pageName: "BannerManagement", icon: ImageIcon },
         { title: "Material Promocional", pageName: "PromoCreator", icon: Palette },
         { title: "Painel de Mídia", pageName: "PainelMidia", icon: ImageIcon },
+        { title: "Revisar descrições", pageName: "RevisaoDeDescricoes", icon: Palette },
       ],
     },
     {

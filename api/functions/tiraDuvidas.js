@@ -29,6 +29,9 @@ const MODEL_GATEWAY = process.env.AI_MODEL_VISION || 'anthropic/claude-opus-5';
 const MODEL_GATEWAY_RESERVA = process.env.AI_MODEL_VISION_RESERVA || 'anthropic/claude-sonnet-5';
 
 const resolverIA = () => resolverIACompartilhada({ modelDireto: MODEL_DIRETO, modelGateway: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA });
+// 10/10/2026 — a mesma IA de VISÃO (texto + foto) serve ao "revisar descrições em lote"
+// (descricoesEmLote.js): um lugar só decide qual modelo olha foto.
+export { resolverIA as resolverIADeVisao };
 
 const Atendimento = z.object({
   resposta: z.string().describe('a resposta pra pessoa, em português simples, no máximo 5 frases curtas'),

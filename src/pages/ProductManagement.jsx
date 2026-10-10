@@ -68,6 +68,8 @@ export default function ProductManagement() {
   const [batchConversion, setBatchConversion] = useState(null);
   const [gtinCode, setGtinCode] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
+  // ✨ 10/10/2026 — "Gerar descrição com IA" dentro do Editar: preenche o campo, o admin confere e salva
+  const [gerandoDescricao, setGerandoDescricao] = useState(false);
   const [showObservationModal, setShowObservationModal] = useState(false);
   const [currentObservation, setCurrentObservation] = useState({ productId: null, text: '' });
   const [currentPage, setCurrentPage] = useState(() => {
@@ -1992,6 +1994,35 @@ export default function ProductManagement() {
                       <p className="text-xs text-gray-400 mt-1">
                         Este texto aparece para o cliente na página de venda, sob o título “Descrição”.
                       </p>
+                      {editingProduct && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={gerandoDescricao}
+                          data-teste="gerar-descricao-ia"
+                          onClick={async () => {
+                            // 10/10/2026 — a IA lê o nome, as fotos e os dados do cadastro (sem inventar) e
+                            // só PREENCHE o campo: nada é gravado até apertar Atualizar.
+                            if ((formData.notes || '').trim() && !confirm('Já existe texto nesta descrição. Substituir pelo texto da IA? (nada é salvo até você apertar Atualizar)')) return;
+                            setGerandoDescricao(true);
+                            try {
+                              const r = await plataforma.functions.invoke('descricoesEmLote', { action: 'gerar', alvo: 'produtos', id: editingProduct.id, semRascunho: true, actorId: currentUser?.id });
+                              if (r?.ok && r.texto) setFormData((f) => ({ ...f, notes: r.texto }));
+                              else alert(r?.motivo === 'ia_indisponivel' ? 'A IA está indisponível agora.' : `Não consegui gerar uma descrição segura agora (${r?.motivo || 'erro'}). Escreva à mão ou tente de novo.`);
+                            } catch { alert('Não consegui falar com a IA agora.'); } finally { setGerandoDescricao(false); }
+                          }}
+                          className="mt-2 border-gray-600 text-gray-200 hover:text-white"
+                        >
+                          {gerandoDescricao ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                          Gerar descrição com IA
+                        </Button>
+                      )}
+                      {editingProduct && (
+                        <Button type="button" size="sm" variant="ghost" onClick={() => navigate(createPageUrl('RevisaoDeDescricoes'))} className="mt-2 ml-2 text-gray-300 hover:text-white">
+                          Revisar todas as descrições
+                        </Button>
+                      )}
                     </div>
 
                     <div className="col-span-full flex flex-wrap gap-2">
