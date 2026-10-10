@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     const limite = Math.min(500, Math.max(5, parseInt(body.limite) || 40));
     const detalhe = body.detalhe === true;
 
-    const colunas = 'id,description,lot,quantity,qty_perfeito,qty_bom,qty_oficina,qty_ruim,catalog_active,status,price_catalog,selling_price_retail,updated_date';
+    const colunas = 'id,description,lot,quantity,quantity_sold,qty_perfeito,qty_bom,qty_oficina,qty_ruim,catalog_active,status,price_catalog,selling_price_retail,updated_date';
     const produtos = await lerTudo(`products?select=${colunas}`);
 
     // Reserva ativa = peça já prometida a quem está pagando agora (PONTO 126).
@@ -121,16 +121,26 @@ export default async function handler(req, res) {
 
     const naVitrine = produtos.filter((p) => p.catalog_active === true);
 
+    const preco = (p) => num(p.price_catalog) || num(p.selling_price_retail) || 0;
+    const sobra = (p) => fisico(p) - num(p.quantity);   // contagem física acima da loja
+
     const cartao = (p) => ({
       id: p.id,
       ...(detalhe ? { produto: String(p.description || '').slice(0, 90) } : {}),
       lote: p.lot || null,
       loja_mostra: p.quantity === null ? 'sem quantidade' : num(p.quantity),
       contagem_fisica: fisico(p),
+      ja_vendidas: num(p.quantity_sold),
+      diferenca: sobra(p),
+      // 👇 A coluna que decide cada linha. Ver o bloco grande logo abaixo.
+      explicada_por_vendas: sobra(p) <= num(p.quantity_sold),
       reservado_agora: reservadoPorProduto[p.id] || 0,
-      preco: num(p.price_catalog) || num(p.selling_price_retail) || 0,
+      preco: preco(p),
       status: p.status || null,
     });
+
+    const emReais = (lista, unidades) =>
+      Math.round(lista.reduce((soma, p) => soma + unidades(p) * preco(p), 0) * 100) / 100;
 
     // ── 1. O caso grave: veio de lote (logo TEM classificação preenchida no
     //      cadastro), está à venda, mas a contagem física está zerada.
@@ -143,10 +153,34 @@ export default async function handler(req, res) {
     const semClassificacaoPorCadastro = naVitrine
       .filter((p) => num(p.quantity) > 0 && fisico(p) === 0 && !p.lot);
 
-    // ── 3. A loja mostra MENOS do que existe fisicamente: venda perdida.
-    const escondendoPeca = produtos
-      .filter((p) => fisico(p) > num(p.quantity))
-      .sort((a, b) => (fisico(b) - num(b.quantity)) - (fisico(a) - num(a.quantity)));
+    // ══════════════════════════════════════════════════════════════════════════
+    // 🔴 CORREÇÃO DE LEITURA 25/08/2026 — "CONTAGEM FÍSICA MAIOR" QUASE NUNCA É
+    //    PEÇA ESCONDIDA. NA MAIORIA DAS VEZES É RASTRO DE VENDA.
+    // ══════════════════════════════════════════════════════════════════════════
+    // A primeira versão tratava TODO produto com contagem física acima da loja
+    // como "venda perdida". Errado, e o dado real mostrou por quê: apareceram
+    // itens com status VENDIDO PIX, quantidade 0 na loja e contagem física 19.
+    // Não tem 19 peças no depósito — foram vendidas.
+    //
+    // A razão é a mesma divergência de sempre: a venda desconta `quantity` e
+    // NUNCA encosta na contagem por classificação. Então, depois de N vendas:
+    //
+    //     contagem_fisica − quantity  ≈  quantity_sold
+    //
+    // Ou seja: a diferença é o rastro das vendas, não peça parada. Chamar isso
+    // de "venda perdida" mandaria a operação procurar no depósito mercadoria que
+    // já saiu — e, pior, poderia levar alguém a REPOR quantidade na loja para
+    // "bater" com uma contagem que está velha. Aí sim voltaríamos a vender o que
+    // não existe, que é exatamente o problema que este relatório veio resolver.
+    //
+    // `quantity_sold` é a coluna que separa os dois casos, linha por linha:
+    //   diferença ≤ já vendidas  → rastro de venda. Esperado.
+    //   diferença > já vendidas  → sobra que as vendas não explicam. Olhar.
+    const comSobra = produtos
+      .filter((p) => sobra(p) > 0)
+      .sort((a, b) => sobra(b) - sobra(a));
+    const escondendoPeca = comSobra.filter((p) => !cartao(p).explicada_por_vendas);
+    const rastroDeVenda = comSobra.filter((p) => cartao(p).explicada_por_vendas);
 
     // ── 4. Está comprável, mas a última peça já está reservada por quem está
     //      pagando agora. O próximo cliente coloca no carrinho e leva não no
@@ -185,6 +219,7 @@ export default async function handler(req, res) {
       // 🔴 É AQUI QUE ESTÁ O PROBLEMA QUE VOCÊ PERGUNTOU
       vendendo_sem_peca_fisica: {
         quantos: vendendoSemPeca.length,
+        valor_exposto: emReais(vendendoSemPeca, (p) => num(p.quantity)),
         o_que_e: 'Produto que veio de LOTE, está à venda na loja, mas a contagem física por classificação está zerada. Como o lote preenche essa contagem no cadastro, zerada aqui é divergência de verdade — a loja pode estar vendendo o que não existe no depósito.',
         o_que_fazer: 'Conferir estas peças no depósito. Se não existirem, zerar a quantidade na Gestão de Produtos — não pela loja.',
         itens: vendendoSemPeca.slice(0, limite).map(cartao),
@@ -199,8 +234,17 @@ export default async function handler(req, res) {
 
       loja_escondendo_peca_que_existe: {
         quantos: escondendoPeca.length,
-        o_que_e: 'A contagem física é MAIOR que o que a loja mostra. Isso é venda perdida: a peça está no depósito e o cliente não consegue comprar.',
+        valor_parado: emReais(escondendoPeca, sobra),
+        o_que_e: 'A contagem física é maior que a da loja E a diferença NÃO é explicada pelo que já foi vendido. Aqui pode haver peça de verdade parada no depósito, sem o cliente conseguir comprar.',
+        o_que_fazer: 'Conferir no depósito. Se a peça existir, subir a quantidade na Gestão de Produtos.',
         itens: escondendoPeca.slice(0, limite).map(cartao),
+      },
+
+      apenas_rastro_de_venda: {
+        quantos: rastroDeVenda.length,
+        o_que_e: 'A contagem física está maior que a da loja, mas a diferença bate com o que já foi vendido. Não é peça parada — é a contagem por classificação que ficou velha, porque nenhuma venda encosta nela. Esperado, não é erro.',
+        o_que_fazer: 'NÃO reponha quantidade na loja para "bater" com esses números. A contagem é que está velha, não a loja.',
+        itens: detalhe ? rastroDeVenda.slice(0, limite).map(cartao) : '(mande "detalhe": true para ver a lista)',
       },
 
       ultima_peca_ja_prometida: {
@@ -211,6 +255,7 @@ export default async function handler(req, res) {
 
       marcado_vendido_e_ainda_a_venda: {
         quantos: vendidoMasAindaNaLoja.length,
+        valor_exposto: emReais(vendidoMasAindaNaLoja, (p) => num(p.quantity)),
         o_que_e: 'O cadastro do produto está marcado como VENDIDO, mas a quantidade continua positiva e ele segue comprável na loja. Aqui não são duas contagens divergindo — é o próprio cadastro se contradizendo.',
         o_que_fazer: 'Conferir um a um. Se foi vendido mesmo, zerar a quantidade na Gestão de Produtos.',
         itens: vendidoMasAindaNaLoja.slice(0, limite).map(cartao),
