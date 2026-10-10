@@ -17,7 +17,7 @@ import MaestroDeVideos from '@/components/video/MaestroDeVideos';
 // carregada na Home (só os 80 mais recentes) — um destaque em leilão mais antigo
 // nunca aparecia, mesmo salvo corretamente. Agora busca os leilões destacados
 // DIRETO no banco pelo id, então qualquer leilão marcado aparece.
-export default function DestaquesLeiloes({ currentUser }) {
+export default function DestaquesLeiloes({ currentUser, onIds }) {
   const [destaques, setDestaques] = useState([]);
   // 🎬 17/09/2026 — o vídeo de cada destaque, por id de leilão.
   // Herdado do PRODUTO ligado (products.video_urls), igual à sala faz desde
@@ -37,7 +37,7 @@ export default function DestaquesLeiloes({ currentUser }) {
       const ids = [...new Set((featured || [])
         .filter((r) => r.raw_base44?.auction_id && r.is_active !== false)
         .map((r) => r.raw_base44.auction_id))];
-      if (!alive || ids.length === 0) { if (alive) setDestaques([]); return; }
+      if (!alive || ids.length === 0) { if (alive) { setDestaques([]); onIds?.([]); } return; }
 
       const { data: auctionsData } = await supabase
         .from('auctions')
@@ -50,6 +50,8 @@ export default function DestaquesLeiloes({ currentUser }) {
       const byId = Object.fromEntries((auctionsData || []).map((a) => [a.id, a]));
       const emCartaz = destaquesEmCartaz(featured, byId);
       setDestaques(emCartaz);
+      // a Home tira estes ids da grade que roda (os destaques ficam FIXOS, em cima)
+      onIds?.(emCartaz.map((a) => a.id));
 
       // 🎬 UMA consulta para TODOS os destaques, nunca uma por card.
       // Seis destaques dariam seis idas ao banco se cada card buscasse o seu
