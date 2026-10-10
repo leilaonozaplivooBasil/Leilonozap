@@ -28,6 +28,7 @@ import CartaoLojaVirtual from '../components/catalog/CartaoLojaVirtual';
 import useTotalProdutosLoja, { textoTotalProdutos } from '@/hooks/useTotalProdutosLoja';
 import { useSectionTracking } from '@/lib/tracking';
 import useBannersDoPainel from '@/hooks/useBannersDoPainel';
+import { sementeDoAcesso, rodarProdutos } from '@/lib/rodizioDaVitrine';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -72,7 +73,12 @@ export default function Catalog() {
   const banners = useBannersDoPainel({ contexto: 'catalog', chaveCache: 'catalog_banners_cache' });
   const [showFilters, setShowFilters] = useState(false);
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
-  const [sortBy, setSortBy] = useState("recent");
+  // 🎲 10/10/2026 — padrão "variados": os produtos em RODÍZIO por acesso (a vitrine não fica
+  // parada nos mesmos itens). "recent" continua disponível em Ordenar por.
+  const [sortBy, setSortBy] = useState("variados");
+  const [semente] = useState(() => {
+    try { return sementeDoAcesso({ armazem: window.sessionStorage }); } catch { return sementeDoAcesso({}); }
+  });
   const [stockFilter, setStockFilter] = useState("inStock");
   const [licenseePhone, setLicenseePhone] = useState(null);
   const [licenseeData, setLicenseeData] = useState(null);
@@ -187,10 +193,16 @@ export default function Catalog() {
     }
 
     // 🛒 Esgotados sempre por último (não some, mas não atrapalha quem quer comprar)
-    filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
+    // 🎲 Em "variados" e SEM busca, os com estoque entram em rodízio (e os esgotados seguem no fim);
+    // com busca o resultado fica na ordem de sempre — quem procura algo não quer sorteio.
+    if (sortBy === "variados" && !debouncedSearchTerm) {
+      filtered = rodarProdutos(filtered, semente);
+    } else {
+      filtered = [...filtered].sort((a, b) => ((b.quantity > 0 ? 1 : 0) - (a.quantity > 0 ? 1 : 0)));
+    }
 
     setFilteredProducts(filtered);
-  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro]);
+  }, [products, debouncedSearchTerm, priceRange, sortBy, stockFilter, selectedCategory, secaoFiltro, semente]);
 
   // 🎴 Monta o cartão da Loja Virtual a partir de UM AppUser (dono resolvido).
   // Extraído pra o cartão poder vir do cadastro (dono real) ou do link, sem duplicar código.
@@ -798,7 +810,7 @@ export default function Catalog() {
                     onClick={() => {
                       setSelectedCategory("all");
                       setPriceRange({ min: "", max: "" });
-                      setSortBy("recent");
+                      setSortBy("variados");
                       setStockFilter("all");
                     }}
                     className="text-sm text-gray-400 hover:text-white"
@@ -854,6 +866,7 @@ export default function Catalog() {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
                     >
+                      <option value="variados">Variados (muda a cada visita)</option>
                       <option value="recent">Mais recentes</option>
                       <option value="priceAsc">Menor preço</option>
                       <option value="priceDesc">Maior preço</option>

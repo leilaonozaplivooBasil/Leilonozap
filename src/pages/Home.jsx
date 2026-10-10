@@ -24,6 +24,8 @@ const RecommendedSection = lazy(() => import('../components/recommendations/Reco
 import HeroBannerLeiloes from '../components/home/HeroBannerLeiloes';
 import useBannersDoPainel from '@/hooks/useBannersDoPainel';
 import { STATUS_EM_CARTAZ, estaEmCartaz } from '@/lib/leilaoEmCartaz';
+import { sementeDoAcesso, ordemDaGrade, faltamDoisDias } from '@/lib/rodizioDaVitrine';
+import FileiraFaltamDoisDias from '../components/home/FileiraFaltamDoisDias';
 import useDragRow from '@/hooks/useDragRow';
 import LiveStats from '../components/home/LiveStats';
 import HeroAcoesLeiloes from '../components/home/HeroAcoesLeiloes';
@@ -210,6 +212,14 @@ export default function Home() {
     } catch { return false; }
   });
   const ITEMS_PER_PAGE = 12;
+  // 🎲 10/10/2026 — RODÍZIO (dono: "a loja e os leilões não podem ficar parados nos mesmos
+  // produtos"). Uma semente por ACESSO: abriu o site → ordem nova; navegando → a mesma.
+  // Regras e testes em src/lib/rodizioDaVitrine.js.
+  const [semente] = useState(() => {
+    try { return sementeDoAcesso({ armazem: window.sessionStorage }); } catch { return sementeDoAcesso({}); }
+  });
+  // ids dos Destaques (fixos, vêm pela data): não se repetem na grade que roda
+  const [idsDestaque, setIdsDestaque] = useState([]);
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
@@ -477,9 +487,13 @@ export default function Home() {
     }
 
     // ORDENAÇÃO: ?sort=newest → created_date DESC (leilão recém-criado no topo)
-    // Default → active primeiro + end_time ascendente (comportamento validado em produção)
+    // 🎲 Vitrine padrão (sem busca, sem filtro de data, fora dos favoritos) → ativos em
+    // RODÍZIO por acesso. Quem filtra por data de encerramento pediu essa ordem: mantém.
+    // Demais casos → comportamento validado em produção (active primeiro + end_time ascendente).
     if (sortNewest) {
       filtered.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+    } else if (!searchTerm.trim() && dateFilter === "all") {
+      filtered = ordemDaGrade(filtered, { semente });
     } else {
       filtered.sort((a, b) => {
         if (a.status === 'active' && b.status !== 'active') return -1;
@@ -496,14 +510,30 @@ export default function Home() {
       seenTitles.add(normalizedTitle);
       return true;
     });
-  }, [auctions, activeCategory, activeSourceFilter, dateFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest, searchTerm]);
+  }, [auctions, activeCategory, activeSourceFilter, dateFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap, sortNewest, searchTerm, semente]);
+
+  // 🎲 A vitrine "de descoberta" (destaques + fileira de 2 dias + rodízio) só vale na Home
+  // limpa: sem busca, sem filtro de data/categoria/origem, fora dos favoritos e sem ?sort.
+  const vitrineLimpa = !sortNewest && !showFavoritesOnly && !searchTerm.trim()
+    && dateFilter === "all" && activeCategory === "todos" && activeSourceFilter === "todos";
+  // ⏳ "Faltam 2 dias": fileira fixa logo abaixo dos Destaques. Sem leilão de 2 dias → não aparece.
+  const fileiraDeDoisDias = useMemo(
+    () => (vitrineLimpa ? faltamDoisDias(filteredAuctions).filter((a) => !idsDestaque.includes(a.id)) : []),
+    [vitrineLimpa, filteredAuctions, idsDestaque],
+  );
+  // a grade não repete o que já está em cima (destaques e fileira)
+  const listaDaGrade = useMemo(() => {
+    if (!vitrineLimpa) return filteredAuctions;
+    const fora = new Set([...idsDestaque, ...fileiraDeDoisDias.map((a) => a.id)]);
+    return filteredAuctions.filter((a) => !fora.has(a.id));
+  }, [vitrineLimpa, filteredAuctions, idsDestaque, fileiraDeDoisDias]);
 
   // Paginação derivada
-  const totalPages = Math.max(1, Math.ceil(filteredAuctions.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(listaDaGrade.length / ITEMS_PER_PAGE));
   const paginatedAuctions = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredAuctions.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredAuctions, currentPage, ITEMS_PER_PAGE]);
+    return listaDaGrade.slice(start, start + ITEMS_PER_PAGE);
+  }, [listaDaGrade, currentPage, ITEMS_PER_PAGE]);
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
@@ -934,7 +964,8 @@ export default function Home() {
         {mostrarBlocosDeDescoberta(searchTerm) && (
           <>
             <AuctionSectorLinks />
-            <DestaquesLeiloes currentUser={currentUser} />
+            <DestaquesLeiloes currentUser={currentUser} onIds={setIdsDestaque} />
+            <FileiraFaltamDoisDias leiloes={fileiraDeDoisDias} bidStatsMap={bidStatsMap} currentUser={currentUser} />
           </>
         )}
 
@@ -1150,7 +1181,7 @@ export default function Home() {
 
             {/* Info de contagem */}
             <div className="text-center text-sm text-gray-500 mt-2">
-              Mostrando {Math.min(paginatedAuctions.length, ITEMS_PER_PAGE)} de {filteredAuctions.length} leilões
+              Mostrando {Math.min(paginatedAuctions.length, ITEMS_PER_PAGE)} de {listaDaGrade.length} leilões
             </div>
 
             {/* 🏆 24/09/2026 — quem já arrematou + maiores arrematadores (dono) */}
