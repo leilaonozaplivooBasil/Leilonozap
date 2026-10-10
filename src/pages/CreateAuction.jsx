@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, Image as ImageIcon, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, AlertCircle, Sparkles, CheckCircle, Copy, RefreshCw, ArrowLeft } from "lucide-react";
+// 🔗 10/10/2026 (DIR-212) — importar de QUALQUER marketplace pelo link (mesmo motor da loja).
+import { importarProdutoPorLink, fotosPeloNome, marketplaceDoLink, linkValido } from "@/lib/importarPorLink";
 import { createPageUrl } from "@/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -189,82 +191,62 @@ export default function CreateAuction() {
     const productId = urlParams.get('product_id');
     if (productId) loadProductData(productId);
 
-    // 🆕 DETECTA URL DO MERCADO LIVRE (vindo do GoogleShoppingModal via ?ml_url=)
+    // 🔗 DETECTA UM LINK DE PRODUTO (vindo do GoogleShoppingModal via ?ml_url=) — qualquer marketplace (DIR-212)
     const mlUrl = urlParams.get('ml_url');
     if (mlUrl) {
       const decodedUrl = decodeURIComponent(mlUrl);
-      console.log('🔗 [ML_URL] Detectada:', decodedUrl);
+      console.log('🔗 [LINK] Detectado:', decodedUrl);
       setProductUrl(decodedUrl);
-      setSelectedMarketplace({ id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' });
-      setImporterActiveTab("url"); // 🆕 força aba "Por URL"
-      toast.info('🔗 URL do ML detectada! Extraindo dados...');
-      setTimeout(async () => {
-        setIsProcessing(true);
-        setManualStep(1);
-        try {
-          console.log('🔍 [ML_URL] Tentando extractMLImages...');
-          const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', { productUrl: decodedUrl }));
-          
-          if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
-            // Sucesso direto via extractMLImages
-            const data = { title: mlResponse.data.title || '', description: mlResponse.data.description || mlResponse.data.title || '', price: mlResponse.data.price || null, imageUrls: mlResponse.data.images };
-            setExtractedData({ title: data.title, description: data.description });
-            setFormData(prev => ({ ...prev, title: data.title.trim(), description: data.description, starting_price: data.price ? data.price.toString() : prev.starting_price, source_url: decodedUrl }));
-            setDownloadedImages(data.imageUrls);
-            setCoverIndex(0);
-            setManualStep(5);
-            toast.success(`✅ ${data.imageUrls.length} imagens importadas do ML!`);
-          } else {
-            // FALLBACK: ML bloqueou scraping direto
-            // Extrai o título da URL do ML para buscar pelo nome
-            console.log('⚠️ [ML_URL] Scraping direto bloqueado, extraindo título da URL...');
-            
-            // Extrai título legível da URL (ex: /notebook-lenovo-ideapad-slim-3-.../p/...)
-            let productNameFromUrl = '';
-            try {
-              const urlPath = new URL(decodedUrl).pathname;
-              // Pega a parte antes de /p/ ou /MLB
-              const match = urlPath.match(/^\/([^/]+)/);
-              if (match) {
-                productNameFromUrl = match[1].replace(/-/g, ' ').substring(0, 80);
-              }
-            } catch(e) {}
-            
-            if (productNameFromUrl) {
-              toast.info('🔄 Buscando pelo nome do produto...');
-              console.log('🔍 [ML_URL] Buscando por nome:', productNameFromUrl);
-              
-              const nameResponse = await withRetry(() => plataforma.functions.invoke('searchProductByName', {
-                productName: productNameFromUrl
-              }));
-              
-              if (nameResponse?.data?.found && nameResponse.data.imageUrls?.length > 0) {
-                const nd = nameResponse.data;
-                setExtractedData({ title: nd.title || productNameFromUrl, description: nd.description || productNameFromUrl });
-                setFormData(prev => ({ ...prev, title: (nd.title || productNameFromUrl).trim(), description: nd.description || productNameFromUrl, starting_price: nd.price ? nd.price.toString() : prev.starting_price, source_url: decodedUrl }));
-                setDownloadedImages(nd.imageUrls);
-                setCoverIndex(0);
-                setManualStep(5);
-                toast.success(`✅ ${nd.imageUrls.length} imagens importadas!`);
-              } else {
-                toast.warning('⚠️ Não foi possível extrair imagens automaticamente. Use o Upload Manual de Imagens.');
-                setManualStep(0);
-              }
-            } else {
-              toast.warning('⚠️ Não foi possível extrair imagens desta URL. Use o Upload Manual de Imagens.');
-              setManualStep(0);
-            }
-          }
-        } catch (err) {
-          console.error('❌ [ML_URL] Erro:', err.message);
-          toast.error('Erro ao extrair dados: ' + err.message);
-          setManualStep(0);
-        } finally {
-          setIsProcessing(false);
-        }
-      }, 1500);
+      setSelectedMarketplace({ id: 'link', name: marketplaceDoLink(decodedUrl)?.nome || 'Link', placeholder: 'https://...' });
+      setImporterActiveTab("url"); // força aba "Por URL"
+      toast.info('🔗 Link detectado! Lendo o anúncio...');
+      setTimeout(() => { importarLinkNoFormulario(decodedUrl); }, 1500);
     }
   }, [loadCurrentUser]);
+
+  // 🔗 DIR-212 (10/10/2026) — IMPORTAR DE QUALQUER MARKETPLACE PELO LINK (Mercado Livre, Shopee,
+  // Magazine Luiza, Amazon…), com o mesmo motor da loja e do card do produto
+  // (importarProdutoPeloLink). Substitui o extractMLImages, um stub que sempre devolvia
+  // "ml_bloqueado" — o botão "Importar do Mercado Livre" nunca funcionou de verdade.
+  const importarLinkNoFormulario = async (url) => {
+    setIsProcessing(true);
+    setManualStep(1);
+    try {
+      const d = await importarProdutoPorLink({ url });
+      if (!d.ok) throw new Error(d.erro || 'Não consegui importar pelo link.');
+      let fotos = d.fotos.slice(0, 6);
+      if (!fotos.length && d.titulo) {
+        toast.info('🔎 A página não entregou fotos; buscando pelo nome...');
+        fotos = await fotosPeloNome(d.titulo);
+      }
+      if (!d.titulo && !fotos.length) throw new Error('A página não trouxe título nem fotos. Use o Upload Manual de Imagens.');
+      const finalImages = fotos.slice(0, 5);
+      while (finalImages.length < 5) finalImages.push('');
+      setFormData((prev) => ({
+        ...prev,
+        title: (d.titulo || prev.title || '').trim(),
+        description: d.descricao || d.titulo || prev.description,
+        starting_price: d.preco ? String(d.preco) : prev.starting_price,
+        source_url: url,
+        image_urls: finalImages,
+      }));
+      setExtractedData({ title: d.titulo, description: d.descricao || d.titulo });
+      setDownloadedImages(fotos);
+      setCoverIndex(0);
+      setManualStep(fotos.length ? 5 : 0);
+      const origem = d.marketplace?.nome || marketplaceDoLink(url)?.nome || 'o link';
+      toast.success(fotos.length
+        ? `✅ Importado de ${origem}: ${fotos.length} foto(s)${d.preco ? `, preço R$ ${Number(d.preco).toFixed(2).replace('.', ',')}` : ''}.`
+        : `✅ Importado de ${origem} (sem fotos: use o Upload Manual).`);
+      for (const aviso of (d.avisos || []).slice(0, 2)) toast.warning(aviso);
+    } catch (error) {
+      console.error('❌ Erro importação pelo link:', error);
+      toast.error(error.message || 'Erro ao importar. Tente novamente.');
+      setManualStep(0);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const loadProductData = async (productId) => {
     try {
@@ -301,9 +283,8 @@ export default function CreateAuction() {
           return;
         }
 
-        // 3. Se tem source_url do ML → tenta extrair imagens
+        // 3. Se tem link de origem (qualquer marketplace, DIR-212) → lê o anúncio e pega as fotos
         const sourceUrl = product.source_url || '';
-        const isMlUrl = sourceUrl.includes('mercadolivre.com') || sourceUrl.includes('mercadolibre.com');
 
         const autoSearchByGoogleShopping = async (productDescription) => {
           toast.info('🔎 Buscando imagens no Google Shopping automaticamente...');
@@ -345,16 +326,15 @@ export default function CreateAuction() {
           }
         };
 
-        if (isMlUrl) {
+        if (sourceUrl && linkValido(sourceUrl)) {
           setProductUrl(sourceUrl);
-          toast.info('🔗 Produto tem link do ML! Extraindo imagens automaticamente...');
+          toast.info(`🔗 Produto tem link de ${marketplaceDoLink(sourceUrl)?.nome || 'origem'}! Lendo o anúncio...`);
           setTimeout(async () => {
             setIsProcessing(true);
             setManualStep(1);
             try {
-              const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', {
-                productUrl: sourceUrl
-              }));
+              const lido = await importarProdutoPorLink({ url: sourceUrl, titulo: product.description });
+              const mlResponse = lido.ok ? { data: { found: lido.fotos.length > 0, images: lido.fotos, title: lido.titulo, description: lido.descricao } } : null;
 
               if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
                 const imgs = mlResponse.data.images;
@@ -372,15 +352,15 @@ export default function CreateAuction() {
                 setCoverIndex(0);
                 setExtractedData({ title: mlResponse.data.title || '', description: mlResponse.data.description || '' });
                 setManualStep(5);
-                toast.success(`✅ ${imgs.length} imagens extraídas do Mercado Livre!`);
+                toast.success(`✅ ${imgs.length} imagens extraídas do anúncio!`);
               } else {
-                // ML bloqueou → fallback automático Google Shopping
+                // a página não entregou fotos → fallback automático Google Shopping
                 setIsProcessing(false);
                 setManualStep(0);
                 await autoSearchByGoogleShopping(product.description);
               }
             } catch (err) {
-              console.error('❌ Erro ao extrair ML automático:', err);
+              console.error('❌ Erro ao ler o anúncio de origem:', err);
               setIsProcessing(false);
               setManualStep(0);
               await autoSearchByGoogleShopping(product.description);
@@ -1245,97 +1225,45 @@ export default function CreateAuction() {
                   </CardHeader>
                   <CardContent className="space-y-4">
 
-                    {/* IMPORTADOR ÚNICO: MERCADO LIVRE */}
+                    {/* 🔗 DIR-212 — IMPORTAR DE UM LINK (qualquer marketplace) */}
                     {manualStep === 0 && (
-                      <div className="space-y-3">
-                        {/* HEADER COM LOGO ML */}
+                      <div className="space-y-3" data-teste="importar-por-link">
                         <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
-                          <img
-                            src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small.png"
-                            alt="Mercado Livre"
-                            className="w-8 h-8 rounded"
-                          />
+                          <div className="w-8 h-8 rounded bg-yellow-500/20 flex items-center justify-center">
+                            <LinkIcon className="w-5 h-5 text-yellow-300" />
+                          </div>
                           <div>
-                            <p className="text-sm font-bold text-yellow-300">Importar do Mercado Livre</p>
-                            <p className="text-xs text-gray-400">Cole o link do produto e extraímos tudo automaticamente</p>
+                            <p className="text-sm font-bold text-yellow-300">Importar de um link</p>
+                            <p className="text-xs text-gray-400">Mercado Livre, Shopee, Magazine Luiza, Amazon, Americanas… cole o link do produto e a gente lê o anúncio</p>
                           </div>
                         </div>
-
                         <Input
                           value={productUrl}
                           onChange={(e) => setProductUrl(e.target.value)}
                           onKeyPress={(e) => {
                             if (e.key === 'Enter' && productUrl.trim()) {
-                              const isML = productUrl.trim().includes('mercadolivre.com') || productUrl.trim().includes('mercadolibre.com');
-                              if (!isML) {
-                                toast.error('⚠️ Cole um link válido do Mercado Livre');
+                              if (!linkValido(productUrl.trim())) {
+                                toast.error('⚠️ Cole um link completo, começando com https://');
                                 return;
                               }
-                              document.getElementById('btn-importar-ml')?.click();
+                              document.getElementById('btn-importar-link')?.click();
                             }
                           }}
-                          placeholder="https://www.mercadolivre.com.br/produto/..."
+                          placeholder="https://www.mercadolivre.com.br/... · https://shopee.com.br/... · https://www.magazineluiza.com.br/..."
                           className="bg-gray-900 border-yellow-600 text-gray-100 placeholder-gray-500 focus:border-yellow-400 text-sm"
                           disabled={isProcessing}
                         />
-
                         <Button
-                          id="btn-importar-ml"
+                          id="btn-importar-link"
                           onClick={async (e) => {
                             e.preventDefault();
                             if (isProcessing) return;
-
                             const url = productUrl.trim();
-                            const isML = url.includes('mercadolivre.com') || url.includes('mercadolibre.com');
-                            if (!isML) {
-                              toast.error('⚠️ Cole um link válido do Mercado Livre');
+                            if (!linkValido(url)) {
+                              toast.error('⚠️ Cole um link completo, começando com https://');
                               return;
                             }
-
-                            setIsProcessing(true);
-                            setManualStep(1);
-                            try {
-                              const mlResponse = await withRetry(() => plataforma.functions.invoke('extractMLImages', {
-                                productUrl: url
-                              }));
-
-                              if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
-                                const data = {
-                                  title: mlResponse.data.title || '',
-                                  description: mlResponse.data.description || mlResponse.data.title || '',
-                                  price: mlResponse.data.price || null,
-                                  imageUrls: mlResponse.data.images
-                                };
-
-                                // Aplica TUDO de uma vez no formData
-                                const finalImages = data.imageUrls.slice(0, 5);
-                                while (finalImages.length < 5) finalImages.push("");
-
-                                setFormData(prev => ({
-                                  ...prev,
-                                  title: data.title.trim(),
-                                  description: data.description,
-                                  starting_price: data.price ? data.price.toString() : prev.starting_price,
-                                  source_url: url,
-                                  image_urls: finalImages
-                                }));
-                                setDownloadedImages(data.imageUrls);
-                                setCoverIndex(0);
-                                setExtractedData({ title: data.title, description: data.description });
-                                setManualStep(5);
-                                toast.success(`✅ ${data.imageUrls.length} imagens importadas do ML!`);
-                              } else {
-                                throw new Error('Nenhuma imagem encontrada. Verifique o link ou use Upload Manual.');
-                              }
-                            } catch (error) {
-                              console.error('❌ Erro importação ML:', error);
-                              toast.error(error.message || 'Erro ao importar. Tente novamente.');
-                              setManualStep(0);
-                              setSelectedMarketplace(null);
-                              setProductUrl('');
-                            } finally {
-                              setIsProcessing(false);
-                            }
+                            await importarLinkNoFormulario(url);
                           }}
                           disabled={isProcessing || !productUrl.trim()}
                           className="w-full bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold text-sm h-11"
@@ -1343,22 +1271,20 @@ export default function CreateAuction() {
                           {isProcessing ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Extraindo dados e imagens...
+                              Lendo o anúncio...
                             </>
                           ) : (
                             <>
                               <Zap className="w-4 h-4 mr-2" />
-                              🤖 Importar do Mercado Livre
+                              🤖 Importar pelo link{marketplaceDoLink(productUrl) ? ` (${marketplaceDoLink(productUrl).nome})` : ''}
                             </>
                           )}
                         </Button>
-
                         <p className="text-xs text-gray-500 text-center">
-                          ✨ Extrai título, descrição, preço e imagens em alta resolução (WebP)
+                          ✨ Lê título, descrição, preço, medidas e fotos do anúncio. Se a loja bloquear o nosso servidor, o nome vem do próprio link e as fotos da busca por nome.
                         </p>
                       </div>
                     )}
-
                     {/* ETAPA 1: PROCESSANDO DADOS */}
                     {manualStep === 1 && (
                       <div className="text-center py-8">

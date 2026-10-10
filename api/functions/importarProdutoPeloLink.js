@@ -17,7 +17,7 @@
 // com a mesma rede de segurança quando a API recusa o schema).
 import { exigirSessao } from '../_lib/sessao.js';
 import { resolverIA, clienteIA, opcoesDeReserva, detalhesDoErro, Anthropic } from '../_lib/ia.js';
-import { buscarPagina, textoDaPagina, SCHEMA_DA_FICHA, montarPromptDaFicha, montarPromptDaEstimativa, sanearFicha, medidasDoJsonLd } from '../_lib/fichaDaPagina.js';
+import { buscarPagina, textoDaPagina, SCHEMA_DA_FICHA, montarPromptDaFicha, montarPromptDaEstimativa, sanearFicha, medidasDoJsonLd, precoDaPagina, marketplaceDoHost, tituloDoEndereco, tituloEhGenerico } from '../_lib/fichaDaPagina.js';
 
 export const config = { maxDuration: 60 };
 
@@ -104,10 +104,21 @@ export default async function handler(req, res) {
     try { host = url ? new URL(url).hostname : ''; } catch { host = ''; }
     const pag = url ? await buscarPagina(url) : { ok: false, status: 0, html: '', finalUrl: '', erro: 'sem_url' };
     const lida = pag.ok ? textoDaPagina(pag.html, { url: pag.finalUrl || url }) : null;
-    const temTexto = Boolean(lida && (lida.texto.length >= MINIMO_DE_TEXTO || lida.jsonLd));
-    const titulo = tituloDoCorpo || lida?.titulo || '';
-    const fotos = lida?.imagens || [];
-    const pagina = { status: pag.status, host, lida: temTexto, erro: pag.ok ? (temTexto ? null : 'sem_texto_util') : pag.erro };
+    // 🔗 DIR-212 (10/10/2026) — qualquer marketplace. A página pode abrir e ser só a tela de
+    // verificação do marketplace (título "Mercado Livre", sem JSON-LD): isso NÃO é texto útil —
+    // o nome vem do próprio endereço, que carrega o slug do produto, e as fotos ficam de fora
+    // (seriam o logotipo). O preço só entra quando a página DECLARA (JSON-LD/meta); nunca é estimado.
+    const marketplace = marketplaceDoHost(host);
+    const tituloDaPagina = lida && !tituloEhGenerico(lida.titulo) ? lida.titulo : '';
+    const tituloDoLink = tituloDoEndereco(pag.finalUrl || url);
+    const paginaGenerica = Boolean(lida && !tituloDaPagina && !lida.jsonLd);
+    const temTexto = Boolean(lida && !paginaGenerica && (lida.texto.length >= MINIMO_DE_TEXTO || lida.jsonLd));
+    const titulo = tituloDoCorpo || tituloDaPagina || tituloDoLink;
+    const tituloDe = tituloDoCorpo ? 'informado' : tituloDaPagina ? 'pagina' : tituloDoLink ? 'endereco' : null;
+    const fotos = paginaGenerica ? [] : (lida?.imagens || []);
+    const precoLido = pag.ok ? precoDaPagina(pag.html) : { preco: null, moeda: null, origem: null };
+    const pagina = { status: pag.status, host, lida: temTexto, erro: pag.ok ? (temTexto ? null : (paginaGenerica ? 'tela_de_verificacao' : 'sem_texto_util')) : pag.erro };
+    const extras = { marketplace, preco: precoLido.preco, moeda: precoLido.moeda, preco_origem: precoLido.origem, titulo_de: tituloDe };
 
     // 2) a IA
     const ia = await resolverIA({ modelDireto: MODEL_DIRETO, modelGateway: MODEL_GATEWAY, reserva: MODEL_GATEWAY_RESERVA });
@@ -117,16 +128,16 @@ export default async function handler(req, res) {
       const ficha = sanearFicha({ titulo, descricao: lida?.jsonLd?.description || lida?.descricaoMeta || '', marca: lida?.jsonLd?.brand || null, modelo: lida?.jsonLd?.model || null, ...(doLd || {}), encontrado_na_pagina: Boolean(doLd), confianca: doLd ? 'media' : 'baixa', observacao: 'IA não conectada: li só o que a página declara nos dados estruturados.' }, { fonte: temTexto ? 'pagina' : 'estimativa' });
       ficha.avisos.unshift('IA não conectada (configure ANTHROPIC_API_KEY ou AI_GATEWAY_API_KEY).');
       console.warn('[importarProdutoPeloLink] sem IA', { host, status: pag.status, fonte: ficha.fonte });
-      return res.status(200).json({ ok: true, ...ficha, pagina, fotos, needs_key: true });
+      return res.status(200).json({ ok: true, ...ficha, pagina, fotos, ...extras, needs_key: true });
     }
 
     if (!temTexto && !titulo) {
-      return res.status(200).json({ ok: false, error: 'Não consegui ler a página e não tenho um título para estimar.', details: { pagina }, fotos });
+      return res.status(200).json({ ok: false, error: 'Não consegui ler a página e não tenho um título para estimar.', details: { pagina }, fotos, ...extras });
     }
 
     const prompt = temTexto ? montarPromptDaFicha({ url: pag.finalUrl || url, titulo, pagina: lida }) : montarPromptDaEstimativa({ titulo });
     const r = await perguntarIA(ia, prompt);
-    if (!r.ok) return res.status(200).json({ ok: false, error: r.error, details: { ...(r.details || {}), pagina }, fotos, titulo });
+    if (!r.ok) return res.status(200).json({ ok: false, error: r.error, details: { ...(r.details || {}), pagina }, fotos, titulo, ...extras });
 
     let ficha = sanearFicha(r.obj, { fonte: temTexto ? 'pagina' : 'estimativa' });
     if (!ficha.titulo) ficha.titulo = titulo;
@@ -156,8 +167,8 @@ export default async function handler(req, res) {
         };
       }
     }
-    console.log('[importarProdutoPeloLink]', { fonte: ficha.fonte, host, status: pag.status, lida: temTexto, confianca: ficha.confianca, fotos: fotos.length, model: r.model });
-    return res.status(200).json({ ok: true, ...ficha, pagina, fotos });
+    console.log('[importarProdutoPeloLink]', { fonte: ficha.fonte, host, status: pag.status, lida: temTexto, confianca: ficha.confianca, fotos: fotos.length, model: r.model, marketplace: marketplace?.id || null, preco: precoLido.preco, titulo_de: tituloDe });
+    return res.status(200).json({ ok: true, ...ficha, pagina, fotos, ...extras });
   } catch (e) {
     console.error('[importarProdutoPeloLink] erro inesperado', String(e?.message || e));
     return res.status(200).json({ ok: false, error: 'Erro ao importar pelo link', details: String(e?.message || e).slice(0, 300) });

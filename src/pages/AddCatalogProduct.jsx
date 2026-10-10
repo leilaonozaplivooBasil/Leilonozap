@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Loader2, Plus, X, Image as ImageIcon, Edit2, Trash2 } from 'lucide-react';
+import { Link as LinkIcon, Camera, Loader2, Plus, X, Image as ImageIcon, Edit2, Trash2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 // 🛡️ PONTO 74: nunca gravar JSON de erro da IA como descrição
@@ -17,6 +17,8 @@ import { ORIGENS } from '@/lib/origemProduto';
 // (src/lib/fotosParaNosso.js): esta tela, o editor do leilão e o buscador
 // manual usam a MESMA função. A cópia local que vivia aqui foi retirada.
 import { trazerFotosParaNosso } from '@/lib/fotosParaNosso';
+// 🔗 10/10/2026 (DIR-212) — importar de QUALQUER marketplace pelo link, com o mesmo motor do leilão.
+import { importarProdutoPorLink, fotosPeloNome, marketplaceDoLink, linkValido, resumoDaImportacao, MARKETPLACES_CONHECIDOS } from '@/lib/importarPorLink';
 // 📦 08/10/2026 (DIR-207) — a régua única de medidas: vazio vira null (nunca 0),
 // fora da faixa é recusado, e a tela mostra a caixa que o frete VAI usar.
 import { normalizarMedidas, caixaDoFrete, resumoDaCaixa, faltamMedidas, textoDoCampo, ORIGENS_MEDIDA } from '@/lib/medidasDoProduto';
@@ -62,6 +64,11 @@ export default function AddCatalogProduct() {
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   // PONTO 77 CAMADA 5 — painel do buscador de fotos (abre/fecha pelo link "Buscar fotos")
   const [showBuscadorFotos, setShowBuscadorFotos] = useState(false);
+  // 🔗 DIR-212 — importar de um link (qualquer marketplace)
+  const [linkImport, setLinkImport] = useState('');
+  const [importandoLink, setImportandoLink] = useState(false);
+  const [statusLink, setStatusLink] = useState('');
+  const [avisosLink, setAvisosLink] = useState([]);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -117,7 +124,9 @@ export default function AddCatalogProduct() {
     // Campos existentes
     lot: '',
     purchase_order: '',
-    notes: ''
+    notes: '',
+    // 🔗 DIR-212: de onde o produto foi importado (link do marketplace)
+    source_url: ''
   });
   
   // Carrega categorias, subcategorias e vendedores
@@ -176,7 +185,8 @@ export default function AddCatalogProduct() {
       height: textoDoCampo(product.altura),
       width: textoDoCampo(product.largura),
       quantity: product.quantity || 1,
-      catalog_active: product.catalog_active || false
+      catalog_active: product.catalog_active || false,
+      source_url: product.source_url || ''
     }));
     setMedidasOrigem(product.medidas_origem || null);
     setProdutoCarregado(product);
@@ -414,6 +424,85 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
   // leilão — mesmo comportamento, uma cópia só.
   const trazerParaNosso = trazerFotosParaNosso;
 
+  // 🔗 DIR-212 (10/10/2026) — IMPORTAR DE QUALQUER MARKETPLACE PELO LINK
+  // Dono: "quero essa opção também quando formos adicionar produtos na loja; pode ser
+  // qualquer link — Shopee, Magazine Luiza, Mercado Livre etc." Mesmo motor do leilão
+  // e do card do produto (importarProdutoPeloLink): título, descrição, marca, modelo,
+  // medidas, preço declarado e fotos. NUNCA passa por cima do que a pessoa já
+  // preencheu: só entra em campo vazio. Toda foto de fora passa pelo nosso servidor.
+  const importarPeloLink = async () => {
+    const url = linkImport.trim();
+    if (!linkValido(url)) {
+      toast({ title: 'Cole o link do produto', description: 'O endereço precisa começar com http:// ou https://', variant: 'destructive', duration: 2500 });
+      return;
+    }
+    setImportandoLink(true);
+    setAvisosLink([]);
+    const origem = marketplaceDoLink(url)?.nome || 'a página';
+    setStatusLink(`🔎 Lendo o anúncio em ${origem}...`);
+    try {
+      const d = await importarProdutoPorLink({ url, titulo: formDataRef.current.title });
+      if (!d.ok) {
+        setStatusLink('');
+        toast({ title: 'Não consegui importar pelo link', description: d.erro, variant: 'destructive', duration: 4000 });
+        return;
+      }
+      const antes = formDataRef.current;
+      const { valores: medidasLidas } = normalizarMedidas(d.medidas || {});
+      const preencheu = [];
+      // só entra em campo vazio — e registra o que entrou, para dizer à pessoa
+      const so = (nome, atual, novo) => {
+        const n = novo === null || novo === undefined ? '' : String(novo);
+        if (textoDoCampo(atual) === '' && n.trim() !== '') { preencheu.push(nome); return n; }
+        return atual;
+      };
+      const precoTexto = d.preco ? String(d.preco) : '';
+      const patch = {
+        title: so('nome', antes.title, (d.titulo || '').slice(0, 60)),
+        description: so('descrição', antes.description, d.descricao),
+        brand: so('marca', antes.brand, d.marca),
+        model: so('modelo', antes.model, d.modelo),
+        weight: so('peso', antes.weight, textoDoCampo(medidasLidas.peso)),
+        height: so('altura', antes.height, textoDoCampo(medidasLidas.altura)),
+        length: so('comprimento', antes.length, textoDoCampo(medidasLidas.comprimento)),
+        width: so('largura', antes.width, textoDoCampo(medidasLidas.largura)),
+        price: so('preço', antes.price, precoTexto),
+        compare_price: so('preço de referência', antes.compare_price, precoTexto),
+        source_url: url,
+      };
+      setFormData((prev) => ({ ...prev, ...patch }));
+      if (['peso', 'altura', 'comprimento', 'largura'].some((c) => preencheu.includes(c))) {
+        setMedidasOrigem(d.fonte === 'pagina' ? 'pagina' : 'estimativa_ia');
+      }
+      // fotos: as da página; sem nenhuma, pela busca por nome. Sempre copiadas para o nosso servidor.
+      const nome = d.titulo || antes.title;
+      let candidatas = d.fotos.slice(0, 6);
+      if (!candidatas.length && nome) {
+        setStatusLink('🔎 A página não entregou fotos; buscando pelo nome...');
+        candidatas = await fotosPeloNome(nome);
+      }
+      let fotosNovas = 0; let falharam = 0;
+      if (candidatas.length) {
+        setStatusLink('📥 Copiando as fotos para o nosso servidor...');
+        const r = await trazerParaNosso(candidatas, nome);
+        falharam = r.falharam;
+        const jaTem = (formDataRef.current.image_urls || []).filter(Boolean);
+        const inéditas = r.fotos.filter((f) => !jaTem.includes(f));
+        fotosNovas = inéditas.length;
+        if (inéditas.length) setFormData((prev) => ({ ...prev, image_urls: [...(prev.image_urls || []).filter(Boolean), ...inéditas] }));
+      }
+      setAvisosLink(d.avisos || []);
+      const resumo = resumoDaImportacao({ marketplace: d.marketplace, preencheu, fotos: fotosNovas, falharam, preco: preencheu.includes('preço') ? d.preco : null });
+      setStatusLink(`✅ ${resumo}`);
+      toast({ title: `Importado de ${d.marketplace?.nome || origem}`, description: resumo, duration: 5000 });
+    } catch (e) {
+      setStatusLink('');
+      toast({ title: 'Erro ao importar', description: e?.message || 'Tente de novo.', variant: 'destructive', duration: 3000 });
+    } finally {
+      setImportandoLink(false);
+    }
+  };
+
   const autoFetchImages = async (product) => {
     setIsAutoImporting(true);
     setAutoImportStatus('🔍 Buscando imagens automaticamente...');
@@ -434,21 +523,21 @@ Retorne APENAS o JSON, sem markdown, sem explicações:
     }
 
     try {
-      // Tenta ML primeiro se tiver source_url
+      // 🔗 DIR-212 — se o produto tem o link de origem (qualquer marketplace), lê o anúncio.
+      // (antes: extractMLImages, um stub que sempre devolvia "ml_bloqueado")
       const sourceUrl = product.source_url || '';
-      const isMlUrl = sourceUrl.includes('mercadolivre.com') || sourceUrl.includes('mercadolibre.com');
 
-      if (isMlUrl) {
-        setAutoImportStatus('🛒 Importando do Mercado Livre...');
-        const mlResponse = await plataforma.functions.invoke('extractMLImages', { productUrl: sourceUrl });
-        const mlImgs = mlResponse?.images || mlResponse?.data?.images || [];
+      if (sourceUrl && linkValido(sourceUrl)) {
+        setAutoImportStatus(`🔗 Lendo o anúncio em ${marketplaceDoLink(sourceUrl)?.nome || 'origem'}...`);
+        const lido = await importarProdutoPorLink({ url: sourceUrl, titulo: product.description });
+        const mlImgs = lido.ok ? lido.fotos : [];
         if (mlImgs.length > 0) {
           setAutoImportStatus('📥 Copiando as fotos para o nosso servidor...');
           const { fotos, falharam } = await trazerParaNosso(mlImgs.slice(0, 5), product.description);
           setFormData(prev => ({ ...prev, image_urls: fotos }));
           setAutoImportStatus(falharam
-            ? `✅ ${fotos.length} imagens do ML no nosso servidor · ⚠️ ${falharam} não vieram`
-            : `✅ ${fotos.length} imagens importadas do ML!`);
+            ? `✅ ${fotos.length} imagens do anúncio no nosso servidor · ⚠️ ${falharam} não vieram`
+            : `✅ ${fotos.length} imagens importadas do anúncio!`);
           setTimeout(() => setAutoImportStatus(''), 3000);
           return;
         }
@@ -788,6 +877,8 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         ...(medidaMudou ? { medidas_em: new Date().toISOString() } : {}),
         lot: formData.sku || formData.lot,
         purchase_order: formData.purchase_order,
+        // 🔗 DIR-212 — o link de origem fica no produto (reimportar fotos, conferir o anúncio)
+        source_url: formData.source_url || null,
         // 🏷️ 01/09/2026 — ESTA LINHA FALTAVA. A tela tem os seletores de Categoria
         // e Subcategoria, a IA classifica e ainda escreve na tela "✅ Preenchido
         // automaticamente! Categoria: X › Y" — e nada disso ia para o banco: o
@@ -1002,6 +1093,43 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                       {autoFillStatus}
                     </div>
                   )}
+                  {/* 🔗 DIR-212 — Importar de um link (qualquer marketplace) */}
+                  <div className="bg-white rounded-lg border border-blue-200 p-6" data-teste="importar-por-link">
+                    <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-blue-600" /> Importar de um link
+                    </h2>
+                    <p className="text-xs text-gray-500 mt-1 mb-3">
+                      Cole o link do produto em qualquer marketplace: a gente lê o anúncio e preenche nome, descrição, marca, medidas, preço e fotos. Só entra no que estiver vazio.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {MARKETPLACES_CONHECIDOS.map((m) => (
+                        <span key={m.id} className={`text-[11px] px-2 py-0.5 rounded-full border ${marketplaceDoLink(linkImport)?.id === m.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>{m.nome}</span>
+                      ))}
+                      <span className="text-[11px] px-2 py-0.5 rounded-full border bg-gray-50 text-gray-600 border-gray-200">e qualquer outro</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Input
+                        value={linkImport}
+                        onChange={(e) => setLinkImport(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); importarPeloLink(); } }}
+                        placeholder="https://www.mercadolivre.com.br/... · https://shopee.com.br/... · https://www.magazineluiza.com.br/..."
+                        className="bg-white border-gray-300 flex-1"
+                        disabled={importandoLink}
+                      />
+                      <Button type="button" onClick={importarPeloLink} disabled={importandoLink || !linkImport.trim()} className="bg-blue-600 hover:bg-blue-700 text-white" data-teste="botao-importar-por-link">
+                        {importandoLink ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Importando...</>) : 'Importar pelo link'}
+                      </Button>
+                    </div>
+                    {statusLink && (
+                      <p className={`text-sm mt-3 ${statusLink.startsWith('✅') ? 'text-green-700' : 'text-gray-700'}`} data-teste="status-importar-por-link">{statusLink}</p>
+                    )}
+                    {avisosLink.length > 0 && (
+                      <ul className="mt-2 space-y-1 text-xs text-amber-700" data-teste="avisos-importar-por-link">
+                        {avisosLink.map((a, i) => <li key={i}>⚠️ {a}</li>)}
+                      </ul>
+                    )}
+                  </div>
+
                   {/* Título e Descrição */}
                   <div className="bg-white rounded-lg border p-6">
                     <h2 className="text-base font-semibold text-gray-900 mb-4">
